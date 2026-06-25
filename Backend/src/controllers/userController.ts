@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express'
 import * as queries from "../db/queries"
+import { imagekit } from '../lib/imagekit';
+
 
 import { RegisterCheckValid } from '../validations/validinputs'
 
@@ -157,13 +159,17 @@ export const checkEmailExists = async (req: Request, res: Response) => {
 
 export const getCurrentUser = async (req: Request, res: Response) => {
     try {
-        const user = (req as any).user;
+        const decodedUser = (req as any).user;
 
-        if (!user) {
+        if (!decodedUser) {
             return res.status(401).json({ message: "Unauthorized" });
         }
 
-        // Do not return sensitive fields such as password
+        const user = await queries.findUserById(decodedUser.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
         const { password, ...safeUser } = user;
         return res.status(200).json({ user: safeUser });
     } catch (error) {
@@ -230,6 +236,7 @@ export const userProfile = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         isEmailVerified: user.isEmailVerified,
+        avatarUrl: (user as any).avatarUrl || null,
         createdAt: user.createdAt,
     });
 
@@ -455,4 +462,42 @@ export const forgotUserPassword = async (req: Request, res: Response) => {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 
+}
+
+export const editUserAvatar = async (req: Request, res: Response) => {
+    if (!(req as any).user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+        const user = await queries.findUserById((req as any).user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const { avatarUrl } = req.body;
+        if (avatarUrl === undefined) {
+            return res.status(400).json({ message: "avatarUrl is required" });
+        }
+
+        // Delete old avatar from ImageKit if it exists
+        if ((user as any).avatarUrl && (user as any).avatarUrl.includes('#')) {
+            const fileId = (user as any).avatarUrl.split('#')[1];
+            if (fileId) {
+                try {
+                    await imagekit.deleteFile(fileId);
+                } catch (err) {
+                    console.error('Failed to delete old avatar from ImageKit:', err);
+                }
+            }
+        }
+
+        const updatedUser = await queries.updateUserAvatar(user.id, avatarUrl || null);
+        return res.status(200).json({
+            id: updatedUser.id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            avatarUrl: (updatedUser as any).avatarUrl || null
+        });
+    } catch (error) {
+        console.error('Error in editUserAvatar:', error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
 }

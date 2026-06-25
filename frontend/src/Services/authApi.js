@@ -80,3 +80,8 @@ export const requestPasswordReset = async (email) => {
     const response = await api.post('/users/forgot-password', { email });
     return response.data;
 }
+
+export const updateUserAvatar = async ({ avatarUrl }) => {
+    const response = await api.put('/users/update-avatar', { avatarUrl });
+    return response.data;
+}

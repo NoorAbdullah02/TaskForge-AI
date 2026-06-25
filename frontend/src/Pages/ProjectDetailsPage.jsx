@@ -9,8 +9,13 @@ import {
     removeMember,
     createTask,
     updateTask,
-    deleteTask
+    deleteTask,
+    getProjectDocuments,
+    addProjectDocument,
+    deleteProjectDocument
 } from '../Services/projectApi';
+import ImageKitUpload from '../Components/ImageKitUpload';
+
 import {
     Loader,
     Calendar,
@@ -26,7 +31,9 @@ import {
     Info,
     LayoutGrid,
     ArrowLeft,
-    Check
+    Check,
+    FileText,
+    Paperclip
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -38,6 +45,9 @@ const ProjectDetailsPage = () => {
     const [project, setProject] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
+    const [documents, setDocuments] = useState([]);
+    const [docsLoading, setDocsLoading] = useState(false);
+
 
     // Forms states
     const [inviteEmail, setInviteEmail] = useState('');
@@ -90,11 +100,30 @@ const ProjectDetailsPage = () => {
         }
     };
 
+    const fetchDocuments = async () => {
+        try {
+            setDocsLoading(true);
+            const data = await getProjectDocuments(id);
+            setDocuments(data);
+        } catch (err) {
+            console.error('Error fetching project documents:', err);
+        } finally {
+            setDocsLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (isLoggedIn && id) {
             fetchDetails();
         }
     }, [isLoggedIn, id]);
+
+    useEffect(() => {
+        if (isLoggedIn && id && activeTab === 'documents') {
+            fetchDocuments();
+        }
+    }, [isLoggedIn, id, activeTab]);
+
 
     // Handle Project update
     const handleUpdateProject = async (e) => {
@@ -292,6 +321,7 @@ const ProjectDetailsPage = () => {
                             { id: 'overview', label: 'Overview', icon: Info },
                             { id: 'tasks', label: 'Tasks Board', icon: CheckSquare },
                             { id: 'milestones', label: 'Milestones', icon: Trophy },
+                            { id: 'documents', label: 'Documents', icon: FileText },
                             { id: 'members', label: 'Members', icon: Users },
                             ...(isManager ? [{ id: 'settings', label: 'Settings', icon: Settings }] : []),
                         ].map((tab) => {
@@ -777,6 +807,91 @@ const ProjectDetailsPage = () => {
                                             Delete Project
                                         </button>
                                     </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {/* DOCUMENTS TAB */}
+                    {activeTab === 'documents' && (
+                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow border border-gray-100 space-y-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800">Project Documents</h3>
+                                    <p className="text-gray-500 font-semibold mt-1">Upload and manage deliverables, plans, and files inside this project.</p>
+                                </div>
+                            </div>
+
+                            {/* Uploader */}
+                            <div className="max-w-xl">
+                                <ImageKitUpload
+                                    folder="project-docs"
+                                    onUploadSuccess={async (fileDetails) => {
+                                        try {
+                                            await addProjectDocument(id, {
+                                                fileName: fileDetails.fileName,
+                                                fileUrl: fileDetails.fileUrl,
+                                                fileSize: fileDetails.fileSize,
+                                                fileType: fileDetails.fileType
+                                            });
+                                            toast.success('Document uploaded successfully');
+                                            fetchDocuments();
+                                        } catch (error) {
+                                            toast.error('Failed to save document metadata');
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* Documents list */}
+                            {docsLoading ? (
+                                <div className="text-center py-12">
+                                    <Loader className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                                    <p className="text-gray-500 font-semibold">Loading project files...</p>
+                                </div>
+                            ) : documents.length === 0 ? (
+                                <div className="bg-gray-50/50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200 max-w-xl mx-auto my-6">
+                                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-gray-500 font-bold">No documents uploaded yet</p>
+                                    <p className="text-xs text-gray-400">Drag and drop files in the zone above to attach them to the workspace.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {documents.map((doc) => (
+                                        <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-150 hover:shadow-sm transition-all">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+                                                    <Paperclip className="w-5 h-5" />
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <a
+                                                        href={doc.fileUrl.split('#')[0]}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="font-bold text-sm text-blue-650 hover:underline truncate block"
+                                                    >
+                                                        {doc.fileName}
+                                                    </a>
+                                                    <p className="text-xxs text-gray-400 font-semibold mt-0.5 uppercase">
+                                                        {doc.fileSize ? `${(doc.fileSize / (1024 * 1024)).toFixed(2)} MB` : ''} • {doc.fileType?.split('/')[1] || 'File'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await deleteProjectDocument(id, doc.id);
+                                                        toast.success('Document deleted');
+                                                        fetchDocuments();
+                                                    } catch (err) {
+                                                        toast.error('Failed to delete document');
+                                                    }
+                                                }}
+                                                className="text-gray-400 hover:text-red-600 transition p-2 bg-white hover:bg-red-50 rounded-xl border border-gray-250"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

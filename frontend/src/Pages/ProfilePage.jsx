@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, CheckCircle, X, Camera, Edit2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getUserProfile, sendVerificationEmail, verifyEmailToken, updateUserName, updateUserPassword } from '../Services/authApi';
+import { getUserProfile, sendVerificationEmail, verifyEmailToken, updateUserName, updateUserPassword, updateUserAvatar } from '../Services/authApi';
+import { uploadFile } from '../Services/uploadApi';
+
 
 const ProfilePage = () => {
     const { user, logout, login } = useAuth();
@@ -37,10 +39,8 @@ const ProfilePage = () => {
                 const data = await getUserProfile();
                 setProfileData(data);
                 setEditData(data);
-                // Load profile image from localStorage if exists
-                const savedImage = localStorage.getItem(`profileImage_${data.email}`);
-                if (savedImage) {
-                    setProfileImage(savedImage);
+                if (data.avatarUrl) {
+                    setProfileImage(data.avatarUrl.split('#')[0]);
                 }
             } catch (err) {
                 console.error('Error fetching profile:', err);
@@ -56,30 +56,29 @@ const ProfilePage = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
         if (!file.type.startsWith('image/')) {
             toast.error('Please select an image file');
             return;
         }
 
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
             toast.error('Image size must be less than 5MB');
             return;
         }
 
         try {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const imageData = event.target?.result;
-                setProfileImage(imageData);
-                // Save to localStorage
-                localStorage.setItem(`profileImage_${profileData.email}`, imageData);
-                toast.success('Profile photo updated');
-            };
-            reader.readAsDataURL(file);
+            const toastId = toast.loading('Uploading photo...');
+            const res = await uploadFile(file, 'avatars');
+            const fileUrlWithId = `${res.url}#${res.fileId}`;
+            
+            const updated = await updateUserAvatar({ avatarUrl: fileUrlWithId });
+            setProfileImage(res.url);
+            
+            if (login) login(updated);
+            toast.success('Profile photo updated successfully!', { id: toastId });
         } catch (err) {
-            toast.error('Failed to upload image', err);
+            console.error('Profile photo upload error:', err);
+            toast.error('Failed to upload image');
         }
     };
 

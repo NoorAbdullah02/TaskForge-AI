@@ -242,6 +242,14 @@ export const updateUserName = async (userId: number, name: string) => {
     return updated;
 }
 
+export const updateUserAvatar = async (userId: number, avatarUrl: string | null) => {
+    const [updated] = await db.update(users)
+        .set({ avatarUrl })
+        .where(eq(users.id, userId))
+        .returning();
+    return updated;
+}
+
 
 export const updateUserPassword = async (userId: number, hashedPassword: string) => {
 

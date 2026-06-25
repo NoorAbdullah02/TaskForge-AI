@@ -49,3 +49,18 @@ export const deleteTask = async (projectId, taskId) => {
     const response = await api.delete(`/projects/${projectId}/tasks/${taskId}`);
     return response.data;
 };
+
+export const getProjectDocuments = async (projectId) => {
+    const response = await api.get(`/projects/${projectId}/documents`);
+    return response.data;
+};
+
+export const addProjectDocument = async (projectId, docData) => {
+    const response = await api.post(`/projects/${projectId}/documents`, docData);
+    return response.data;
+};
+
+export const deleteProjectDocument = async (projectId, docId) => {
+    const response = await api.delete(`/projects/${projectId}/documents/${docId}`);
+    return response.data;
+};

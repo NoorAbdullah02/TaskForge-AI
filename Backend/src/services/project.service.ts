@@ -1,7 +1,8 @@
 import { db } from '../db/index';
 import { eq, and } from 'drizzle-orm';
-import { projects, projectMembers, tasks, users } from '../db/schema';
+import { projects, projectMembers, tasks, users, projectDocuments } from '../db/schema';
 import type { Project, NewProject, Task, NewTask } from '../db/schema';
+
 
 export class ProjectService {
     // Fetch all projects where the user is a member or owner
@@ -156,6 +157,42 @@ export class ProjectService {
     static async deleteTaskOrMilestone(taskId: number) {
         const [deleted] = await db.delete(tasks)
             .where(eq(tasks.id, taskId))
+            .returning();
+        return deleted;
+    }
+
+    // Get all project documents
+    static async getProjectDocuments(projectId: number) {
+        return db.select()
+            .from(projectDocuments)
+            .where(eq(projectDocuments.projectId, projectId));
+    }
+
+    // Add a project document
+    static async createProjectDocument(data: {
+        projectId: number;
+        userId: number;
+        fileName: string;
+        fileUrl: string;
+        fileSize?: number;
+        fileType?: string;
+    }) {
+        const [inserted] = await db.insert(projectDocuments).values({
+            projectId: data.projectId,
+            userId: data.userId,
+            fileName: data.fileName,
+            fileUrl: data.fileUrl,
+            fileSize: data.fileSize || null,
+            fileType: data.fileType || null,
+            createdAt: new Date()
+        }).returning();
+        return inserted;
+    }
+
+    // Delete a project document record
+    static async deleteProjectDocument(docId: number) {
+        const [deleted] = await db.delete(projectDocuments)
+            .where(eq(projectDocuments.id, docId))
             .returning();
         return deleted;
     }

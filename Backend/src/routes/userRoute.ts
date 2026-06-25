@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerUser, changeUserPassword, forgotUserPassword, resetUserPassword, loginUser, checkEmailExists, getCurrentUser, logoutUser, userProfile, verify_email, send_verification_email, verifyEmailToken, resendVerificationByEmail, editUserName } from '../controllers/userController'
+import { registerUser, changeUserPassword, forgotUserPassword, resetUserPassword, loginUser, checkEmailExists, getCurrentUser, logoutUser, userProfile, verify_email, send_verification_email, verifyEmailToken, resendVerificationByEmail, editUserName, editUserAvatar } from '../controllers/userController'
 import { checkValiditi } from '../middleware/checkValidUser'
 
 
@@ -25,6 +25,8 @@ router.post('/resend-verification-email', resendVerificationByEmail);
 router.post('/verify-email-token', verifyEmailToken);
 
 router.put('/update-name', checkValiditi, editUserName);
+
+router.put('/update-avatar', checkValiditi, editUserAvatar);
 
 router.put('/update-password', checkValiditi, changeUserPassword);
 

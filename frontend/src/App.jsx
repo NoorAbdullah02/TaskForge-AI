@@ -8,7 +8,13 @@ import ResetPassword from './Pages/ResetPassword.jsx'
 import ForgotPassword from './Pages/ForgotPassword.jsx'
 import ProjectsPage from './Pages/ProjectsPage.jsx'
 import ProjectDetailsPage from './Pages/ProjectDetailsPage.jsx'
+import TasksPage from './Pages/TasksPage.jsx'
+import TaskDetailsPage from './Pages/TaskDetailsPage.jsx'
+import AttendancePage from './Pages/AttendancePage.jsx'
+import LeavePage from './Pages/LeavePage.jsx'
 import { Routes, Route } from 'react-router-dom';
+
+
 import { useAuth } from './context/AuthContext.jsx'
 import { Toaster } from 'react-hot-toast';
 import Header from './Components/Header.jsx'
@@ -35,7 +41,13 @@ const App = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/tasks/:id" element={<TaskDetailsPage />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/leaves" element={<LeavePage />} />
             <Route path="/" element={<Dashboard />} />
+
+
             <Route path="/after-register" element={<AfterRegister />} />
             <Route path="*" element={<Navigate to="/" />} />
 

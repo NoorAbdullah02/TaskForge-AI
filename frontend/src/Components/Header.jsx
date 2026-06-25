@@ -40,12 +40,32 @@ const Header = () => {
                         </Link>
 
                         {isLoggedIn && (
-                            <Link
-                                to="/projects"
-                                className="hidden sm:block text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
-                            >
-                                Projects
-                            </Link>
+                            <div className="hidden sm:flex items-center gap-6">
+                                <Link
+                                    to="/projects"
+                                    className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                >
+                                    Projects
+                                </Link>
+                                <Link
+                                    to="/tasks"
+                                    className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                >
+                                    Tasks
+                                </Link>
+                                <Link
+                                    to="/attendance"
+                                    className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                >
+                                    Attendance
+                                </Link>
+                                <Link
+                                    to="/leaves"
+                                    className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                >
+                                    Leaves
+                                </Link>
+                            </div>
                         )}
                     </div>
 
@@ -88,8 +108,12 @@ const Header = () => {
                                         onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                                         className="flex items-center gap-3 px-3 py-2 hover:bg-blue-100 rounded-2xl transition-all group"
                                     >
-                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-all">
-                                            {user?.name?.charAt(0).toUpperCase()}
+                                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-all overflow-hidden">
+                                            {user?.avatarUrl ? (
+                                                <img src={user.avatarUrl.split('#')[0]} alt="Avatar" className="w-full h-full object-cover" />
+                                            ) : (
+                                                user?.name?.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <div className="hidden sm:flex flex-col items-start">
                                             <span className="text-sm font-semibold text-gray-800">{user?.name}</span>
@@ -111,8 +135,12 @@ const Header = () => {
                                             {/* Header */}
                                             <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-blue-100 border-b-2 border-blue-100">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
-                                                        {user?.name?.charAt(0).toUpperCase()}
+                                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md overflow-hidden">
+                                                        {user?.avatarUrl ? (
+                                                            <img src={user.avatarUrl.split('#')[0]} alt="Avatar" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            user?.name?.charAt(0).toUpperCase()
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="text-gray-800 font-bold text-sm">{user?.name}</p>

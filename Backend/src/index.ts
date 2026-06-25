@@ -5,6 +5,13 @@ import requestIp from 'request-ip';
 
 import userRoute from './routes/userRoute';
 import projectRoute from './routes/project.routes';
+import taskRoute from './routes/task.routes';
+import attendanceRoute from './routes/attendance.routes';
+import leaveRoute from './routes/leave.routes';
+import uploadRoute from './routes/upload.routes';
+
+
+
 
 import cookieParser from "cookie-parser";
 
@@ -44,6 +51,13 @@ app.get('/check', (req, res) => {
 
 app.use("/api/users", userRoute);
 app.use("/api/projects", projectRoute);
+app.use("/api/tasks", taskRoute);
+app.use("/api/attendance", attendanceRoute);
+app.use("/api/leaves", leaveRoute);
+app.use("/api/upload", uploadRoute);
+
+
+
 
 
 

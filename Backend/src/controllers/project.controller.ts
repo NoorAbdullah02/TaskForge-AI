@@ -1,6 +1,11 @@
 import type { Request, Response } from 'express';
 import { ProjectService } from '../services/project.service';
 import { getUserByEmail } from '../db/queries';
+import { db } from '../db/index';
+import { eq } from 'drizzle-orm';
+import { projectDocuments } from '../db/schema';
+import { imagekit } from '../lib/imagekit';
+
 
 export class ProjectController {
     // Get all projects for current user
@@ -272,6 +277,106 @@ export class ProjectController {
             return res.status(200).json({ message: 'Task deleted successfully' });
         } catch (error) {
             console.error('Error in deleteTask:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Get all project documents
+    static async getProjectDocuments(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const projectId = parseInt(req.params.id, 10);
+            if (isNaN(projectId)) return res.status(400).json({ message: 'Invalid Project ID' });
+
+            // Check membership
+            const details = await ProjectService.getProjectDetails(projectId);
+            if (!details) return res.status(404).json({ message: 'Project not found' });
+            const isMember = details.members.some((m) => m.id === user.id);
+            if (!isMember) return res.status(403).json({ message: 'Access denied: Not a member of the project' });
+
+            const docs = await ProjectService.getProjectDocuments(projectId);
+            return res.status(200).json(docs);
+        } catch (error) {
+            console.error('Error in getProjectDocuments:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Add a project document
+    static async addProjectDocument(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const projectId = parseInt(req.params.id, 10);
+            if (isNaN(projectId)) return res.status(400).json({ message: 'Invalid Project ID' });
+
+            const { fileName, fileUrl, fileSize, fileType } = req.body;
+            if (!fileName || !fileUrl) {
+                return res.status(400).json({ message: 'File name and URL are required' });
+            }
+
+            // Check membership
+            const details = await ProjectService.getProjectDetails(projectId);
+            if (!details) return res.status(404).json({ message: 'Project not found' });
+            const isMember = details.members.some((m) => m.id === user.id);
+            if (!isMember) return res.status(403).json({ message: 'Access denied: Not a member of the project' });
+
+            const doc = await ProjectService.createProjectDocument({
+                projectId,
+                userId: user.id,
+                fileName,
+                fileUrl,
+                fileSize,
+                fileType
+            });
+
+            return res.status(201).json({ message: 'Document added successfully', document: doc });
+        } catch (error) {
+            console.error('Error in addProjectDocument:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Delete a project document
+    static async deleteProjectDocument(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const projectId = parseInt(req.params.id, 10);
+            const docId = parseInt(req.params.docId, 10);
+            if (isNaN(projectId) || isNaN(docId)) {
+                return res.status(400).json({ message: 'Invalid Project ID or Document ID' });
+            }
+
+            // Check membership
+            const details = await ProjectService.getProjectDetails(projectId);
+            if (!details) return res.status(404).json({ message: 'Project not found' });
+            const isMember = details.members.some((m) => m.id === user.id);
+            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+
+            const [doc] = await db.select().from(projectDocuments).where(eq(projectDocuments.id, docId));
+            if (!doc) return res.status(404).json({ message: 'Document not found' });
+
+            // Delete from ImageKit if it's an ImageKit upload (URL has hash)
+            if (doc.fileUrl && doc.fileUrl.includes('#')) {
+                const fileId = doc.fileUrl.split('#')[1];
+                if (fileId) {
+                    try {
+                        await imagekit.deleteFile(fileId);
+                    } catch (err) {
+                        console.error('Failed to delete file from ImageKit:', err);
+                    }
+                }
+            }
+
+            await ProjectService.deleteProjectDocument(docId);
+            return res.status(200).json({ message: 'Document deleted successfully' });
+        } catch (error) {
+            console.error('Error in deleteProjectDocument:', error);
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }

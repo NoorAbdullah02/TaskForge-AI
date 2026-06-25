@@ -8,9 +8,11 @@ export const users = pgTable("users", {
     email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(),
     isEmailVerified: boolean("is_email_verified").notNull().default(false),
+    avatarUrl: varchar("avatar_url", { length: 500 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
+
 
 
 
@@ -167,6 +169,18 @@ export const attachments = pgTable("attachments", {
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
 });
 
+export const projectDocuments = pgTable("project_documents", {
+    id: serial("id").primaryKey(),
+    projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'set null' }),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    fileUrl: text("file_url").notNull(),
+    fileSize: integer("file_size"),
+    fileType: varchar("file_type", { length: 100 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+
 export const notifications = pgTable("notifications", {
     id: serial("id").primaryKey(),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -299,6 +313,18 @@ export const attachmentsRelations = relations(attachments, ({ one }) => ({
     })
 }));
 
+export const projectDocumentsRelations = relations(projectDocuments, ({ one }) => ({
+    project: one(projects, {
+        fields: [projectDocuments.projectId],
+        references: [projects.id]
+    }),
+    user: one(users, {
+        fields: [projectDocuments.userId],
+        references: [users.id]
+    })
+}));
+
+
 export const notificationsRelations = relations(notifications, ({ one }) => ({
     user: one(users, {
         fields: [notifications.userId],
@@ -359,6 +385,10 @@ export type NewComment = typeof comments.$inferInsert;
 
 export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
+
+export type ProjectDocument = typeof projectDocuments.$inferSelect;
+export type NewProjectDocument = typeof projectDocuments.$inferInsert;
+
 
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;

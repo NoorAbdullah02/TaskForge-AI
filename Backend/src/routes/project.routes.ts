@@ -21,4 +21,9 @@ router.post('/:id/tasks', checkValiditi, ProjectController.createTask);
 router.put('/:id/tasks/:taskId', checkValiditi, ProjectController.updateTask);
 router.delete('/:id/tasks/:taskId', checkValiditi, ProjectController.deleteTask);
 
+// Project Documents
+router.get('/:id/documents', checkValiditi, ProjectController.getProjectDocuments);
+router.post('/:id/documents', checkValiditi, ProjectController.addProjectDocument);
+router.delete('/:id/documents/:docId', checkValiditi, ProjectController.deleteProjectDocument);
+
 export default router;
