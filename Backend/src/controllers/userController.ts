@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express'
 import * as queries from "../db/queries"
 import { imagekit } from '../lib/imagekit';
+import { sendMail } from '../lib/send-email';
+import { otpTemplate } from '../emails/otpTemplate';
 
 
 import { RegisterCheckValid } from '../validations/validinputs'
@@ -82,17 +84,20 @@ export const loginUser = async (req: Request, res: Response) => {
             return res.status(403).json({ message: "Email is not verified Check Your Email Please!" });
         }
 
+        if (check.is2faEnabled) {
+            const otp = queries.generateRandomToken(6);
+            const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            await queries.save2FaOtp(check.id, otp, expires);
 
-        // const token = jwt.sign({
-        //     id: check.id,
-        //     email: check.email
-        // }, env.JWT_SECRET, { expiresIn: '7d' });
-        // res.cookie('token', token, {
-        //     httpOnly: true,
-        //     // secure: env.NODE_ENV === 'production',
-        //     sameSite: 'lax', // allow sending cookie on top-level navigations in dev
-        //     maxAge: 7 * 24 * 60 * 60 * 1000
-        // })
+            try {
+                const html = otpTemplate({ token: otp });
+                await sendMail(check.email, 'Your 2FA Verification Code', html);
+            } catch (err) {
+                console.error('Failed to send OTP email:', err);
+            }
+
+            return res.status(200).json({ message: "2FA_REQUIRED", email: check.email });
+        }
 
         // create a session record for the logged-in user
 
@@ -111,6 +116,11 @@ export const loginUser = async (req: Request, res: Response) => {
             name: check.name,
             email: check.email,
             isEmailVerified: check.isEmailVerified,
+            role: check.role,
+            position: check.position,
+            phone: check.phone,
+            departmentId: check.departmentId,
+            is2faEnabled: check.is2faEnabled,
             sessionId
         });
         const refreshToken = queries.refressAccessToken({ sessionId });
@@ -237,6 +247,11 @@ export const userProfile = async (req: Request, res: Response) => {
         email: user.email,
         isEmailVerified: user.isEmailVerified,
         avatarUrl: (user as any).avatarUrl || null,
+        role: user.role,
+        position: user.position,
+        phone: user.phone,
+        departmentId: user.departmentId,
+        is2faEnabled: user.is2faEnabled,
         createdAt: user.createdAt,
     });
 
@@ -501,3 +516,135 @@ export const editUserAvatar = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Internal Server Error" });
     }
 }
+
+export const verify2FaUser = async (req: Request, res: Response) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP code are required" });
+        }
+
+        const user = await queries.getUserByEmail(email);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!user.otpCode || !user.otpExpiresAt || user.otpCode !== otp || new Date() > new Date(user.otpExpiresAt)) {
+            return res.status(400).json({ message: "Invalid or expired verification code" });
+        }
+
+        // Clear OTP
+        await queries.save2FaOtp(user.id, null, null);
+
+        // Standard login logic (session + tokens)
+        const sessionPayload = {
+            userId: user.id,
+            ip: (req as any).clientIp || req.ip || req.headers['x-forwarded-for'] || null,
+            userAgent: req.get('User-Agent') || null,
+        };
+        const session = await queries.createSession(sessionPayload as any);
+        const sessionId = session[0]?.id;
+
+        const accessToken = queries.createAccessToken({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            isEmailVerified: user.isEmailVerified,
+            role: user.role,
+            position: user.position,
+            phone: user.phone,
+            departmentId: user.departmentId,
+            is2faEnabled: user.is2faEnabled,
+            sessionId
+        });
+        const refreshToken = queries.refressAccessToken({ sessionId });
+
+        const baseConfig = {
+            httpOnly: true,
+            secure: env.NODE_ENV === 'production',
+            sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+        };
+
+        res.cookie('accessToken', accessToken, { ...baseConfig, maxAge: 15 * 60 * 1000 });
+        res.cookie('refreshToken', refreshToken, { ...baseConfig, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+        return res.status(200).json({ message: "Login successful", accessToken, sessionId });
+    } catch (error) {
+        console.error("Error in verify2FaUser:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const toggle2FaUser = async (req: Request, res: Response) => {
+    if (!(req as any).user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+        const user = await queries.findUserById((req as any).user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const { enable } = req.body;
+        const updated = await queries.toggle2Fa(user.id, !!enable);
+
+        return res.status(200).json({
+            message: `2FA ${!!enable ? 'enabled' : 'disabled'} successfully`,
+            is2faEnabled: updated.is2faEnabled
+        });
+    } catch (error) {
+        console.error("Error in toggle2FaUser:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const updateUserProfile = async (req: Request, res: Response) => {
+    if (!(req as any).user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+        const user = await queries.findUserById((req as any).user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const { name, position, phone, departmentId } = req.body;
+        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            return res.status(400).json({ message: "Name is required" });
+        }
+
+        const updated = await queries.updateUserProfile(user.id, {
+            name: name.trim(),
+            position: position ? position.trim() : null,
+            phone: phone ? phone.trim() : null,
+            departmentId: departmentId ? parseInt(departmentId, 10) : null
+        });
+
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: {
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+                role: updated.role,
+                position: updated.position,
+                phone: updated.phone,
+                departmentId: updated.departmentId,
+                avatarUrl: (updated as any).avatarUrl || null,
+                is2faEnabled: updated.is2faEnabled,
+            }
+        });
+    } catch (error) {
+        console.error("Error in updateUserProfile:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const getDepartments = async (req: Request, res: Response) => {
+    if (!(req as any).user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+        const list = await queries.getDepartmentsList();
+        return res.status(200).json(list);
+    } catch (error) {
+        console.error("Error in getDepartments:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};

@@ -514,11 +514,18 @@ const ProjectDetailsPage = () => {
 
                                             <div className="space-y-3">
                                                 {columnTasks.map((t) => (
-                                                    <div key={t.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 space-y-3 relative group">
+                                                    <div
+                                                        key={t.id}
+                                                        onClick={() => navigate(`/tasks/${t.id}`)}
+                                                        className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 space-y-3 relative group hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                                                    >
                                                         <div className="flex justify-between items-start">
                                                             <h5 className="font-bold text-gray-800 line-clamp-2 pr-6">{t.title}</h5>
                                                             <button
-                                                                onClick={() => handleDeleteTask(t.id)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteTask(t.id);
+                                                                }}
                                                                 className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -530,11 +537,18 @@ const ProjectDetailsPage = () => {
                                                         )}
 
                                                         <div className="flex justify-between items-center pt-2 text-xs">
-                                                            <span className={`px-2 py-0.5 rounded font-bold uppercase ${
-                                                                t.priority === 'high' || t.priority === 'critical' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                                {t.priority}
-                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className={`px-2 py-0.5 rounded font-bold uppercase ${
+                                                                    t.priority === 'high' || t.priority === 'critical' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                    {t.priority}
+                                                                </span>
+                                                                {t.assigneeName && (
+                                                                    <span className="bg-blue-50 text-blue-750 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-1 border border-blue-100">
+                                                                        👤 {t.assigneeName}
+                                                                    </span>
+                                                                )}
+                                                            </div>
 
                                                             {t.dueDate && (
                                                                 <span className="text-gray-400 font-semibold">
@@ -547,7 +561,10 @@ const ProjectDetailsPage = () => {
                                                         <div className="pt-2 border-t border-gray-100 flex gap-2">
                                                             {columnStatus !== 'todo' && (
                                                                 <button
-                                                                    onClick={() => handleUpdateTaskStatus(t.id, columnStatus === 'done' ? 'in-progress' : 'todo')}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleUpdateTaskStatus(t.id, columnStatus === 'done' ? 'in-progress' : 'todo');
+                                                                    }}
                                                                     className="flex-1 py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xxs rounded transition text-center"
                                                                 >
                                                                     ◀ Back
@@ -555,7 +572,10 @@ const ProjectDetailsPage = () => {
                                                             )}
                                                             {columnStatus !== 'done' && (
                                                                 <button
-                                                                    onClick={() => handleUpdateTaskStatus(t.id, columnStatus === 'todo' ? 'in-progress' : 'done')}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleUpdateTaskStatus(t.id, columnStatus === 'todo' ? 'in-progress' : 'done');
+                                                                    }}
                                                                     className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xxs rounded transition text-center"
                                                                 >
                                                                     Move Forward ▶

@@ -57,38 +57,40 @@ export async function checkValiditi(req: Request, res: Response, next: NextFunct
 
 
     if (accessToken) {
-        const decoded = jwt.verify(accessToken, env.JWT_SECRET);
-        (req as any).user = decoded;
-        return next();
+        try {
+            const decoded = jwt.verify(accessToken, env.JWT_SECRET);
+            (req as any).user = decoded;
+            return next();
+        } catch (error) {
+            // Access token expired or invalid, fall through to check refresh token
+        }
     }
 
     if (refreshToken) {
         try {
-
             const result = await refressTokens(refreshToken);
+            if (result) {
+                const { newAccessToken, newRefreshToken, user: userInfo } = result as any;
 
-            const { newAccessToken, newRefreshToken, user: userInfo } = result as any;
+                (req as any).user = userInfo;
 
-            (req as any).user = userInfo;
+                const baseConfig = {
+                    httpOnly: true,
+                    secure: env.NODE_ENV === 'production',
+                    sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+                };
 
-            const baseConfig = {
-                httpOnly: true,
-                secure: env.NODE_ENV === 'production',
-                sameSite: (env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+                res.cookie('accessToken', newAccessToken, {
+                    ...baseConfig,
+                    maxAge: 15 * 60 * 1000 // 15 minutes
+                });
+
+                res.cookie('refreshToken', newRefreshToken, {
+                    ...baseConfig,
+                    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                });
             }
-
-            res.cookie('accessToken', newAccessToken, {
-                ...baseConfig,
-                maxAge: 15 * 60 * 1000 // 15 minutes
-            });
-
-            res.cookie('refreshToken', newRefreshToken, {
-                ...baseConfig,
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-            });
-
             return next();
-
         } catch (error) {
             console.log('Error verifying refresh token:', error);
         }

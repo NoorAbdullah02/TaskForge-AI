@@ -32,10 +32,10 @@ const Header = () => {
                     <div className="flex items-center gap-8">
                         <Link to={isLoggedIn ? "/" : "/"} className="flex items-center gap-3 group">
                             <div>
-                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                                    Dashboard
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+                                    TaskForge AI
                                 </h1>
-                                <p className="text-xs text-gray-500 font-medium">Control Panel</p>
+                                <p className="text-xs text-gray-500 font-medium">Project Management</p>
                             </div>
                         </Link>
 
@@ -65,6 +65,20 @@ const Header = () => {
                                 >
                                     Leaves
                                 </Link>
+                                <Link
+                                    to="/ai-workspace"
+                                    className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                >
+                                    AI Workspace
+                                </Link>
+                                {(user?.role === 'admin' || user?.role === 'manager') && (
+                                    <Link
+                                        to="/admin-settings"
+                                        className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                                    >
+                                        Admin Settings
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </div>
@@ -98,7 +112,7 @@ const Header = () => {
 
                                 {/* Notifications */}
                                 <button className="relative p-2.5 hover:bg-blue-100 rounded-xl transition-all group">
-                                    <Bell className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition" />
+                                    <Bell className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition animate-pulse" />
                                     <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
                                 </button>
 
@@ -117,7 +131,7 @@ const Header = () => {
                                         </div>
                                         <div className="hidden sm:flex flex-col items-start">
                                             <span className="text-sm font-semibold text-gray-800">{user?.name}</span>
-                                            <span className="text-xs text-gray-500">User</span>
+                                            <span className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</span>
                                         </div>
                                         <svg
                                             className={`w-4 h-4 text-gray-600 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`}
@@ -174,7 +188,7 @@ const Header = () => {
 
                                             {/* Footer */}
                                             <div className="px-6 py-3 bg-gray-50 text-center text-xs text-gray-500 border-t border-gray-200">
-                                                v1.0.0 • Dashboard
+                                                v1.0.0 • TaskForge AI
                                             </div>
                                         </div>
                                     )}

@@ -6,9 +6,12 @@ import requestIp from 'request-ip';
 import userRoute from './routes/userRoute';
 import projectRoute from './routes/project.routes';
 import taskRoute from './routes/task.routes';
+import adminRoute from './routes/admin.routes';
 import attendanceRoute from './routes/attendance.routes';
 import leaveRoute from './routes/leave.routes';
 import uploadRoute from './routes/upload.routes';
+import aiRoute from './routes/ai.routes';
+import dashboardRoute from './routes/dashboard.routes';
 
 
 
@@ -52,9 +55,12 @@ app.get('/check', (req, res) => {
 app.use("/api/users", userRoute);
 app.use("/api/projects", projectRoute);
 app.use("/api/tasks", taskRoute);
+app.use("/api/admin", adminRoute);
 app.use("/api/attendance", attendanceRoute);
 app.use("/api/leaves", leaveRoute);
 app.use("/api/upload", uploadRoute);
+app.use("/api/ai", aiRoute);
+app.use("/api/dashboard", dashboardRoute);
 
 
 

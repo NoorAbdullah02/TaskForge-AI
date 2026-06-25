@@ -12,4 +12,6 @@ export const env = {
   BREVO_API_KEY: process.env.BREVO_API_KEY || '',
   EMAIL_FROM: process.env.EMAIL_FROM || '',
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || '',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
 };

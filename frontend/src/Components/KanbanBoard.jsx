@@ -53,9 +53,16 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
             </p>
 
             <div className="flex justify-between items-center pt-2 text-xxs border-t border-gray-50">
-                <span className={`px-2 py-0.5 rounded font-extrabold uppercase border ${priorityColors[task.priority] || priorityColors.medium}`}>
-                    {task.priority}
-                </span>
+                <div className="flex items-center gap-1">
+                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase border ${priorityColors[task.priority] || priorityColors.medium}`}>
+                        {task.priority}
+                    </span>
+                    {task.assigneeName && (
+                        <span className="bg-blue-50 text-blue-755 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-0.5 border border-blue-100">
+                            👤 {task.assigneeName}
+                        </span>
+                    )}
+                </div>
                 {task.dueDate && (
                     <span className="text-gray-400 font-semibold flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-gray-450" />

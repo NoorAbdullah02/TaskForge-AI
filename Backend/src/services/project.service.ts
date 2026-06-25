@@ -38,8 +38,21 @@ export class ProjectService {
         .innerJoin(users, eq(projectMembers.userId, users.id))
         .where(eq(projectMembers.projectId, projectId));
 
-        // Fetch tasks
-        const projectTasks = await db.select().from(tasks).where(eq(tasks.projectId, projectId));
+        // Fetch tasks with assignee details
+        const projectTasksRaw = await db.select({
+            task: tasks,
+            assigneeName: users.name,
+            assigneeEmail: users.email,
+        })
+        .from(tasks)
+        .leftJoin(users, eq(tasks.assigneeId, users.id))
+        .where(eq(tasks.projectId, projectId));
+
+        const projectTasks = projectTasksRaw.map(r => ({
+            ...r.task,
+            assigneeName: r.assigneeName,
+            assigneeEmail: r.assigneeEmail,
+        }));
 
         // Calculate progress
         const totalTasks = projectTasks.filter(t => !t.isMilestone).length;

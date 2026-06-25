@@ -156,6 +156,9 @@ export class TaskController {
         try {
             const user = (req as any).user;
             const taskId = parseInt(req.params.id, 10);
+            if (isNaN(taskId)) {
+                return res.status(400).json({ message: 'Invalid Task ID' });
+            }
             const { title } = req.body;
 
             if (!title) return res.status(400).json({ message: 'Subtask title is required' });

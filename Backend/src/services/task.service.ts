@@ -20,17 +20,22 @@ export class TaskService {
         // Build base query
         let query = db.select({
             task: tasks,
-            projectName: projects.name
+            projectName: projects.name,
+            assigneeName: users.name,
+            assigneeEmail: users.email
         })
         .from(tasks)
         .innerJoin(projects, eq(tasks.projectId, projects.id))
+        .leftJoin(users, eq(tasks.assigneeId, users.id))
         .where(inArray(tasks.projectId, projectIds));
 
         // Execute query and filter in memory or extend Drizzle conditions
         const results = await query;
         let filtered = results.map(r => ({
             ...r.task,
-            projectName: r.projectName
+            projectName: r.projectName,
+            assigneeName: r.assigneeName,
+            assigneeEmail: r.assigneeEmail
         }));
 
         if (filters) {

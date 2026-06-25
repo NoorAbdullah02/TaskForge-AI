@@ -85,3 +85,23 @@ export const updateUserAvatar = async ({ avatarUrl }) => {
     const response = await api.put('/users/update-avatar', { avatarUrl });
     return response.data;
 }
+
+export const verify2Fa = async ({ email, otp }) => {
+    const response = await api.post('/users/verify-2fa', { email, otp });
+    return response.data;
+}
+
+export const toggle2Fa = async (enable) => {
+    const response = await api.put('/users/toggle-2fa', { enable });
+    return response.data;
+}
+
+export const updateUserProfile = async (profileData) => {
+    const response = await api.put('/users/update-profile', profileData);
+    return response.data;
+}
+
+export const getDepartments = async () => {
+    const response = await api.get('/users/departments');
+    return response.data;
+}

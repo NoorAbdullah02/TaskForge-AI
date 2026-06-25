@@ -1,6 +1,6 @@
 import { db } from '../db/index';
 import { eq, lt, sql, and } from 'drizzle-orm';
-import { users, sessionTable, verifyEmailTable, passwordResetTokenTable } from "./schema";
+import { users, sessionTable, verifyEmailTable, passwordResetTokenTable, departments } from "./schema";
 import type { newVerify, newSession, NewUser } from "./schema";
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
@@ -10,6 +10,7 @@ import { randomInt } from 'crypto';
 import { sendMail } from '../lib/send-email';
 
 import { verifyEmailTemplate } from '../emails/verifyEmailTemplate';
+import { passwordResetTemplate } from '../emails/passwordResetTemplate';
 
 //import { sendMail } from '../lib/nodemailer';
 
@@ -97,6 +98,11 @@ export const refressTokens = async (token: string) => {
             name: user.name,
             email: user.email,
             isEmailVerified: user.isEmailVerified,
+            role: user.role,
+            position: user.position,
+            phone: user.phone,
+            departmentId: user.departmentId,
+            is2faEnabled: user.is2faEnabled,
             sessionId: currentSession.id
         }
 
@@ -303,19 +309,10 @@ export const sendPasswordResetEmail = async (userId: number, email: string) => {
     resetUrl.searchParams.append('token', randomToken);
     resetUrl.searchParams.append('email', email);
 
-    // Simple reset email HTML (keeps styling consistent with verification email)
-    const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Reset your password</title></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f7fafc; padding: 24px;">
-  <div style="max-width:560px; margin:0 auto; background:#fff; border-radius:12px; padding:32px; box-shadow:0 10px 30px rgba(2,6,23,0.08);">
-    <h2 style="margin:0 0 12px; color:#111827">Reset your password</h2>
-    <p style="margin:0 0 20px; color:#6b7280">We received a request to reset your password. Use the code below or click the button to continue.</p>
-    <div style="background:#f3f4f6; padding:18px; border-radius:8px; text-align:center; margin-bottom:18px;">
-      <div style="font-family: 'Courier New', monospace; font-size:28px; font-weight:700; letter-spacing:4px;">${randomToken}</div>
-    </div>
-    <div style="text-align:center; margin-bottom:12px;"><a href="${resetUrl.toString()}" style="display:inline-block; background:#2563eb; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600;">Reset Password</a></div>
-    <p style="color:#9ca3af; font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
-  </div>
-</body></html>`;
+    const html = passwordResetTemplate({
+        resetUrl: resetUrl.toString(),
+        token: randomToken,
+    });
 
     try {
         const result = await sendMail(email, 'Reset your password', html);
@@ -335,4 +332,41 @@ export const sendPasswordResetEmail = async (userId: number, email: string) => {
         };
     }
 }
+
+export const updateUserProfile = async (
+    userId: number,
+    data: { name: string; position: string | null; phone: string | null; departmentId: number | null }
+) => {
+    const [updated] = await db.update(users)
+        .set({
+            name: data.name,
+            position: data.position,
+            phone: data.phone,
+            departmentId: data.departmentId,
+            updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+    return updated;
+};
+
+export const toggle2Fa = async (userId: number, isEnabled: boolean) => {
+    const [updated] = await db.update(users)
+        .set({ is2faEnabled: isEnabled, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+    return updated;
+};
+
+export const save2FaOtp = async (userId: number, otpCode: string | null, expiresAt: Date | null) => {
+    const [updated] = await db.update(users)
+        .set({ otpCode, otpExpiresAt: expiresAt, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+    return updated;
+};
+
+export const getDepartmentsList = async () => {
+    return db.select().from(departments);
+};
 

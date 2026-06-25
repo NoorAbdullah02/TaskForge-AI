@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, CheckCircle, X, Camera, Edit2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getUserProfile, sendVerificationEmail, verifyEmailToken, updateUserName, updateUserPassword, updateUserAvatar } from '../Services/authApi';
+import { getUserProfile, sendVerificationEmail, verifyEmailToken, updateUserName, updateUserPassword, updateUserAvatar, updateUserProfile, getDepartments, toggle2Fa } from '../Services/authApi';
 import { uploadFile } from '../Services/uploadApi';
 
 
@@ -26,31 +26,81 @@ const ProfilePage = () => {
     const [isChanging, setIsChanging] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [departments, setDepartments] = useState([]);
 
     // track if a verification link was sent and any preview url returned by backend
     const [linkSent, setLinkSent] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    // Fetch user profile
+    // Fetch user profile and departments
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchProfileAndDepartments = async () => {
             try {
                 setLoading(true);
-                const data = await getUserProfile();
-                setProfileData(data);
-                setEditData(data);
-                if (data.avatarUrl) {
-                    setProfileImage(data.avatarUrl.split('#')[0]);
+                const [profile, depts] = await Promise.all([
+                    getUserProfile(),
+                    getDepartments()
+                ]);
+                setProfileData(profile);
+                setEditData(profile);
+                setDepartments(depts);
+                if (profile.avatarUrl) {
+                    setProfileImage(profile.avatarUrl.split('#')[0]);
                 }
             } catch (err) {
-                console.error('Error fetching profile:', err);
-                toast.error('Failed to load profile');
+                console.error('Error fetching profile or departments:', err);
+                toast.error('Failed to load profile settings');
             } finally {
                 setLoading(false);
             }
         };
-        fetchProfile();
+        fetchProfileAndDepartments();
     }, []);
+
+    const getRoleBadge = (role) => {
+        switch (role?.toLowerCase()) {
+            case 'admin':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-sm uppercase tracking-wider">
+                        🛡️ Admin
+                    </span>
+                );
+            case 'manager':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm uppercase tracking-wider">
+                        💼 Manager
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm uppercase tracking-wider">
+                        👤 Employee
+                    </span>
+                );
+        }
+    };
+
+    const getDepartmentName = (deptId) => {
+        const dept = departments.find(d => d.id === deptId);
+        return dept ? dept.name : 'Not Assigned';
+    };
+
+    const handleToggle2Fa = async (e) => {
+        const checked = e.target.checked;
+        const toastId = toast.loading(`${checked ? 'Enabling' : 'Disabling'} 2FA...`);
+        try {
+            const res = await toggle2Fa(checked);
+            setProfileData((prev) => ({ ...prev, is2faEnabled: res.is2faEnabled }));
+            setEditData((prev) => ({ ...prev, is2faEnabled: res.is2faEnabled }));
+            if (login) {
+                login({ ...user, is2faEnabled: res.is2faEnabled });
+            }
+            toast.success(res.message || `2FA ${checked ? 'enabled' : 'disabled'} successfully`, { id: toastId });
+        } catch (err) {
+            console.error('Toggle 2FA error:', err);
+            toast.error(err?.response?.data?.message || 'Failed to toggle 2FA', { id: toastId });
+        }
+    };
 
     const handleProfileImageChange = async (e) => {
         const file = e.target.files?.[0];
@@ -89,17 +139,24 @@ const ProfilePage = () => {
 
         try {
             setIsSaving(true);
-            const updated = await updateUserName({ name: editData.name.trim() });
+            const res = await updateUserProfile({
+                name: editData.name.trim(),
+                position: editData.position || null,
+                phone: editData.phone || null,
+                departmentId: editData.departmentId || null
+            });
 
-            setProfileData((prev) => ({ ...prev, ...updated }));
-            setEditData((prev) => ({ ...prev, ...updated }));
+            const updatedUser = res.user;
+
+            setProfileData(updatedUser);
+            setEditData(updatedUser);
             setEditingProfile(false);
 
-            if (login) login(updated);
-            toast.success('Name updated successfully');
+            if (login) login(updatedUser);
+            toast.success('Profile updated successfully');
         } catch (err) {
-            console.error('Update name error:', err);
-            toast.error(err?.response?.data?.message || 'Failed to update name');
+            console.error('Update profile error:', err);
+            toast.error(err?.response?.data?.message || 'Failed to update profile');
         } finally {
             setIsSaving(false);
         }
@@ -235,20 +292,64 @@ const ProfilePage = () => {
                             {/* Profile Info */}
                             <div className="flex-1 text-center sm:text-left">
                                 {editingProfile ? (
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 w-full sm:max-w-md">
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
                                             <input
                                                 type="text"
                                                 value={editData.name || ''}
                                                 onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                                                className="w-full sm:w-96 px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-2xl font-bold"
+                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
+                                                placeholder="Full Name"
                                             />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Job Title</label>
+                                            <input
+                                                type="text"
+                                                value={editData.position || ''}
+                                                onChange={(e) => setEditData({ ...editData, position: e.target.value })}
+                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
+                                                placeholder="e.g. Lead Developer"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
+                                            <input
+                                                type="text"
+                                                value={editData.phone || ''}
+                                                onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
+                                                placeholder="e.g. +1 (555) 123-4567"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Department</label>
+                                            <select
+                                                value={editData.departmentId || ''}
+                                                onChange={(e) => setEditData({ ...editData, departmentId: e.target.value ? parseInt(e.target.value, 10) : null })}
+                                                className="w-full px-4 py-2 border-2 border-gray-300 bg-white rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
+                                            >
+                                                <option value="">Select Department</option>
+                                                {departments.map((dept) => (
+                                                    <option key={dept.id} value={dept.id}>
+                                                        {dept.name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 ) : (
                                     <>
-                                        <h2 className="text-4xl font-bold text-gray-800 mb-3">{profileData?.name}</h2>
+                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
+                                            <h2 className="text-4xl font-bold text-gray-800">{profileData?.name}</h2>
+                                            {getRoleBadge(profileData?.role)}
+                                        </div>
+                                        {profileData?.position && (
+                                            <p className="text-lg font-semibold text-gray-500 mb-3 text-center sm:text-left">
+                                                {profileData.position}
+                                            </p>
+                                        )}
                                         <p className="text-gray-600 flex items-center justify-center sm:justify-start gap-2 text-lg">
                                             <Mail className="w-5 h-5" />
                                             {profileData?.email}
@@ -267,14 +368,22 @@ const ProfilePage = () => {
 
                                 {/* Info Grid */}
                                 {!editingProfile && (
-                                    <div className="grid grid-cols-2 gap-4 mt-8">
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-200">
-                                            <p className="text-gray-600 text-sm font-medium">Account Type</p>
-                                            <p className="font-semibold text-gray-800 mt-1">Personal</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
+                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Department</p>
+                                            <p className="font-bold text-gray-800 mt-1 text-base">{getDepartmentName(profileData?.departmentId)}</p>
                                         </div>
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-200">
-                                            <p className="text-gray-600 text-sm font-medium">Member Since</p>
-                                            <p className="font-semibold text-gray-800 mt-1">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</p>
+                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
+                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Phone Number</p>
+                                            <p className="font-bold text-gray-800 mt-1 text-base">{profileData?.phone || 'Not Provided'}</p>
+                                        </div>
+                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
+                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Account Role</p>
+                                            <p className="font-bold text-gray-800 mt-1 text-base capitalize">{profileData?.role}</p>
+                                        </div>
+                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
+                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Member Since</p>
+                                            <p className="font-bold text-gray-800 mt-1 text-base">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</p>
                                         </div>
                                     </div>
                                 )}
@@ -343,20 +452,59 @@ const ProfilePage = () => {
 
                 {/* Additional Info Card */}
                 {!editingProfile && (
-                    <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6">Account Information</h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                <span className="text-gray-600 font-medium">Full Name</span>
-                                <span className="font-semibold text-gray-800">{profileData?.name}</span>
+                    <div className="space-y-8">
+                        <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6">Account Information</h3>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                                    <span className="text-gray-600 font-medium">Full Name</span>
+                                    <span className="font-semibold text-gray-800">{profileData?.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                                    <span className="text-gray-600 font-medium">Email Address</span>
+                                    <span className="font-semibold text-gray-800">{profileData?.email}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                                    <span className="text-gray-600 font-medium">Department</span>
+                                    <span className="font-semibold text-gray-800">{getDepartmentName(profileData?.departmentId)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                                    <span className="text-gray-600 font-medium">Job Title</span>
+                                    <span className="font-semibold text-gray-800">{profileData?.position || 'Not Set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                                    <span className="text-gray-600 font-medium">Phone Number</span>
+                                    <span className="font-semibold text-gray-800">{profileData?.phone || 'Not Set'}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 font-medium">Joined Date</span>
+                                    <span className="font-semibold text-gray-800">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                <span className="text-gray-600 font-medium">Email Address</span>
-                                <span className="font-semibold text-gray-800">{profileData?.email}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-600 font-medium">Joined Date</span>
-                                <span className="font-semibold text-gray-800">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+
+                        {/* Security & 2FA Card */}
+                        <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Security & Two-Factor Auth (2FA)</h3>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Two-factor authentication adds an extra layer of security to your account by requiring an OTP code sent to your email during login.
+                            </p>
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50">
+                                <div>
+                                    <span className="font-bold text-gray-800 block text-base">Two-Factor Authentication</span>
+                                    <span className="text-xs text-gray-500 font-medium">
+                                        {profileData?.is2faEnabled ? '2FA is currently active on your account' : 'Enable 2FA for extra login security'}
+                                    </span>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={!!profileData?.is2faEnabled}
+                                        onChange={handleToggle2Fa}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
                             </div>
                         </div>
                     </div>

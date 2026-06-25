@@ -9,6 +9,13 @@ export const users = pgTable("users", {
     password: varchar("password", { length: 255 }).notNull(),
     isEmailVerified: boolean("is_email_verified").notNull().default(false),
     avatarUrl: varchar("avatar_url", { length: 500 }),
+    role: varchar("role", { length: 50 }).notNull().default("employee"),
+    position: varchar("position", { length: 255 }),
+    phone: varchar("phone", { length: 50 }),
+    departmentId: integer("department_id"),
+    is2faEnabled: boolean("is_2fa_enabled").notNull().default(false),
+    otpCode: varchar("otp_code", { length: 8 }),
+    otpExpiresAt: timestamp("otp_expires_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -97,7 +104,7 @@ export const departments = pgTable("departments", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull().unique(),
     description: text("description"),
-    managerId: integer("manager_id").references(() => users.id, { onDelete: 'set null' }),
+    managerId: integer("manager_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -239,6 +246,19 @@ export const aiRequests = pgTable("ai_requests", {
     tokensUsed: integer("tokens_used"),
     status: varchar("status", { length: 50 }).notNull().default("success"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const systemSettings = pgTable("system_settings", {
+    id: serial("id").primaryKey(),
+    orgName: varchar("org_name", { length: 255 }).notNull().default("TaskForge AI"),
+    orgLogo: varchar("org_logo", { length: 500 }),
+    timeZone: varchar("time_zone", { length: 100 }).notNull().default("UTC"),
+    officeStart: varchar("office_start", { length: 50 }).notNull().default("09:00"),
+    officeEnd: varchar("office_end", { length: 50 }).notNull().default("17:00"),
+    workingDays: varchar("working_days", { length: 255 }).notNull().default("1,2,3,4,5"),
+    holidays: text("holidays").notNull().default("[]"),
+    leavePolicy: text("leave_policy").notNull().default('{"sick": 14, "casual": 10, "annual": 15}'),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
 
 
@@ -404,3 +424,6 @@ export type NewActivityLog = typeof activityLogs.$inferInsert;
 
 export type AiRequest = typeof aiRequests.$inferSelect;
 export type NewAiRequest = typeof aiRequests.$inferInsert;
+
+export type SystemSettings = typeof systemSettings.$inferSelect;
+export type NewSystemSettings = typeof systemSettings.$inferInsert;

@@ -7,4 +7,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
+          'vendor-animation': ['framer-motion', 'gsap'],
+          'vendor-charts': ['recharts'],
+          'vendor-utils': ['axios', 'zustand']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  }
 })
