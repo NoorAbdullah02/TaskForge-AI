@@ -1,0 +1,25 @@
+{
+  "name": "authentication",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "npm install --prefix Backend --include=dev && npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm run build --prefix Backend",
+    "start": "npm run db:push --prefix Backend && npm run start --prefix Backend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoorAbdullah02/TaskForge-AI-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NoorAbdullah02/TaskForge-AI-/issues"
+  },
+  "homepage": "https://github.com/NoorAbdullah02/TaskForge-AI-#readme"
+}
