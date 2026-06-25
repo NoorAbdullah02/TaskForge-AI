@@ -17,6 +17,9 @@ import { passwordResetTemplate } from '../emails/passwordResetTemplate';
 //user queri
 
 export const createUser = async (data: NewUser) => {
+    // Check if this is the first user in the database to bootstrap as admin
+    const allUsers = await db.select().from(users).limit(1);
+    const isFirstUser = allUsers.length === 0;
 
     const existingUser = await db.select()
         .from(users)
@@ -25,15 +28,23 @@ export const createUser = async (data: NewUser) => {
     if (existingUser.length > 0) {
         throw new Error('User with this email already exists');
     }
-    const [user] = await db.insert(users).values
-        ({ ...data }).returning();
 
-    const emailResult = await sendNewVerificationEmail(user.id, user.email);
+    const insertData = { ...data };
+    if (isFirstUser) {
+        insertData.role = 'admin';
+        insertData.isEmailVerified = true;
+    }
 
+    const [user] = await db.insert(users).values(insertData).returning();
+
+    let emailResult = null;
+    if (!isFirstUser) {
+        emailResult = await sendNewVerificationEmail(user.id, user.email);
+    }
 
     return { user, emailResult };
-
 }
+
 
 export const getUserByEmail = async (email: string) => {
     const [user] = await db.select()
