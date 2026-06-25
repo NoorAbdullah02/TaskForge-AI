@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { AttendanceService } from '../services/attendance.service';
+import { EmailTriggerService } from '../services/emailTrigger.service';
 
 export class AttendanceController {
     // Get today's check-in/out status
@@ -32,6 +33,17 @@ export class AttendanceController {
             const ipAddress = (req as any).clientIp || req.ip;
 
             const record = await AttendanceService.checkIn(user.id, date, location, ipAddress);
+
+            if (record.status === 'late' && user.activeWorkspaceId) {
+                await EmailTriggerService.sendAttendanceWarning(
+                    user.email,
+                    user.name,
+                    record.date,
+                    'Late Check-in Warning',
+                    user.activeWorkspaceId
+                );
+            }
+
             return res.status(201).json({
                 message: 'Checked in successfully',
                 record
@@ -96,6 +108,44 @@ export class AttendanceController {
         } catch (error) {
             console.error('Error in getMonthlyReport controller:', error);
             return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Generate QR Attendance Token
+    static async generateQR(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const token = await AttendanceService.generateQRToken(user.id);
+            return res.status(200).json({ token });
+        } catch (error) {
+            console.error('Error in generateQR:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Verify QR Attendance Scan
+    static async verifyQR(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { token, location } = req.body;
+            if (!token) {
+                return res.status(400).json({ message: 'Token is required' });
+            }
+
+            const ipAddress = (req as any).clientIp || req.ip;
+
+            const record = await AttendanceService.verifyQRToken(token, location, ipAddress);
+            return res.status(200).json({
+                message: 'QR Attendance verified successfully',
+                record
+            });
+        } catch (error: any) {
+            console.error('Error in verifyQR:', error);
+            return res.status(400).json({ message: error.message || 'QR verification failed' });
         }
     }
 }

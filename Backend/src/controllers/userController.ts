@@ -3,6 +3,9 @@ import * as queries from "../db/queries"
 import { imagekit } from '../lib/imagekit';
 import { sendMail } from '../lib/send-email';
 import { otpTemplate } from '../emails/otpTemplate';
+import { db } from '../db/index';
+import { workspaceMembers, workspaces } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
 
 
 import { RegisterCheckValid } from '../validations/validinputs'
@@ -99,8 +102,41 @@ export const loginUser = async (req: Request, res: Response) => {
             return res.status(200).json({ message: "2FA_REQUIRED", email: check.email });
         }
 
-        // create a session record for the logged-in user
+        // Check workspace memberships
+        const userMemberships = await db.select({
+            workspaceId: workspaceMembers.workspaceId,
+            role: workspaceMembers.role,
+            status: workspaceMembers.status,
+            workspaceStatus: workspaces.status,
+            workspaceName: workspaces.name,
+            workspaceSlug: workspaces.slug
+        })
+        .from(workspaceMembers)
+        .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+        .where(eq(workspaceMembers.userId, check.id));
 
+        if (check.role !== 'super_admin' && userMemberships.length === 0) {
+            return res.status(403).json({ message: "You are not a member of any workspace." });
+        }
+
+        // Find an active membership
+        const activeMembership = userMemberships.find(m => m.status === 'active');
+        if (check.role !== 'super_admin' && !activeMembership) {
+            const hasPending = userMemberships.some(m => m.status === 'pending');
+            if (hasPending) {
+                return res.status(403).json({ message: "Your request to join the workspace is pending approval." });
+            }
+            return res.status(403).json({ message: "Your account is not active in any workspace." });
+        }
+
+        // Check suspended
+        if (check.role !== 'super_admin' && activeMembership && activeMembership.workspaceStatus === 'suspended') {
+            return res.status(403).json({ message: "This workspace has been suspended by system administrators." });
+        }
+
+        const currentWorkspace = activeMembership || { workspaceId: null, role: check.role, workspaceName: '', workspaceSlug: '' };
+
+        // create a session record for the logged-in user
 
         const sessionPayload = {
             userId: check.id,
@@ -116,7 +152,10 @@ export const loginUser = async (req: Request, res: Response) => {
             name: check.name,
             email: check.email,
             isEmailVerified: check.isEmailVerified,
-            role: check.role,
+            role: check.role === 'super_admin' ? 'super_admin' : currentWorkspace.role,
+            activeWorkspaceId: currentWorkspace.workspaceId,
+            workspaceName: currentWorkspace.workspaceName,
+            workspaceSlug: currentWorkspace.workspaceSlug,
             position: check.position,
             phone: check.phone,
             departmentId: check.departmentId,

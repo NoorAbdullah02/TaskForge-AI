@@ -2,16 +2,22 @@ import express from 'express';
 import { env } from './config/env';
 import cors from 'cors';
 import requestIp from 'request-ip';
+import http from 'http';
+import { socketService } from './services/socket.service';
 
 import userRoute from './routes/userRoute';
 import projectRoute from './routes/project.routes';
 import taskRoute from './routes/task.routes';
 import adminRoute from './routes/admin.routes';
+import agileRoute from './routes/agile.routes';
 import attendanceRoute from './routes/attendance.routes';
 import leaveRoute from './routes/leave.routes';
 import uploadRoute from './routes/upload.routes';
 import aiRoute from './routes/ai.routes';
 import dashboardRoute from './routes/dashboard.routes';
+import workspaceRoute from './routes/workspace.routes';
+import superAdminRoute from './routes/superAdmin.routes';
+import reportsRoute from './routes/reports.routes';
 
 
 
@@ -56,11 +62,14 @@ app.use("/api/users", userRoute);
 app.use("/api/projects", projectRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/admin", adminRoute);
+app.use("/api/agile", agileRoute);
 app.use("/api/attendance", attendanceRoute);
 app.use("/api/leaves", leaveRoute);
 app.use("/api/upload", uploadRoute);
 app.use("/api/ai", aiRoute);
 app.use("/api/dashboard", dashboardRoute);
+app.use("/api/workspaces", workspaceRoute);
+app.use("/api/super-admin", superAdminRoute);
 
 
 
@@ -84,6 +93,9 @@ if (env.NODE_ENV === 'production') {
 
 
 
-app.listen(env.PORT, () => {
+const server = http.createServer(app);
+socketService.init(server);
+
+server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
-})
+});

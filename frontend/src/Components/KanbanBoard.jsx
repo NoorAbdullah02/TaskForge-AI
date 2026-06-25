@@ -9,9 +9,17 @@ import {
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Trophy, Calendar, Sparkles } from 'lucide-react';
+import { Trophy, Calendar, Sparkles, CheckSquare, HelpCircle, Megaphone, UserPlus, FileImage } from 'lucide-react';
 import { updateTask } from '../Services/taskApi';
 import toast from 'react-hot-toast';
+
+const WORK_TYPE_ICONS = {
+    task: { icon: CheckSquare, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
+    request: { icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
+    campaign: { icon: Megaphone, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' },
+    candidate: { icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+    asset: { icon: FileImage, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
+};
 
 function KanbanTaskCard({ task, onClick, priorityColors }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -35,6 +43,9 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
         onClick(task.id);
     };
 
+    const workTypeInfo = WORK_TYPE_ICONS[task.workType] || WORK_TYPE_ICONS.task;
+    const WorkTypeIcon = workTypeInfo.icon;
+
     return (
         <div
             ref={setNodeRef}
@@ -44,8 +55,13 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
             onClick={handleCardClick}
             className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing space-y-3 relative group"
         >
-            <div className="flex items-start justify-between">
-                <h5 className="font-bold text-gray-800 line-clamp-2 pr-2">{task.title}</h5>
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                    <div className={`p-1.5 rounded-lg border shrink-0 ${workTypeInfo.bg}`}>
+                        <WorkTypeIcon className={`w-3.5 h-3.5 ${workTypeInfo.color}`} />
+                    </div>
+                    <h5 className="font-bold text-gray-800 line-clamp-2">{task.title}</h5>
+                </div>
                 {task.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
             </div>
             <p className="text-xxs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded w-fit">
@@ -125,6 +141,8 @@ function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
 
 export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColors, statusStates, statusTitles }) {
     const [activeTask, setActiveTask] = useState(null);
+    const activeWorkTypeInfo = activeTask ? (WORK_TYPE_ICONS[activeTask.workType] || WORK_TYPE_ICONS.task) : null;
+    const ActiveWorkTypeIcon = activeWorkTypeInfo ? activeWorkTypeInfo.icon : null;
 
     const mouseSensor = useSensor(MouseSensor, {
         activationConstraint: {
@@ -208,10 +226,15 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
             </div>
 
             <DragOverlay adjustScale={true}>
-                {activeTask ? (
+                {activeTask && ActiveWorkTypeIcon && activeWorkTypeInfo ? (
                     <div className="bg-white p-4 rounded-2xl shadow-xl border-2 border-blue-500 scale-105 opacity-90 cursor-grabbing space-y-3 relative select-none pointer-events-none">
-                        <div className="flex items-start justify-between">
-                            <h5 className="font-bold text-gray-800 line-clamp-2 pr-2">{activeTask.title}</h5>
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2">
+                                <div className={`p-1.5 rounded-lg border shrink-0 ${activeWorkTypeInfo.bg}`}>
+                                    <ActiveWorkTypeIcon className={`w-3.5 h-3.5 ${activeWorkTypeInfo.color}`} />
+                                </div>
+                                <h5 className="font-bold text-gray-800 line-clamp-2">{activeTask.title}</h5>
+                            </div>
                             {activeTask.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
                         </div>
                         <p className="text-xxs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded w-fit">

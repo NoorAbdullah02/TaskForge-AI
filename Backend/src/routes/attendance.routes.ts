@@ -10,5 +10,7 @@ router.post('/check-in', checkValiditi, AttendanceController.checkIn);
 router.post('/check-out', checkValiditi, AttendanceController.checkOut);
 router.get('/history', checkValiditi, AttendanceController.getHistory);
 router.get('/report', checkValiditi, AttendanceController.getMonthlyReport);
+router.get('/qr/generate', checkValiditi, AttendanceController.generateQR);
+router.post('/qr/verify', checkValiditi, AttendanceController.verifyQR);
 
 export default router;

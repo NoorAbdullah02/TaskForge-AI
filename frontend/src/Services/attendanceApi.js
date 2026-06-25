@@ -26,3 +26,13 @@ export const getMonthlyReport = async (year, month) => {
     });
     return response.data;
 };
+
+export const generateQR = async () => {
+    const response = await api.get('/attendance/qr/generate');
+    return response.data;
+};
+
+export const verifyQR = async (token, location) => {
+    const response = await api.post('/attendance/qr/verify', { token, location });
+    return response.data;
+};

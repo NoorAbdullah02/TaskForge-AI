@@ -35,7 +35,7 @@ export const createUser = async (data: NewUser) => {
         insertData.isEmailVerified = true;
     }
 
-    const [user] = await db.insert(users).values(insertData).returning();
+    const [user] = (await db.insert(users).values(insertData).returning()) as any[];
 
     let emailResult = null;
     if (!isFirstUser) {

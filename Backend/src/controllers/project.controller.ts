@@ -5,6 +5,7 @@ import { db } from '../db/index';
 import { eq } from 'drizzle-orm';
 import { projectDocuments } from '../db/schema';
 import { imagekit } from '../lib/imagekit';
+import { EmailTriggerService } from '../services/emailTrigger.service';
 
 
 export class ProjectController {
@@ -51,7 +52,7 @@ export class ProjectController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-            const { name, description, startDate, endDate } = req.body;
+            const { name, description, startDate, endDate, workTypes } = req.body;
             if (!name || name.trim().length === 0) {
                 return res.status(400).json({ message: 'Project name is required' });
             }
@@ -62,7 +63,18 @@ export class ProjectController {
                 startDate: startDate ? new Date(startDate) : undefined,
                 endDate: endDate ? new Date(endDate) : undefined,
                 ownerId: user.id,
+                workTypes: workTypes || 'task',
             });
+
+            if (user.activeWorkspaceId) {
+                await EmailTriggerService.sendProjectCreated(
+                    user.email,
+                    user.name,
+                    project.name,
+                    user.workspaceName || 'Your Workspace',
+                    user.activeWorkspaceId
+                );
+            }
 
             return res.status(201).json({ message: 'Project created successfully', project });
         } catch (error) {
@@ -156,6 +168,25 @@ export class ProjectController {
             if (!targetUser) return res.status(404).json({ message: 'User with this email not found' });
 
             const assignment = await ProjectService.assignMember(projectId, targetUser.id, role || 'member');
+
+            if (user.activeWorkspaceId) {
+                if (role === 'manager' || role === 'project_manager') {
+                    await EmailTriggerService.sendProjectManagerAssigned(
+                        targetUser.email,
+                        targetUser.name,
+                        details.name,
+                        user.activeWorkspaceId
+                    );
+                } else {
+                    await EmailTriggerService.sendProjectAssignment(
+                        targetUser.email,
+                        targetUser.name,
+                        details.name,
+                        user.activeWorkspaceId
+                    );
+                }
+            }
+
             return res.status(200).json({ message: 'Member assigned successfully', assignment });
         } catch (error) {
             console.error('Error in assignMember:', error);
@@ -213,7 +244,7 @@ export class ProjectController {
             const isMember = details.members.some((m) => m.id === user.id);
             if (!isMember) return res.status(403).json({ message: 'Only project members can add tasks' });
 
-            const { title, description, status, priority, assigneeId, isMilestone, dueDate } = req.body;
+            const { title, description, status, priority, assigneeId, isMilestone, dueDate, workType } = req.body;
             if (!title || title.trim().length === 0) {
                 return res.status(400).json({ message: 'Task title is required' });
             }
@@ -224,6 +255,7 @@ export class ProjectController {
                 description,
                 status: status || 'todo',
                 priority: priority || 'medium',
+                workType: workType || 'task',
                 assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
                 isMilestone: !!isMilestone,
                 dueDate: dueDate ? new Date(dueDate) : null,

@@ -3,8 +3,9 @@ import { TaskService } from '../services/task.service';
 import { ProjectService } from '../services/project.service';
 import { db } from '../db/index';
 import { eq } from 'drizzle-orm';
-import { subtasks, comments, attachments } from '../db/schema';
+import { subtasks, comments, attachments, users } from '../db/schema';
 import { imagekit } from '../lib/imagekit';
+import { EmailTriggerService } from '../services/emailTrigger.service';
 
 
 export class TaskController {
@@ -65,7 +66,7 @@ export class TaskController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-            const { projectId, title, description, status, priority, assigneeId, isMilestone, dueDate } = req.body;
+            const { projectId, title, description, status, priority, assigneeId, isMilestone, dueDate, workType } = req.body;
             if (!projectId) return res.status(400).json({ message: 'Project ID is required' });
             if (!title || title.trim().length === 0) return res.status(400).json({ message: 'Title is required' });
 
@@ -79,10 +80,25 @@ export class TaskController {
                 description: description || null,
                 status: status || 'todo',
                 priority: priority || 'medium',
+                workType: workType || 'task',
                 assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
                 isMilestone: !!isMilestone,
                 dueDate: dueDate ? new Date(dueDate) : null,
             });
+
+            if (task.assigneeId && user.activeWorkspaceId) {
+                const [targetUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
+                if (targetUser) {
+                    const projectDetails = await ProjectService.getProjectDetails(task.projectId);
+                    await EmailTriggerService.sendTaskAssigned(
+                        targetUser.email,
+                        targetUser.name,
+                        task.title,
+                        projectDetails?.name || 'Project',
+                        user.activeWorkspaceId
+                    );
+                }
+            }
 
             return res.status(201).json({ message: 'Task created successfully', task });
         } catch (error) {
@@ -117,6 +133,38 @@ export class TaskController {
                 isMilestone: isMilestone !== undefined ? !!isMilestone : undefined,
                 dueDate: dueDate ? new Date(dueDate) : undefined,
             });
+
+            if (user.activeWorkspaceId) {
+                const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
+                
+                // If assignee changed, send task assigned email
+                if (assigneeId !== undefined && assigneeId !== details.assigneeId && updated.assigneeId) {
+                    const [targetUser] = await db.select().from(users).where(eq(users.id, updated.assigneeId));
+                    if (targetUser) {
+                        await EmailTriggerService.sendTaskAssigned(
+                            targetUser.email,
+                            targetUser.name,
+                            updated.title,
+                            projectDetails?.name || 'Project',
+                            user.activeWorkspaceId
+                        );
+                    }
+                }
+                
+                // If status is changed to completed (done) and it is milestone
+                if (status === 'done' && details.status !== 'done' && updated.isMilestone) {
+                    const [ownerUser] = await db.select().from(users).where(eq(users.id, projectDetails?.ownerId || 0));
+                    if (ownerUser) {
+                        await EmailTriggerService.sendMilestoneAchieved(
+                            ownerUser.email,
+                            ownerUser.name,
+                            updated.title,
+                            projectDetails?.name || 'Project',
+                            user.activeWorkspaceId
+                        );
+                    }
+                }
+            }
 
             return res.status(200).json({ message: 'Task updated successfully', task: updated });
         } catch (error) {

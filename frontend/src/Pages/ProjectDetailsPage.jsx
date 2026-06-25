@@ -33,9 +33,20 @@ import {
     ArrowLeft,
     Check,
     FileText,
-    Paperclip
+    Paperclip,
+    HelpCircle,
+    Megaphone,
+    FileImage
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const WORK_TYPE_ICONS = {
+    task: { icon: CheckSquare, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-105' },
+    request: { icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-105' },
+    campaign: { icon: Megaphone, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-105' },
+    candidate: { icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-150' },
+    asset: { icon: FileImage, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-105' },
+};
 
 const ProjectDetailsPage = () => {
     const { id } = useParams();
@@ -62,6 +73,7 @@ const ProjectDetailsPage = () => {
     const [taskIsMilestone, setTaskIsMilestone] = useState(false);
     const [taskDueDate, setTaskDueDate] = useState('');
     const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const [taskWorkType, setTaskWorkType] = useState('task');
 
     // Edit project state
     const [editName, setEditName] = useState('');
@@ -81,8 +93,12 @@ const ProjectDetailsPage = () => {
     const fetchDetails = async () => {
         try {
             setIsLoading(true);
+
             const data = await getProjectDetails(id);
             setProject(data);
+            if (data.workTypes) {
+                setTaskWorkType(data.workTypes.split(',')[0]);
+            }
 
             // Populate settings inputs
             setEditName(data.name);
@@ -204,6 +220,7 @@ const ProjectDetailsPage = () => {
                 assigneeId: taskAssignee || undefined,
                 isMilestone: taskIsMilestone,
                 dueDate: taskDueDate || undefined,
+                workType: taskWorkType,
             });
             toast.success(taskIsMilestone ? 'Milestone created! 🏆' : 'Task added successfully! ✅');
             setTaskTitle('');
@@ -211,6 +228,7 @@ const ProjectDetailsPage = () => {
             setTaskAssignee('');
             setTaskIsMilestone(false);
             setTaskDueDate('');
+            setTaskWorkType(project.workTypes ? project.workTypes.split(',')[0] : 'task');
             fetchDetails();
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to create task');
@@ -440,6 +458,20 @@ const ProjectDetailsPage = () => {
                                     <div className="space-y-3">
                                         <div className="flex gap-2">
                                             <select
+                                                value={taskWorkType}
+                                                onChange={(e) => setTaskWorkType(e.target.value)}
+                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                            >
+                                                {project.workTypes ? project.workTypes.split(',').map((type) => (
+                                                    <option key={type} value={type}>
+                                                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                                                    </option>
+                                                )) : (
+                                                    <option value="task">Task</option>
+                                                )}
+                                            </select>
+
+                                            <select
                                                 value={taskPriority}
                                                 onChange={(e) => setTaskPriority(e.target.value)}
                                                 className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
@@ -513,24 +545,32 @@ const ProjectDetailsPage = () => {
                                             </div>
 
                                             <div className="space-y-3">
-                                                {columnTasks.map((t) => (
-                                                    <div
-                                                        key={t.id}
-                                                        onClick={() => navigate(`/tasks/${t.id}`)}
-                                                        className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 space-y-3 relative group hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <h5 className="font-bold text-gray-800 line-clamp-2 pr-6">{t.title}</h5>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteTask(t.id);
-                                                                }}
-                                                                className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
+                                                {columnTasks.map((t) => {
+                                                    const workTypeInfo = WORK_TYPE_ICONS[t.workType] || WORK_TYPE_ICONS.task;
+                                                    const WorkTypeIcon = workTypeInfo.icon;
+                                                    return (
+                                                        <div
+                                                            key={t.id}
+                                                            onClick={() => navigate(`/tasks/${t.id}`)}
+                                                            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 space-y-3 relative group hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                                                        >
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <div className="flex items-start gap-2">
+                                                                    <div className={`p-1.5 rounded-lg border shrink-0 ${workTypeInfo.bg}`}>
+                                                                        <WorkTypeIcon className={`w-3.5 h-3.5 ${workTypeInfo.color}`} />
+                                                                    </div>
+                                                                    <h5 className="font-bold text-gray-800 line-clamp-2 pr-6">{t.title}</h5>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteTask(t.id);
+                                                                    }}
+                                                                    className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
 
                                                         {t.description && (
                                                             <p className="text-xs text-gray-500 font-medium">{t.description}</p>
@@ -583,7 +623,7 @@ const ProjectDetailsPage = () => {
                                                             )}
                                                         </div>
                                                     </div>
-                                                ))}
+                                                )})}
                                                 {columnTasks.length === 0 && (
                                                     <p className="text-center text-gray-400 text-xs py-8 font-medium">Empty column</p>
                                                 )}

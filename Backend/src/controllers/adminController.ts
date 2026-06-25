@@ -239,7 +239,7 @@ export const updateUserRoleDept = async (req: Request, res: Response) => {
         const [targetUser] = await db.select().from(users).where(eq(users.id, id));
         if (!targetUser) return res.status(404).json({ message: "User not found" });
 
-        const { role, departmentId, position, phone } = req.body;
+        const { role, departmentId, position, phone, shiftType } = req.body;
 
         const [updated] = await db.update(users)
             .set({
@@ -247,12 +247,13 @@ export const updateUserRoleDept = async (req: Request, res: Response) => {
                 departmentId: departmentId !== undefined ? (departmentId ? parseInt(departmentId, 10) : null) : targetUser.departmentId,
                 position: position !== undefined ? position : targetUser.position,
                 phone: phone !== undefined ? phone : targetUser.phone,
+                shiftType: shiftType !== undefined ? shiftType : targetUser.shiftType,
                 updatedAt: new Date()
             })
             .where(eq(users.id, id))
             .returning();
 
-        await logAdminAction(req, 'UPDATE', 'user', id, `Updated role/department for user ${updated.name} (Role: ${updated.role}, Dept: ${updated.departmentId})`);
+        await logAdminAction(req, 'UPDATE', 'user', id, `Updated role/department/shift for user ${updated.name} (Role: ${updated.role}, Shift: ${updated.shiftType})`);
 
         const { password, otpCode, otpExpiresAt, ...safeUser } = updated;
         return res.status(200).json(safeUser);

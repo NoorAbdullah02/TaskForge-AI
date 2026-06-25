@@ -1,5 +1,9 @@
 import type { Request, Response } from 'express';
 import { LeaveService } from '../services/leave.service';
+import { EmailTriggerService } from '../services/emailTrigger.service';
+import { db } from '../db/index';
+import { users } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export class LeaveController {
     // Apply for leave request
@@ -82,6 +86,20 @@ export class LeaveController {
             }
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'approved', user.id);
+
+            // Send notification email
+            const [targetUser] = await db.select().from(users).where(eq(users.id, record.userId));
+            if (targetUser && user.activeWorkspaceId) {
+                await EmailTriggerService.sendLeaveApproval(
+                    targetUser.email,
+                    targetUser.name,
+                    record.leaveType,
+                    record.startDate.toLocaleDateString(),
+                    record.endDate.toLocaleDateString(),
+                    user.activeWorkspaceId
+                );
+            }
+
             return res.status(200).json({
                 message: 'Leave request approved successfully',
                 record
@@ -104,6 +122,20 @@ export class LeaveController {
             }
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'rejected', user.id);
+
+            // Send notification email
+            const [targetUser] = await db.select().from(users).where(eq(users.id, record.userId));
+            if (targetUser && user.activeWorkspaceId) {
+                await EmailTriggerService.sendLeaveRejection(
+                    targetUser.email,
+                    targetUser.name,
+                    record.leaveType,
+                    record.startDate.toLocaleDateString(),
+                    record.endDate.toLocaleDateString(),
+                    user.activeWorkspaceId
+                );
+            }
+
             return res.status(200).json({
                 message: 'Leave request rejected successfully',
                 record

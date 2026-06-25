@@ -13,6 +13,8 @@ export const users = pgTable("users", {
     position: varchar("position", { length: 255 }),
     phone: varchar("phone", { length: 50 }),
     departmentId: integer("department_id"),
+    teamId: integer("team_id").references((): any => teams.id, { onDelete: 'set null' }),
+    shiftType: varchar("shift_type", { length: 50 }).notNull().default("morning"),
     is2faEnabled: boolean("is_2fa_enabled").notNull().default(false),
     otpCode: varchar("otp_code", { length: 8 }),
     otpExpiresAt: timestamp("otp_expires_at", { mode: "date" }),
@@ -75,8 +77,12 @@ export const verifyEmailTable = pgTable("verify_email", {
 
 
 // one user have multiple sessions 
-export const usersRelation = relations(users, ({ many }) => ({
-    session: many(sessionTable)
+export const usersRelation = relations(users, ({ one, many }) => ({
+    session: many(sessionTable),
+    team: one(teams, {
+        fields: [users.teamId],
+        references: [teams.id]
+    })
 }))
 
 export const sessionsRelation = relations(sessionTable, ({ one }) => ({
@@ -99,9 +105,50 @@ export type newSession = typeof sessionTable.$inferInsert;
 export type user = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
+export const workspaces = pgTable("workspaces", {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    inviteCode: varchar("invite_code", { length: 50 }).notNull().unique(),
+    inviteLink: varchar("invite_link", { length: 255 }).notNull(),
+    ownerId: integer("owner_id").references((): any => users.id, { onDelete: 'set null' }),
+    status: varchar("status", { length: 50 }).notNull().default("active"),
+    logo: varchar("logo", { length: 500 }),
+    description: text("description"),
+    password: varchar("password", { length: 255 }),
+    timeZone: varchar("time_zone", { length: 100 }).notNull().default("UTC"),
+    officeStart: varchar("office_start", { length: 50 }).notNull().default("09:00"),
+    officeEnd: varchar("office_end", { length: 50 }).notNull().default("17:00"),
+    workingDays: varchar("working_days", { length: 255 }).notNull().default("1,2,3,4,5"),
+    holidays: text("holidays").notNull().default("[]"),
+    leavePolicy: text("leave_policy").notNull().default('{"sick": 14, "casual": 10, "annual": 15}'),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const workspaceMembers = pgTable("workspace_members", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    role: varchar("role", { length: 50 }).notNull().default("employee"),
+    status: varchar("status", { length: 50 }).notNull().default("pending"),
+    joinedAt: timestamp("joined_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const emailLogs = pgTable("email_logs", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+    recipient: varchar("recipient", { length: 255 }).notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    eventType: varchar("event_type", { length: 100 }).notNull(),
+    status: varchar("status", { length: 50 }).notNull().default("sent"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
 
 export const departments = pgTable("departments", {
     id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
     name: varchar("name", { length: 255 }).notNull().unique(),
     description: text("description"),
     managerId: integer("manager_id"),
@@ -109,13 +156,14 @@ export const departments = pgTable("departments", {
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
 
-
 export const projects = pgTable("projects", {
     id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     departmentId: integer("department_id").references(() => departments.id, { onDelete: 'set null' }),
     status: varchar("status", { length: 50 }).notNull().default("planning"),
+    workTypes: text("work_types").notNull().default("task"),
     startDate: timestamp("start_date", { mode: "date" }),
     endDate: timestamp("end_date", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -138,9 +186,12 @@ export const tasks = pgTable("tasks", {
     description: text("description"),
     status: varchar("status", { length: 50 }).notNull().default("todo"),
     priority: varchar("priority", { length: 50 }).notNull().default("medium"),
-    assigneeId: integer("assignee_id").references(() => users.id, { onDelete: 'set null' }),
+    workType: varchar("work_type", { length: 50 }).notNull().default("task"),
+    assigneeId: integer("assignee_id").references((): any => users.id, { onDelete: 'set null' }),
     isMilestone: boolean("is_milestone").notNull().default(false),
     dueDate: timestamp("due_date", { mode: "date" }),
+    storyId: integer("story_id").references(() => stories.id, { onDelete: 'set null' }),
+    sprintId: integer("sprint_id").references(() => sprints.id, { onDelete: 'set null' }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -227,6 +278,7 @@ export const leaveRequests = pgTable("leave_requests", {
 
 export const activityLogs = pgTable("activity_logs", {
     id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
     userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
     action: varchar("action", { length: 255 }).notNull(),
     entityType: varchar("entity_type", { length: 100 }),
@@ -258,6 +310,51 @@ export const systemSettings = pgTable("system_settings", {
     workingDays: varchar("working_days", { length: 255 }).notNull().default("1,2,3,4,5"),
     holidays: text("holidays").notNull().default("[]"),
     leavePolicy: text("leave_policy").notNull().default('{"sick": 14, "casual": 10, "annual": 15}'),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const teams = pgTable("teams", {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    leaderId: integer("leader_id").references((): any => users.id, { onDelete: 'set null' }),
+    departmentId: integer("department_id").references(() => departments.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const epics = pgTable("epics", {
+    id: serial("id").primaryKey(),
+    projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 50 }).notNull().default("planning"),
+    startDate: timestamp("start_date", { mode: "date" }),
+    endDate: timestamp("end_date", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const stories = pgTable("stories", {
+    id: serial("id").primaryKey(),
+    epicId: integer("epic_id").notNull().references(() => epics.id, { onDelete: 'cascade' }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 50 }).notNull().default("todo"),
+    points: integer("points").notNull().default(0),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const sprints = pgTable("sprints", {
+    id: serial("id").primaryKey(),
+    projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    name: varchar("name", { length: 255 }).notNull(),
+    startDate: timestamp("start_date", { mode: "date" }),
+    endDate: timestamp("end_date", { mode: "date" }),
+    status: varchar("status", { length: 50 }).notNull().default("future"), // active, completed, future
+    goal: text("goal"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
 
@@ -298,6 +395,14 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     assignee: one(users, {
         fields: [tasks.assigneeId],
         references: [users.id]
+    }),
+    story: one(stories, {
+        fields: [tasks.storyId],
+        references: [stories.id]
+    }),
+    sprint: one(sprints, {
+        fields: [tasks.sprintId],
+        references: [sprints.id]
     }),
     subtasks: many(subtasks),
     comments: many(comments),
@@ -427,3 +532,90 @@ export type NewAiRequest = typeof aiRequests.$inferInsert;
 
 export type SystemSettings = typeof systemSettings.$inferSelect;
 export type NewSystemSettings = typeof systemSettings.$inferInsert;
+
+export type Workspace = typeof workspaces.$inferSelect;
+export type NewWorkspace = typeof workspaces.$inferInsert;
+
+export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
+export type NewWorkspaceMember = typeof workspaceMembers.$inferInsert;
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type NewEmailLog = typeof emailLogs.$inferInsert;
+
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+
+export type Epic = typeof epics.$inferSelect;
+export type NewEpic = typeof epics.$inferInsert;
+
+export type Story = typeof stories.$inferSelect;
+export type NewStory = typeof stories.$inferInsert;
+
+export type Sprint = typeof sprints.$inferSelect;
+export type NewSprint = typeof sprints.$inferInsert;
+
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+    leader: one(users, {
+        fields: [teams.leaderId],
+        references: [users.id]
+    }),
+    department: one(departments, {
+        fields: [teams.departmentId],
+        references: [departments.id]
+    }),
+    members: many(users)
+}));
+
+export const epicsRelations = relations(epics, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [epics.projectId],
+        references: [projects.id]
+    }),
+    stories: many(stories)
+}));
+
+export const storiesRelations = relations(stories, ({ one, many }) => ({
+    epic: one(epics, {
+        fields: [stories.epicId],
+        references: [epics.id]
+    }),
+    tasks: many(tasks)
+}));
+
+export const sprintsRelations = relations(sprints, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [sprints.projectId],
+        references: [projects.id]
+    }),
+    tasks: many(tasks)
+}));
+
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
+    owner: one(users, {
+        fields: [workspaces.ownerId],
+        references: [users.id]
+    }),
+    members: many(workspaceMembers),
+    projects: many(projects),
+    departments: many(departments),
+    emailLogs: many(emailLogs),
+    activityLogs: many(activityLogs)
+}));
+
+export const workspaceMembersRelations = relations(workspaceMembers, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [workspaceMembers.workspaceId],
+        references: [workspaces.id]
+    }),
+    user: one(users, {
+        fields: [workspaceMembers.userId],
+        references: [users.id]
+    })
+}));
+
+export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [emailLogs.workspaceId],
+        references: [workspaces.id]
+    })
+}));

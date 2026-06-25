@@ -75,6 +75,7 @@ export class ProjectService {
         startDate?: Date;
         endDate?: Date;
         ownerId: number;
+        workTypes?: string;
     }) {
         return db.transaction(async (tx) => {
             const [project] = await tx.insert(projects).values({
@@ -83,6 +84,7 @@ export class ProjectService {
                 departmentId: data.departmentId || null,
                 startDate: data.startDate || null,
                 endDate: data.endDate || null,
+                workTypes: data.workTypes || "task",
             }).returning();
 
             await tx.insert(projectMembers).values({

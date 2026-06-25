@@ -6,7 +6,9 @@ import {
     checkIn,
     checkOut,
     getAttendanceHistory,
-    getMonthlyReport
+    getMonthlyReport,
+    generateQR,
+    verifyQR
 } from '../Services/attendanceApi';
 import {
     Clock,
@@ -20,7 +22,11 @@ import {
     FileText,
     Globe,
     CheckCircle,
-    Info
+    Info,
+    QrCode,
+    Scan,
+    Camera,
+    RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,8 +39,46 @@ const AttendancePage = () => {
     const [checkingStatus, setCheckingStatus] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
+    // Mode: 'daily' (standard buttons) or 'qr' (QR code scanner & generator)
+    const [activeMode, setActiveMode] = useState('daily');
+    const [qrToken, setQrToken] = useState('');
+    const [qrLoading, setQrLoading] = useState(false);
+    const [scannedToken, setScannedToken] = useState('');
+    const [qrSubTab, setQrSubTab] = useState('show'); // 'show' or 'scan'
+    const [timeLeft, setTimeLeft] = useState(300);
+
     // Live Clock State
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    const isQRActive = () => {
+        const hour = currentTime.getHours();
+        const minute = currentTime.getMinutes();
+        const currentTimeMinutes = hour * 60 + minute;
+        return currentTimeMinutes >= 11 * 60 && currentTimeMinutes <= 20 * 60; // 11:00 AM to 8:00 PM
+    };
+
+    // Auto-refresh countdown for QR Code
+    useEffect(() => {
+        if (!qrToken || activeMode !== 'qr') return;
+        if (!isQRActive()) return;
+        setTimeLeft(300);
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    handleGenerateQR();
+                    return 300;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [qrToken, activeMode]);
+
+    const formatTimeLeft = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
 
     // Selected Location
     const [location, setLocation] = useState('Office'); // 'Office' or 'Remote'
@@ -42,6 +86,50 @@ const AttendancePage = () => {
     // History and Monthly Report State
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
+
+    const handleGenerateQR = async () => {
+        if (!isQRActive()) {
+            toast.error('QR code generation is disabled outside 11:00 AM - 08:00 PM');
+            return;
+        }
+        setQrLoading(true);
+        try {
+            const data = await generateQR();
+            setQrToken(data.token);
+            toast.success('New check-in token generated!');
+        } catch (error) {
+            console.error('Failed to generate QR token:', error);
+            toast.error('Failed to generate check-in token');
+        } finally {
+            setQrLoading(false);
+        }
+    };
+
+    const handleVerifyQR = async () => {
+        if (!isQRActive()) {
+            toast.error('QR check-in verification is disabled outside 11:00 AM - 08:00 PM');
+            return;
+        }
+        const tokenToVerify = scannedToken || qrToken;
+        if (!tokenToVerify) {
+            toast.error('No QR token is active or scanned');
+            return;
+        }
+        setActionLoading(true);
+        try {
+            await verifyQR(tokenToVerify, 'QR Scanner Terminal');
+            toast.success('QR Attendance successfully verified! 🚀');
+            setQrToken('');
+            setScannedToken('');
+            loadTodayAndHistory();
+            loadMonthlyReport();
+        } catch (error) {
+            console.error('QR validation error:', error);
+            toast.error(error.response?.data?.message || 'QR Verification failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
     const [reportYear, setReportYear] = useState(new Date().getFullYear());
@@ -213,105 +301,313 @@ const AttendancePage = () => {
                         <p className="text-gray-600 font-medium">Log daily working hours and track monthly performance logs.</p>
                     </div>
 
-                    {/* Server Time Display */}
-                    <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-gray-150 flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-indigo-650" />
-                        <div>
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Local Desk Time</p>
-                            <p className="text-lg font-extrabold text-gray-800">
-                                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </p>
+                    <div className="flex items-center gap-3">
+                        {/* Assigned Shift Display */}
+                        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-gray-155 flex items-center gap-3">
+                            <Coffee className="w-5 h-5 text-emerald-600" />
+                            <div>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Assigned Shift</p>
+                                <p className="text-sm font-extrabold text-gray-800 capitalize">
+                                    {user?.shiftType || 'Morning'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Server Time Display */}
+                        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-gray-155 flex items-center gap-3">
+                            <Clock className="w-5 h-5 text-indigo-600" />
+                            <div>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Local Desk Time</p>
+                                <p className="text-sm font-extrabold text-gray-850">
+                                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Tab Selector */}
+                <div className="flex bg-white/60 backdrop-blur-md p-1 border border-gray-150 rounded-2xl max-w-sm shadow-sm">
+                    <button
+                        onClick={() => setActiveMode('daily')}
+                        className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            activeMode === 'daily' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'text-gray-500 hover:text-blue-650'
+                        }`}
+                    >
+                        <UserCheck className="w-4 h-4 inline-block mr-1.5 align-text-bottom" />
+                        Daily Log-in
+                    </button>
+                    <button
+                        onClick={() => {
+                            setActiveMode('qr');
+                            if (!qrToken) handleGenerateQR();
+                        }}
+                        className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            activeMode === 'qr' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'text-gray-500 hover:text-blue-655'
+                        }`}
+                    >
+                        <QrCode className="w-4 h-4 inline-block mr-1.5 align-text-bottom" />
+                        QR Check-in
+                    </button>
+                </div>
+
                 {/* Main Interaction Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Clock In / Out Panel */}
-                    <div className="lg:col-span-2 bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100/50 flex flex-col justify-between relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/30 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                        
-                        <div className="relative z-10 space-y-6">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-500 uppercase tracking-wider mb-1">Log Today</h3>
-                                <p className="text-2xl font-extrabold text-gray-800">{formatDate(currentTime)}</p>
-                            </div>
+                    {activeMode === 'daily' ? (
+                        /* Clock In / Out Panel */
+                        <div className="lg:col-span-2 bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100/50 flex flex-col justify-between relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/30 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                            
+                            <div className="relative z-10 space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-500 uppercase tracking-wider mb-1">Log Today</h3>
+                                    <p className="text-2xl font-extrabold text-gray-800">{formatDate(currentTime)}</p>
+                                </div>
 
-                            {/* Location Selector (Only when checking in) */}
-                            {!todayRecord && (
-                                <div className="space-y-3">
-                                    <label className="block text-sm font-bold text-gray-700">Choose Work Location</label>
-                                    <div className="flex gap-4">
-                                        {['Office', 'Remote'].map((loc) => (
-                                            <button
-                                                key={loc}
-                                                onClick={() => setLocation(loc)}
-                                                className={`flex-1 py-3 px-4 rounded-2xl font-bold text-sm border-2 transition-all flex items-center justify-center gap-2 ${
-                                                    location === loc
-                                                        ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                                                }`}
-                                            >
-                                                <MapPin className={`w-4 h-4 ${location === loc ? 'text-blue-600' : 'text-gray-400'}`} />
-                                                {loc}
-                                            </button>
-                                        ))}
+                                {/* Location Selector (Only when checking in) */}
+                                {!todayRecord && (
+                                    <div className="space-y-3">
+                                        <label className="block text-sm font-bold text-gray-700">Choose Work Location</label>
+                                        <div className="flex gap-4">
+                                            {['Office', 'Remote'].map((loc) => (
+                                                <button
+                                                    key={loc}
+                                                    onClick={() => setLocation(loc)}
+                                                    className={`flex-1 py-3 px-4 rounded-2xl font-bold text-sm border-2 transition-all flex items-center justify-center gap-2 ${
+                                                        location === loc
+                                                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
+                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <MapPin className={`w-4 h-4 ${location === loc ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                    {loc}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* State indicators */}
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-150">
+                                        <span className="text-xxs font-extrabold uppercase text-gray-400">Checked In</span>
+                                        <p className="text-lg font-extrabold text-gray-800 mt-1">
+                                            {todayRecord ? formatTime(todayRecord.checkIn) : '--:--'}
+                                        </p>
+                                        {todayRecord?.location && (
+                                            <span className="text-xxs font-bold text-blue-600 flex items-center gap-1 mt-1">
+                                                <MapPin className="w-3 h-3" /> {todayRecord.location}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-150">
+                                        <span className="text-xxs font-extrabold uppercase text-gray-400">Checked Out</span>
+                                        <p className="text-lg font-extrabold text-gray-800 mt-1">
+                                            {todayRecord?.checkOut ? formatTime(todayRecord.checkOut) : '--:--'}
+                                        </p>
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {/* State indicators */}
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-150">
-                                    <span className="text-xxs font-extrabold uppercase text-gray-400">Checked In</span>
-                                    <p className="text-lg font-extrabold text-gray-800 mt-1">
-                                        {todayRecord ? formatTime(todayRecord.checkIn) : '--:--'}
-                                    </p>
-                                    {todayRecord?.location && (
-                                        <span className="text-xxs font-bold text-blue-600 flex items-center gap-1 mt-1">
-                                            <MapPin className="w-3 h-3" /> {todayRecord.location}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-150">
-                                    <span className="text-xxs font-extrabold uppercase text-gray-400">Checked Out</span>
-                                    <p className="text-lg font-extrabold text-gray-800 mt-1">
-                                        {todayRecord?.checkOut ? formatTime(todayRecord.checkOut) : '--:--'}
-                                    </p>
-                                </div>
+                            {/* Action buttons */}
+                            <div className="pt-6 relative z-10">
+                                {actionLoading ? (
+                                    <button className="w-full py-4 bg-gray-200 text-gray-500 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-wait" disabled>
+                                        <Clock className="w-5 h-5 animate-spin" /> Performing Action...
+                                    </button>
+                                ) : !todayRecord ? (
+                                    <button
+                                        onClick={handleCheckIn}
+                                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                                    >
+                                        <UserCheck className="w-5 h-5" />
+                                        Check In for Today
+                                    </button>
+                                ) : !todayRecord.checkOut ? (
+                                    <button
+                                        onClick={handleCheckOut}
+                                        className="w-full py-4 bg-gradient-to-r from-amber-505 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-extrabold rounded-2xl shadow-lg shadow-rose-500/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                                    >
+                                        <Coffee className="w-5 h-5" />
+                                        Check Out for Today
+                                    </button>
+                                ) : (
+                                    <div className="w-full py-4 bg-emerald-50 border-2 border-emerald-100 text-emerald-700 font-extrabold rounded-2xl flex items-center justify-center gap-2 select-none">
+                                        <CheckCircle className="w-5 h-5" />
+                                        Workday Logged Successfully!
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                        {/* Action buttons */}
-                        <div className="pt-6 relative z-10">
-                            {actionLoading ? (
-                                <button className="w-full py-4 bg-gray-200 text-gray-500 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-wait" disabled>
-                                    <Clock className="w-5 h-5 animate-spin" /> Performing Action...
-                                </button>
-                            ) : !todayRecord ? (
-                                <button
-                                    onClick={handleCheckIn}
-                                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-2xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                                >
-                                    <UserCheck className="w-5 h-5" />
-                                    Check In for Today
-                                </button>
-                            ) : !todayRecord.checkOut ? (
-                                <button
-                                    onClick={handleCheckOut}
-                                    className="w-full py-4 bg-gradient-to-r from-amber-505 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-extrabold rounded-2xl shadow-lg shadow-rose-500/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                                >
-                                    <Coffee className="w-5 h-5" />
-                                    Check Out for Today
-                                </button>
+                    ) : (
+                        /* QR Code Panel */
+                        <div className="lg:col-span-2 bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-gray-100/50 flex flex-col justify-between relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/30 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                            
+                            {!isQRActive() ? (
+                                <div className="relative z-10 space-y-6 h-full flex flex-col justify-center items-center text-center py-12">
+                                    <div className="p-4 bg-amber-50 rounded-full border border-amber-100 text-amber-600 mb-2">
+                                        <AlertCircle className="w-12 h-12" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800">QR Attendance is Offline</h3>
+                                    <p className="text-sm text-gray-500 max-w-md">
+                                        Secure QR badge check-ins and simulator scanning are restricted to official operating hours: 
+                                        <span className="block mt-1 font-bold text-blue-605">11:00 AM to 08:00 PM</span>
+                                    </p>
+                                    <div className="text-xs text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-xl border border-gray-150">
+                                        Current Time: {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="w-full py-4 bg-emerald-50 border-2 border-emerald-100 text-emerald-700 font-extrabold rounded-2xl flex items-center justify-center gap-2 select-none">
-                                    <CheckCircle className="w-5 h-5" />
-                                    Workday Logged Successfully!
+                                <div className="relative z-10 space-y-6 h-full flex flex-col justify-between">
+                                    {/* Header and Sub-tabs */}
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 gap-4">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                                <QrCode className="w-5 h-5 text-blue-600" />
+                                                QR Badge Attendance
+                                            </h3>
+                                            <p className="text-xs text-gray-500 font-medium">Generate your badge or simulate scanner logins.</p>
+                                        </div>
+                                        <div className="flex bg-gray-100 p-1 rounded-xl">
+                                            <button 
+                                                onClick={() => setQrSubTab('show')}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                                    qrSubTab === 'show' ? 'bg-white text-gray-850 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                My QR Code
+                                            </button>
+                                            <button 
+                                                onClick={() => setQrSubTab('scan')}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                                    qrSubTab === 'scan' ? 'bg-white text-gray-850 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                Scanner Simulator
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Sub-tab content */}
+                                    {qrSubTab === 'show' ? (
+                                        <div className="flex flex-col items-center py-4 space-y-4">
+                                            {qrLoading ? (
+                                                <div className="w-[180px] h-[180px] flex items-center justify-center border border-gray-200 rounded-2xl bg-gray-50">
+                                                    <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                                                </div>
+                                            ) : qrToken ? (
+                                                <div className="p-3 bg-white border border-gray-150 rounded-3xl shadow-sm flex flex-col items-center">
+                                                    <img 
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrToken)}`} 
+                                                        alt="Attendance QR Code"
+                                                        className="w-[180px] h-[180px] rounded-xl object-contain"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-[180px] h-[180px] flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50 text-center p-4">
+                                                    <QrCode className="w-8 h-8 text-gray-300 mb-2" />
+                                                    <p className="text-xxs text-gray-400 font-bold">No Active Token</p>
+                                                </div>
+                                            )}
+
+                                            {/* Expiry / Info */}
+                                            {qrToken && (
+                                                <div className="text-center space-y-1">
+                                                    <p className="text-xs font-bold text-gray-700 flex items-center gap-1 justify-center">
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                                                        Active Check-in Code
+                                                    </p>
+                                                    <p className="text-xxs text-gray-400 font-bold uppercase tracking-wider">
+                                                        Expires in: <span className="text-blue-650 font-extrabold">{formatTimeLeft(timeLeft)}</span>
+                                                    </p>
+                                                    <div className="max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap bg-gray-50 text-gray-500 text-[10px] font-mono p-1.5 rounded-lg border border-gray-150 select-all" title="Click to select token">
+                                                        {qrToken}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button 
+                                                onClick={handleGenerateQR}
+                                                disabled={qrLoading}
+                                                className="py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-650 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                Regenerate Badge
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                                            {/* Scan Camera Feed Mockup */}
+                                            <div className="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden aspect-video flex flex-col justify-center items-center text-white p-4 group">
+                                                {/* Scanner target box overlay */}
+                                                <div className="absolute inset-8 border border-white/30 rounded-xl pointer-events-none flex items-center justify-center">
+                                                    {/* Green horizontal scanner line */}
+                                                    <div className="absolute left-0 right-0 h-0.5 bg-emerald-500 shadow-md shadow-emerald-500/50 animate-bounce"></div>
+                                                </div>
+                                                
+                                                <div className="relative z-10 text-center space-y-2 pointer-events-none">
+                                                    <Camera className="w-8 h-8 text-gray-400 mx-auto animate-pulse" />
+                                                    <p className="text-xxs text-gray-400 font-bold uppercase tracking-wider">Simulated Camera Feed</p>
+                                                    <p className="text-[10px] text-emerald-400 font-mono">Ready to scan badge...</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Scanner controls */}
+                                            <div className="space-y-4 flex flex-col justify-between">
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Scanned QR Token</label>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="text"
+                                                                placeholder="Paste QR token string here..."
+                                                                value={scannedToken}
+                                                                onChange={(e) => setScannedToken(e.target.value)}
+                                                                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500 bg-white"
+                                                            />
+                                                            {qrToken && (
+                                                                <button 
+                                                                    onClick={() => setScannedToken(qrToken)}
+                                                                    className="px-2.5 py-2 bg-blue-50 border-2 border-blue-100 hover:border-blue-200 text-blue-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                                                                    title="Autofill current generated token"
+                                                                >
+                                                                    Autofill
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Scan Location</label>
+                                                        <select 
+                                                            value={location}
+                                                            onChange={(e) => setLocation(e.target.value)}
+                                                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500"
+                                                        >
+                                                            <option value="Office">Office Main Lobby</option>
+                                                            <option value="HQ Reception">HQ Reception</option>
+                                                            <option value="Engineering Block">Engineering Block</option>
+                                                            <option value="Remote">Home Office Desk</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    onClick={handleVerifyQR}
+                                                    disabled={actionLoading || (!scannedToken && !qrToken)}
+                                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-extrabold rounded-2xl shadow-lg hover:shadow-emerald-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                >
+                                                    <Scan className="w-4 h-4" />
+                                                    Submit Scanned Badge
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
-                    </div>
+                    )}
 
                     {/* Monthly Summary Stats */}
                     <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-3xl p-6 md:p-8 text-white shadow-2xl flex flex-col justify-between border border-slate-750">
