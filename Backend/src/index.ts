@@ -4,6 +4,7 @@ import cors from 'cors';
 import requestIp from 'request-ip';
 
 import userRoute from './routes/userRoute';
+import projectRoute from './routes/project.routes';
 
 import cookieParser from "cookie-parser";
 
@@ -42,6 +43,7 @@ app.get('/check', (req, res) => {
 
 
 app.use("/api/users", userRoute);
+app.use("/api/projects", projectRoute);
 
 
 

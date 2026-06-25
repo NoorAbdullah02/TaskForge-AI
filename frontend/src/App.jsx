@@ -6,6 +6,8 @@ import ProfilePage from './Pages/ProfilePage.jsx'
 import VerifyEmailToken from './Pages/VerifyEmailToken.jsx'
 import ResetPassword from './Pages/ResetPassword.jsx'
 import ForgotPassword from './Pages/ForgotPassword.jsx'
+import ProjectsPage from './Pages/ProjectsPage.jsx'
+import ProjectDetailsPage from './Pages/ProjectDetailsPage.jsx'
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx'
 import { Toaster } from 'react-hot-toast';
@@ -31,6 +33,8 @@ const App = () => {
             <Route path="/verify-email-token" element={<VerifyEmailToken />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/" element={<Dashboard />} />
             <Route path="/after-register" element={<AfterRegister />} />
             <Route path="*" element={<Navigate to="/" />} />

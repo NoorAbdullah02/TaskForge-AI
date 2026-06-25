@@ -29,14 +29,25 @@ const Header = () => {
             <div className="max-w-7xl mx-auto px-6 py-3">
                 <div className="flex justify-between items-center">
                     {/* Logo Section */}
-                    <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center gap-3 group">
-                        <div>
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                                Dashboard
-                            </h1>
-                            <p className="text-xs text-gray-500 font-medium">Control Panel</p>
-                        </div>
-                    </Link>
+                    <div className="flex items-center gap-8">
+                        <Link to={isLoggedIn ? "/" : "/"} className="flex items-center gap-3 group">
+                            <div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                                    Dashboard
+                                </h1>
+                                <p className="text-xs text-gray-500 font-medium">Control Panel</p>
+                            </div>
+                        </Link>
+
+                        {isLoggedIn && (
+                            <Link
+                                to="/projects"
+                                className="hidden sm:block text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                            >
+                                Projects
+                            </Link>
+                        )}
+                    </div>
 
                     {/* Right Section */}
                     <div className="flex items-center gap-4">
