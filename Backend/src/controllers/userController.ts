@@ -4,8 +4,8 @@ import { imagekit } from '../lib/imagekit';
 import { sendMail } from '../lib/send-email';
 import { otpTemplate } from '../emails/otpTemplate';
 import { db } from '../db/index';
-import { workspaceMembers, workspaces } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { workspaceMembers, workspaces, users, sessionTable, apiKeys, activityLogs } from '../db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 
 import { RegisterCheckValid } from '../validations/validinputs'
@@ -75,6 +75,10 @@ export const loginUser = async (req: Request, res: Response) => {
 
         if (!check) {
             return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+        if (check.role === 'banned') {
+            return res.status(403).json({ message: "Your account has been banned by platform administrators." });
         }
 
         const isPasswordValid = await bcrypt.compare(password, check.password);
@@ -426,6 +430,39 @@ export const verifyEmailToken = async (req: Request, res: Response) => {
     }
 }
 
+// Auto-verify email via link click (GET request from email button)
+export const verifyEmailViaLink = async (req: Request, res: Response) => {
+    try {
+        const { email, token } = req.query;
+
+        if (!email || !token) {
+            return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('Invalid verification link. Missing email or token.')}`);
+        }
+
+        const user = await queries.getUserByEmail(email as string);
+        if (!user) {
+            return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('User not found.')}`);
+        }
+
+        if (user.isEmailVerified) {
+            return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=already-verified&email=${encodeURIComponent(user.email)}`);
+        }
+
+        const verifyRow = await queries.findVerifyToken({ token: token as string, userId: user.id });
+        if (!verifyRow) {
+            return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('Invalid or expired verification link. Please request a new one.')}&email=${encodeURIComponent(user.email)}`);
+        }
+
+        // Token valid — confirm verification
+        await queries.confirmEmailVerification(user.id);
+
+        return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=success&email=${encodeURIComponent(user.email)}`);
+    } catch (err) {
+        console.error('Error in verifyEmailViaLink:', err);
+        return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('Something went wrong. Please try again.')}`);
+    }
+}
+
 
 export const editUserName = async (req: Request, res: Response) => {
 
@@ -684,6 +721,153 @@ export const getDepartments = async (req: Request, res: Response) => {
         return res.status(200).json(list);
     } catch (error) {
         console.error("Error in getDepartments:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const getSetupStatus = async (req: Request, res: Response) => {
+    try {
+        const allUsers = await db.select().from(users).limit(1);
+        return res.status(200).json({ firstTimeSetup: allUsers.length === 0 });
+    } catch (error) {
+        console.error("Error in getSetupStatus:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Active Sessions Management
+export const getUserSessions = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+        const list = await db.select()
+            .from(sessionTable)
+            .where(eq(sessionTable.userId, user.id))
+            .orderBy(desc(sessionTable.createdAt));
+
+        return res.status(200).json(list);
+    } catch (error) {
+        console.error("Error in getUserSessions:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const revokeSession = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const sessionId = parseInt(req.params.id, 10);
+    if (isNaN(sessionId)) return res.status(400).json({ message: "Invalid session ID" });
+
+    try {
+        const [session] = await db.select()
+            .from(sessionTable)
+            .where(and(
+                eq(sessionTable.id, sessionId),
+                eq(sessionTable.userId, user.id)
+            ));
+
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+
+        await queries.clearUserSession(sessionId);
+        return res.status(200).json({ message: "Session revoked successfully" });
+    } catch (error) {
+        console.error("Error in revokeSession:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Activity Logs Management
+export const getUserActivityLogs = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+        const logs = await db.select()
+            .from(activityLogs)
+            .where(eq(activityLogs.userId, user.id))
+            .orderBy(desc(activityLogs.createdAt))
+            .limit(100);
+
+        return res.status(200).json(logs);
+    } catch (error) {
+        console.error("Error in getUserActivityLogs:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// API Key Management
+export const getApiKeys = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+        const keys = await db.select()
+            .from(apiKeys)
+            .where(eq(apiKeys.userId, user.id))
+            .orderBy(desc(apiKeys.createdAt));
+
+        return res.status(200).json(keys);
+    } catch (error) {
+        console.error("Error in getApiKeys:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const createApiKey = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') {
+        return res.status(400).json({ message: "API key name is required" });
+    }
+
+    try {
+        const crypto = require('crypto');
+        const rawKey = 'tf_live_' + crypto.randomBytes(24).toString('hex');
+
+        const [newKey] = await db.insert(apiKeys).values({
+            userId: user.id,
+            workspaceId: user.activeWorkspaceId || null,
+            name,
+            key: rawKey,
+            status: 'active'
+        }).returning();
+
+        return res.status(201).json(newKey);
+    } catch (error) {
+        console.error("Error in createApiKey:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export const revokeApiKey = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const keyId = parseInt(req.params.id, 10);
+    if (isNaN(keyId)) return res.status(400).json({ message: "Invalid key ID" });
+
+    try {
+        const [apiKey] = await db.select()
+            .from(apiKeys)
+            .where(and(
+                eq(apiKeys.id, keyId),
+                eq(apiKeys.userId, user.id)
+            ));
+
+        if (!apiKey) {
+            return res.status(404).json({ message: "API Key not found" });
+        }
+
+        await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
+        return res.status(200).json({ message: "API Key revoked successfully" });
+    } catch (error) {
+        console.error("Error in revokeApiKey:", error);
         return res.status(500).json({ message: "Internal Server Error" });
     }
 };

@@ -3,6 +3,8 @@ import { sprints, tasks, projects, activityLogs, users } from '../db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import { EmailTriggerService } from '../services/emailTrigger.service';
+import { isProjectManager } from '../lib/projectAuth';
+import { socketService } from '../services/socket.service';
 
 async function logActivity(userId: number | null, action: string, entityType: string, entityId: number | null, details: string, ip: string | null) {
     try {
@@ -50,13 +52,16 @@ export const getSprints = async (req: Request, res: Response) => {
 export const createSprint = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const { projectId, name, startDate, endDate, goal } = req.body;
         if (!projectId || !name) {
             return res.status(400).json({ message: "Project ID and Sprint Name are required" });
+        }
+
+        const isPM = await isProjectManager(user.id, user.role, parseInt(projectId, 10));
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
         }
 
         const [proj] = await db.select().from(projects).where(eq(projects.id, parseInt(projectId, 10)));
@@ -74,6 +79,10 @@ export const createSprint = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'CREATE', 'sprint', created.id, `Created sprint ${created.name} for project ${proj.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'sprint_updated', { action: 'created', sprintId: created.id, projectId: parseInt(projectId, 10) });
+        }
+
         return res.status(201).json(created);
     } catch (error) {
         console.error("Error in createSprint:", error);
@@ -84,15 +93,18 @@ export const createSprint = async (req: Request, res: Response) => {
 export const updateSprint = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid sprint ID" });
 
         const [sprint] = await db.select().from(sprints).where(eq(sprints.id, id));
         if (!sprint) return res.status(404).json({ message: "Sprint not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, sprint.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         const { name, startDate, endDate, goal, status } = req.body;
 
@@ -111,6 +123,10 @@ export const updateSprint = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'UPDATE', 'sprint', id, `Updated sprint ${updated.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'sprint_updated', { action: 'updated', sprintId: id, projectId: sprint.projectId });
+        }
+
         return res.status(200).json(updated);
     } catch (error) {
         console.error("Error in updateSprint:", error);
@@ -121,15 +137,18 @@ export const updateSprint = async (req: Request, res: Response) => {
 export const startSprint = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid sprint ID" });
 
         const [sprint] = await db.select().from(sprints).where(eq(sprints.id, id));
         if (!sprint) return res.status(404).json({ message: "Sprint not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, sprint.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         // Verify no other active sprint for this project
         const activeSprints = await db.select().from(sprints).where(
@@ -165,6 +184,10 @@ export const startSprint = async (req: Request, res: Response) => {
             );
         }
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'sprint_updated', { action: 'started', sprintId: id, projectId: sprint.projectId });
+        }
+
         return res.status(200).json(started);
     } catch (error) {
         console.error("Error in startSprint:", error);
@@ -175,15 +198,18 @@ export const startSprint = async (req: Request, res: Response) => {
 export const completeSprint = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid sprint ID" });
 
         const [sprint] = await db.select().from(sprints).where(eq(sprints.id, id));
         if (!sprint) return res.status(404).json({ message: "Sprint not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, sprint.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         // Update sprint status
         const [completed] = await db.update(sprints)
@@ -224,6 +250,10 @@ export const completeSprint = async (req: Request, res: Response) => {
             );
         }
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'sprint_updated', { action: 'completed', sprintId: id, projectId: sprint.projectId });
+        }
+
         return res.status(200).json({
             message: "Sprint completed successfully",
             sprint: completed,
@@ -238,15 +268,18 @@ export const completeSprint = async (req: Request, res: Response) => {
 export const deleteSprint = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid sprint ID" });
 
         const [sprint] = await db.select().from(sprints).where(eq(sprints.id, id));
         if (!sprint) return res.status(404).json({ message: "Sprint not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, sprint.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         // Move all tasks in this sprint to backlog
         await db.update(tasks).set({ sprintId: null }).where(eq(tasks.sprintId, id));
@@ -255,6 +288,10 @@ export const deleteSprint = async (req: Request, res: Response) => {
 
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'DELETE', 'sprint', id, `Deleted sprint ${sprint.name}`, ip);
+
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'sprint_updated', { action: 'deleted', sprintId: id, projectId: sprint.projectId });
+        }
 
         return res.status(200).json({ message: "Sprint deleted successfully" });
     } catch (error) {

@@ -2,6 +2,8 @@ import { db } from '../db/index';
 import { stories, epics, activityLogs, tasks } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { Request, Response } from 'express';
+import { isProjectManager } from '../lib/projectAuth';
+import { socketService } from '../services/socket.service';
 
 async function logActivity(userId: number | null, action: string, entityType: string, entityId: number | null, details: string, ip: string | null) {
     try {
@@ -64,13 +66,19 @@ export const getStories = async (req: Request, res: Response) => {
 export const createStory = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const { epicId, name, description, points, status } = req.body;
         if (!epicId || !name) {
             return res.status(400).json({ message: "Epic ID and Story Name are required" });
+        }
+
+        const [epic] = await db.select().from(epics).where(eq(epics.id, parseInt(epicId, 10)));
+        if (!epic) return res.status(404).json({ message: "Epic not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, epic.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
         }
 
         const [created] = await db.insert(stories).values({
@@ -84,6 +92,10 @@ export const createStory = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'CREATE', 'story', created.id, `Created story ${created.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'story_updated', { action: 'created', storyId: created.id, epicId: parseInt(epicId, 10) });
+        }
+
         return res.status(201).json(created);
     } catch (error) {
         console.error("Error in createStory:", error);
@@ -94,15 +106,21 @@ export const createStory = async (req: Request, res: Response) => {
 export const updateStory = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid story ID" });
 
         const [story] = await db.select().from(stories).where(eq(stories.id, id));
         if (!story) return res.status(404).json({ message: "Story not found" });
+
+        const [epic] = await db.select().from(epics).where(eq(epics.id, story.epicId));
+        if (!epic) return res.status(404).json({ message: "Epic associated with story not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, epic.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         const { name, description, points, status } = req.body;
 
@@ -120,6 +138,10 @@ export const updateStory = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'UPDATE', 'story', id, `Updated story ${updated.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'story_updated', { action: 'updated', storyId: id, epicId: story.epicId });
+        }
+
         return res.status(200).json(updated);
     } catch (error) {
         console.error("Error in updateStory:", error);
@@ -130,15 +152,21 @@ export const updateStory = async (req: Request, res: Response) => {
 export const deleteStory = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid story ID" });
 
         const [story] = await db.select().from(stories).where(eq(stories.id, id));
         if (!story) return res.status(404).json({ message: "Story not found" });
+
+        const [epic] = await db.select().from(epics).where(eq(epics.id, story.epicId));
+        if (!epic) return res.status(404).json({ message: "Epic associated with story not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, epic.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         // Unlink all tasks from this story
         await db.update(tasks).set({ storyId: null }).where(eq(tasks.storyId, id));
@@ -147,6 +175,10 @@ export const deleteStory = async (req: Request, res: Response) => {
 
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'DELETE', 'story', id, `Deleted story ${story.name}`, ip);
+
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'story_updated', { action: 'deleted', storyId: id, epicId: story.epicId });
+        }
 
         return res.status(200).json({ message: "Story deleted successfully" });
     } catch (error) {

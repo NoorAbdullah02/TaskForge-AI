@@ -2,6 +2,8 @@ import { db } from '../db/index';
 import { epics, stories, tasks, activityLogs } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { Request, Response } from 'express';
+import { isProjectManager } from '../lib/projectAuth';
+import { socketService } from '../services/socket.service';
 
 async function logActivity(userId: number | null, action: string, entityType: string, entityId: number | null, details: string, ip: string | null) {
     try {
@@ -54,13 +56,16 @@ export const getEpics = async (req: Request, res: Response) => {
 export const createEpic = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const { projectId, name, description, status, startDate, endDate } = req.body;
         if (!projectId || !name) {
             return res.status(400).json({ message: "Project ID and Epic Name are required" });
+        }
+
+        const isPM = await isProjectManager(user.id, user.role, parseInt(projectId, 10));
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
         }
 
         const [created] = await db.insert(epics).values({
@@ -75,6 +80,10 @@ export const createEpic = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'CREATE', 'epic', created.id, `Created epic ${created.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'epic_updated', { action: 'created', epicId: created.id, projectId: parseInt(projectId, 10) });
+        }
+
         return res.status(201).json(created);
     } catch (error) {
         console.error("Error in createEpic:", error);
@@ -85,15 +94,18 @@ export const createEpic = async (req: Request, res: Response) => {
 export const updateEpic = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid epic ID" });
 
         const [epic] = await db.select().from(epics).where(eq(epics.id, id));
         if (!epic) return res.status(404).json({ message: "Epic not found" });
+
+        const isPM = await isProjectManager(user.id, user.role, epic.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
 
         const { name, description, status, startDate, endDate } = req.body;
 
@@ -112,6 +124,10 @@ export const updateEpic = async (req: Request, res: Response) => {
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'UPDATE', 'epic', id, `Updated epic ${updated.name}`, ip);
 
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'epic_updated', { action: 'updated', epicId: id, projectId: epic.projectId });
+        }
+
         return res.status(200).json(updated);
     } catch (error) {
         console.error("Error in updateEpic:", error);
@@ -122,9 +138,7 @@ export const updateEpic = async (req: Request, res: Response) => {
 export const deleteEpic = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        if (!user) return res.status(401).json({ message: "Unauthorized" });
 
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: "Invalid epic ID" });
@@ -132,10 +146,19 @@ export const deleteEpic = async (req: Request, res: Response) => {
         const [epic] = await db.select().from(epics).where(eq(epics.id, id));
         if (!epic) return res.status(404).json({ message: "Epic not found" });
 
+        const isPM = await isProjectManager(user.id, user.role, epic.projectId);
+        if (!isPM) {
+            return res.status(403).json({ message: "Access denied: You are not the project manager" });
+        }
+
         await db.delete(epics).where(eq(epics.id, id));
 
         const ip = (req as any).clientIp || req.ip || null;
         await logActivity(user.id, 'DELETE', 'epic', id, `Deleted epic ${epic.name}`, ip);
+
+        if (user.activeWorkspaceId) {
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'epic_updated', { action: 'deleted', epicId: id, projectId: epic.projectId });
+        }
 
         return res.status(200).json({ message: "Epic deleted successfully" });
     } catch (error) {

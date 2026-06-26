@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../db/index';
-import { users, projects, tasks, attendance, teams, projectMembers } from '../db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { users, projects, tasks, attendance, teams, projectMembers, departments } from '../db/schema';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { ProjectService } from '../services/project.service';
 
@@ -95,13 +95,27 @@ export class ReportsController {
                 const teamId = parseInt(filters?.teamId, 10);
                 if (isNaN(teamId)) return res.status(400).json({ message: 'Invalid Team ID' });
 
-                const [team] = await db.select().from(teams).where(eq(teams.id, teamId));
+                const [team] = await db.select({
+                    id: teams.id,
+                    name: teams.name,
+                    description: teams.description,
+                    departmentName: departments.name
+                })
+                .from(teams)
+                .leftJoin(departments, eq(teams.departmentId, departments.id))
+                .where(eq(teams.id, teamId));
+
                 if (!team) return res.status(404).json({ message: 'Team not found' });
+
+                const [memberCountRes] = await db.select({ count: sql`count(*)` })
+                    .from(users)
+                    .where(eq(users.teamId, teamId));
+                const memberCount = Number(memberCountRes?.count || 0);
 
                 const summaryStats = `
                     <p>Team Name: <strong>${team.name}</strong></p>
                     <p>Department: <strong>${team.departmentName || 'General'}</strong></p>
-                    <p>Team size: <strong>${team.memberCount || 1} members</strong></p>
+                    <p>Team size: <strong>${memberCount} members</strong></p>
                     <p>This report contains performance analytics for ${team.name} team members inside the current active workspace.</p>
                 `;
 

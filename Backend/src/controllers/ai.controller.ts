@@ -7,6 +7,9 @@ import { TaskService } from '../services/task.service';
 import { eq, inArray, and, gte, count, sql, ne, desc } from 'drizzle-orm';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { MLService } from '../services/ml.service';
+import { EnterpriseAIService } from '../services/enterpriseAI.service';
+import { ProjectIntelligenceService } from '../services/projectIntelligence.service';
+
 
 
 export class AIController {
@@ -876,4 +879,143 @@ JSON structure:
             return res.status(500).json({ message: error.message || 'AI Executive Dashboard fetch failed' });
         }
     }
+
+    static async enterpriseCopilot(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { message, history } = req.body;
+            const workspaceId = user.activeWorkspaceId;
+            if (!workspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const reply = await EnterpriseAIService.askCopilot(message, history || [], user.id, user.role, workspaceId);
+            return res.status(200).json({ reply });
+        } catch (error: any) {
+            console.error('Error in enterpriseCopilot:', error);
+            return res.status(500).json({ message: error.message || 'Copilot failed' });
+        }
+    }
+
+    static async detectBurnout(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { targetUserId } = req.body;
+            const workspaceId = user.activeWorkspaceId;
+            if (!workspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const result = await EnterpriseAIService.detectBurnout(targetUserId || user.id, user.id, user.role, workspaceId);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in detectBurnout:', error);
+            return res.status(500).json({ message: error.message || 'Burnout detection failed' });
+        }
+    }
+
+    static async detectTeamBurnout(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { projectId } = req.params;
+            const workspaceId = user.activeWorkspaceId;
+            if (!workspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const teamMembers = await db.select({ userId: projectMembers.userId })
+                .from(projectMembers)
+                .where(eq(projectMembers.projectId, Number(projectId)));
+
+            const results = [];
+            for (const member of teamMembers) {
+                try {
+                    const result = await EnterpriseAIService.detectBurnout(member.userId, user.id, user.role, workspaceId);
+                    results.push(result);
+                } catch (e) {
+                    // ignore unauthorized/failures gracefully
+                }
+            }
+
+            return res.status(200).json({ teamBurnout: results });
+        } catch (error: any) {
+            console.error('Error in detectTeamBurnout:', error);
+            return res.status(500).json({ message: error.message || 'Team burnout detection failed' });
+        }
+    }
+
+    static async getHealthScore(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { type, id } = req.params;
+            const result = await EnterpriseAIService.getHealthScore(type as any, Number(id), user.id, user.role);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in getHealthScore:', error);
+            return res.status(500).json({ message: error.message || 'Health score retrieval failed' });
+        }
+    }
+
+    static async emailAssist(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { context, tone } = req.body;
+            const result = await EnterpriseAIService.generateEmailDraft(context, tone, user.id, user.role);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in emailAssist:', error);
+            return res.status(500).json({ message: error.message || 'Email assistance failed' });
+        }
+    }
+
+    static async getWeeklyReport(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const workspaceId = user.activeWorkspaceId;
+            if (!workspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const result = await EnterpriseAIService.generateWeeklyReport(user.id, user.role, workspaceId);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in getWeeklyReport:', error);
+            return res.status(500).json({ message: error.message || 'Weekly report failed' });
+        }
+    }
+
+    static async getRoleDashboard(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const workspaceId = user.activeWorkspaceId;
+            if (!workspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const result = await EnterpriseAIService.getRoleDashboard(user.id, user.role, workspaceId);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in getRoleDashboard:', error);
+            return res.status(500).json({ message: error.message || 'Role dashboard failed' });
+        }
+    }
+
+    static async smartAssign(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { taskId } = req.params;
+            const result = await ProjectIntelligenceService.getSmartAssignmentRecommendation(Number(taskId));
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error in smartAssign:', error);
+            return res.status(500).json({ message: error.message || 'Smart assignment failed' });
+        }
+    }
 }
+

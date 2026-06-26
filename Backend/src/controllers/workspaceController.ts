@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../db/index';
-import { workspaces, workspaceMembers, users, activityLogs } from '../db/schema';
+import { workspaces, workspaceMembers, users, activityLogs, projects, projectMembers } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import * as queries from '../db/queries';
@@ -349,6 +349,96 @@ export class WorkspaceController {
         }
     }
 
+    // Bulk Approve / Reject join requests
+    static async bulkApproveMembers(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const activeWorkspaceId = parseInt(req.headers['x-workspace-id'] as string, 10);
+            if (isNaN(activeWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
+
+            const { membershipIds, action } = req.body; // action: 'approve' or 'reject'
+            if (!membershipIds || !Array.isArray(membershipIds) || !action || (action !== 'approve' && action !== 'reject')) {
+                return res.status(400).json({ message: 'Invalid bulk action parameters' });
+            }
+
+            // Verify requesting user is owner or admin in this workspace
+            const [ownerMembership] = await db.select().from(workspaceMembers).where(
+                and(
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.userId, user.id)
+                )
+            );
+            if (!ownerMembership || (ownerMembership.role !== 'owner' && ownerMembership.role !== 'admin')) {
+                return res.status(403).json({ message: 'Only workspace owners or admins can approve join requests' });
+            }
+
+            const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, activeWorkspaceId));
+
+            for (const membershipId of membershipIds) {
+                // Find target membership
+                const [targetMembership] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.id, membershipId));
+                if (!targetMembership || targetMembership.workspaceId !== activeWorkspaceId) {
+                    continue; // Skip invalid request
+                }
+
+                const targetUser = await queries.findUserById(targetMembership.userId);
+
+                if (action === 'approve') {
+                    await db.update(workspaceMembers).set({
+                        status: 'active'
+                    }).where(eq(workspaceMembers.id, membershipId));
+
+                    // Log activity
+                    await db.insert(activityLogs).values({
+                        workspaceId: activeWorkspaceId,
+                        userId: user.id,
+                        action: 'APPROVE_JOIN_REQUEST',
+                        entityType: 'user',
+                        entityId: targetMembership.userId,
+                        details: `Bulk approved join request for user ID ${targetMembership.userId}`,
+                        ipAddress: (req as any).clientIp || req.ip || null
+                    });
+
+                    if (targetUser && workspace) {
+                        await EmailTriggerService.sendWorkspaceApproval(targetUser.email, targetUser.name, workspace.name, workspace.id);
+                        await socketService.sendNotification(
+                            targetUser.id,
+                            'Join Request Approved',
+                            `Your request to join "${workspace.name}" has been approved!`,
+                            'workspace_update'
+                        );
+                    }
+                } else {
+                    await db.update(workspaceMembers).set({
+                        status: 'rejected'
+                    }).where(eq(workspaceMembers.id, membershipId));
+
+                    // Log activity
+                    await db.insert(activityLogs).values({
+                        workspaceId: activeWorkspaceId,
+                        userId: user.id,
+                        action: 'REJECT_JOIN_REQUEST',
+                        entityType: 'user',
+                        entityId: targetMembership.userId,
+                        details: `Bulk rejected join request for user ID ${targetMembership.userId}`,
+                        ipAddress: (req as any).clientIp || req.ip || null
+                    });
+
+                    if (targetUser && workspace) {
+                        await EmailTriggerService.sendWorkspaceRejection(targetUser.email, targetUser.name, workspace.name, workspace.id);
+                    }
+                }
+            }
+
+            return res.status(200).json({ message: `Bulk request completed: ${membershipIds.length} requests ${action}ed.` });
+        } catch (error) {
+            console.error('Error in bulkApproveMembers:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
     // Switch Active Workspace
     static async switchActiveWorkspace(req: Request, res: Response) {
         try {
@@ -454,6 +544,60 @@ export class WorkspaceController {
         }
     }
 
+    // Get current workspace info (invite code, invite link, etc.)
+    static async getWorkspaceInfo(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const activeWorkspaceId = user.activeWorkspaceId;
+            if (!activeWorkspaceId) {
+                return res.status(400).json({ message: 'No active workspace' });
+            }
+
+            const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, activeWorkspaceId));
+            if (!workspace) {
+                return res.status(404).json({ message: 'Workspace not found' });
+            }
+
+            // Check user is owner or admin
+            const [membership] = await db.select()
+                .from(workspaceMembers)
+                .where(and(
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.userId, user.id)
+                ));
+
+            const fullUser = await queries.findUserById(user.id);
+            const isAuthorized = fullUser?.role === 'super_admin' || 
+                                 membership?.role === 'owner' || 
+                                 membership?.role === 'admin';
+
+            if (!isAuthorized) {
+                return res.status(403).json({ message: 'Only workspace owners and admins can view workspace details' });
+            }
+
+            // Count members
+            const membersList = await db.select()
+                .from(workspaceMembers)
+                .where(eq(workspaceMembers.workspaceId, activeWorkspaceId));
+
+            return res.status(200).json({
+                id: workspace.id,
+                name: workspace.name,
+                slug: workspace.slug,
+                inviteCode: workspace.inviteCode,
+                inviteLink: workspace.inviteLink,
+                status: workspace.status,
+                memberCount: membersList.length,
+                createdAt: workspace.createdAt
+            });
+        } catch (error) {
+            console.error('Error in getWorkspaceInfo:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
     // Update Workspace Settings
     static async updateSettings(req: Request, res: Response) {
         try {
@@ -547,4 +691,138 @@ export class WorkspaceController {
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }
+
+    static async getWorkspaceMembers(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const activeWorkspaceId = user.activeWorkspaceId;
+            if (!activeWorkspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            const list = await db.select({
+                id: users.id,
+                name: users.name,
+                email: users.email,
+                avatarUrl: users.avatarUrl,
+                role: workspaceMembers.role,
+                position: users.position
+            })
+            .from(workspaceMembers)
+            .innerJoin(users, eq(workspaceMembers.userId, users.id))
+            .where(
+                and(
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.status, 'active')
+                )
+            );
+
+            return res.status(200).json(list);
+        } catch (error) {
+            console.error('Error in getWorkspaceMembers:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async assignProjectManager(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            // Only workspace owners and admins can assign PMs
+            if (user.role !== 'owner' && user.role !== 'admin') {
+                return res.status(403).json({ message: 'Only workspace owners/admins can assign project managers' });
+            }
+
+            const { userId, projectId } = req.body;
+            if (!userId || !projectId) {
+                return res.status(400).json({ message: 'User ID and Project ID are required' });
+            }
+
+            const activeWorkspaceId = user.activeWorkspaceId;
+            if (!activeWorkspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            // 1. Verify project exists in this workspace
+            const [project] = await db.select()
+                .from(projects)
+                .where(and(eq(projects.id, projectId), eq(projects.workspaceId, activeWorkspaceId)));
+
+            if (!project) {
+                return res.status(404).json({ message: 'Project not found in this workspace' });
+            }
+
+            // 2. Verify target user exists and is an active member of this workspace
+            const [targetMember] = await db.select({
+                id: users.id,
+                email: users.email,
+                name: users.name
+            })
+            .from(workspaceMembers)
+            .innerJoin(users, eq(workspaceMembers.userId, users.id))
+            .where(
+                and(
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.userId, userId),
+                    eq(workspaceMembers.status, 'active')
+                )
+            );
+
+            if (!targetMember) {
+                return res.status(404).json({ message: 'User is not an active member of this workspace' });
+            }
+
+            // 3. Upsert user as project manager in projectMembers
+            const [existingProjectMember] = await db.select()
+                .from(projectMembers)
+                .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)));
+
+            if (existingProjectMember) {
+                await db.update(projectMembers)
+                    .set({ role: 'manager' })
+                    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)));
+            } else {
+                await db.insert(projectMembers)
+                    .values({
+                        projectId,
+                        userId,
+                        role: 'manager',
+                        joinedAt: new Date()
+                    });
+            }
+
+            // 4. Send Email
+            await EmailTriggerService.sendProjectManagerAssigned(
+                targetMember.email,
+                targetMember.name,
+                project.name,
+                activeWorkspaceId
+            );
+
+            // 5. Realtime & Dashboard Notification
+            await socketService.sendNotification(
+                userId,
+                'Project Manager Appointment',
+                `You have been appointed as the Project Manager for project "${project.name}" in workspace "${user.workspaceName || 'your organization'}".`,
+                'pm_assigned'
+            );
+
+            // 6. Log activity
+            await db.insert(activityLogs).values({
+                workspaceId: activeWorkspaceId,
+                userId: user.id,
+                action: 'ASSIGN_PM',
+                entityType: 'project',
+                entityId: projectId,
+                details: `Workspace owner assigned ${targetMember.name} as PM for project ${project.name}`,
+                ipAddress: (req as any).clientIp || req.ip || null,
+                createdAt: new Date()
+            });
+
+            return res.status(200).json({ message: 'Project Manager assigned successfully' });
+        } catch (error) {
+            console.error('Error in assignProjectManager:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
 }
+

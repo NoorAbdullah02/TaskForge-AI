@@ -6,6 +6,9 @@ import { eq } from 'drizzle-orm';
 import { subtasks, comments, attachments, users } from '../db/schema';
 import { imagekit } from '../lib/imagekit';
 import { EmailTriggerService } from '../services/emailTrigger.service';
+import { isProjectManager } from '../lib/projectAuth';
+import { socketService } from '../services/socket.service';
+import { ProjectIntelligenceService } from '../services/projectIntelligence.service';
 
 
 export class TaskController {
@@ -60,7 +63,7 @@ export class TaskController {
         }
     }
 
-    // Create a new task
+    // Create a new task (PM/Owner only)
     static async createTask(req: Request, res: Response) {
         try {
             const user = (req as any).user;
@@ -70,12 +73,16 @@ export class TaskController {
             if (!projectId) return res.status(400).json({ message: 'Project ID is required' });
             if (!title || title.trim().length === 0) return res.status(400).json({ message: 'Title is required' });
 
-            // Security: Check project membership
-            const isMember = await TaskController.verifyMembership(user.id, parseInt(projectId, 10));
-            if (!isMember) return res.status(403).json({ message: 'Access denied: Not a member of this project' });
+            const parsedProjectId = parseInt(projectId, 10);
+
+            // Security: Only PMs/Owners can create tasks
+            const isPM = await isProjectManager(user.id, user.role, parsedProjectId);
+            if (!isPM) {
+                return res.status(403).json({ message: 'Access denied: Only project managers or workspace owners can create tasks' });
+            }
 
             const task = await TaskService.createTask({
-                projectId: parseInt(projectId, 10),
+                projectId: parsedProjectId,
                 title: title.trim(),
                 description: description || null,
                 status: status || 'todo',
@@ -100,6 +107,11 @@ export class TaskController {
                 }
             }
 
+            // Socket broadcast
+            if (user.activeWorkspaceId) {
+                socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'created', taskId: task.id, projectId: parsedProjectId });
+            }
+
             return res.status(201).json({ message: 'Task created successfully', task });
         } catch (error) {
             console.error('Error in createTask:', error);
@@ -107,7 +119,7 @@ export class TaskController {
         }
     }
 
-    // Update task
+    // Update task (with RBAC: employees can only update status on their assigned tasks)
     static async updateTask(req: Request, res: Response) {
         try {
             const user = (req as any).user;
@@ -123,7 +135,30 @@ export class TaskController {
             const isMember = await TaskController.verifyMembership(user.id, details.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
+            const isPM = await isProjectManager(user.id, user.role, details.projectId);
+
             const { title, description, status, priority, assigneeId, isMilestone, dueDate } = req.body;
+
+            // RBAC: If not PM/Owner, only allow status updates on tasks assigned to them
+            if (!isPM) {
+                // Employee can only update status of their own assigned tasks
+                if (details.assigneeId !== user.id) {
+                    return res.status(403).json({ message: 'Access denied: You can only update tasks assigned to you' });
+                }
+                // Only allow status field
+                if (title || description !== undefined || priority || assigneeId !== undefined || isMilestone !== undefined || dueDate) {
+                    return res.status(403).json({ message: 'Access denied: Employees can only update the status of their assigned tasks' });
+                }
+                // Cannot transition out of review/done/approved/rejected without PM approval
+                if (details.status === 'in_review' || details.status === 'review' || details.status === 'approved' || details.status === 'done' || details.status === 'rejected') {
+                    return res.status(403).json({ message: 'Access denied: Only project managers can transition tasks from this status' });
+                }
+                // Cannot set status to approved, rejected, or done directly
+                if (status === 'approved' || status === 'rejected' || status === 'done') {
+                    return res.status(403).json({ message: 'Access denied: Only project managers can approve/complete tasks' });
+                }
+            }
+
             const updated = await TaskService.updateTask(taskId, {
                 title: title ? title.trim() : undefined,
                 description: description !== undefined ? description : undefined,
@@ -153,7 +188,8 @@ export class TaskController {
                 
                 // If status is changed to completed (done) and it is milestone
                 if (status === 'done' && details.status !== 'done' && updated.isMilestone) {
-                    const [ownerUser] = await db.select().from(users).where(eq(users.id, projectDetails?.ownerId || 0));
+                    const ownerMember = projectDetails?.members?.find((m: any) => m.role === 'owner');
+                    const [ownerUser] = ownerMember ? await db.select().from(users).where(eq(users.id, ownerMember.id)) : [null];
                     if (ownerUser) {
                         await EmailTriggerService.sendMilestoneAchieved(
                             ownerUser.email,
@@ -164,6 +200,9 @@ export class TaskController {
                         );
                     }
                 }
+
+                // Socket broadcast
+                socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'updated', taskId: updated.id, projectId: updated.projectId });
             }
 
             return res.status(200).json({ message: 'Task updated successfully', task: updated });
@@ -173,7 +212,7 @@ export class TaskController {
         }
     }
 
-    // Delete task
+    // Delete task (PM/Owner only)
     static async deleteTask(req: Request, res: Response) {
         try {
             const user = (req as any).user;
@@ -185,14 +224,135 @@ export class TaskController {
             const details = await TaskService.getTaskDetails(taskId);
             if (!details) return res.status(404).json({ message: 'Task not found' });
 
-            // Security: Check project membership
-            const isMember = await TaskController.verifyMembership(user.id, details.projectId);
-            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+            // Security: Only PMs/Owners can delete tasks
+            const isPM = await isProjectManager(user.id, user.role, details.projectId);
+            if (!isPM) {
+                return res.status(403).json({ message: 'Access denied: Only project managers or workspace owners can delete tasks' });
+            }
 
             await TaskService.deleteTask(taskId);
+
+            // Socket broadcast
+            if (user.activeWorkspaceId) {
+                socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'deleted', taskId, projectId: details.projectId });
+            }
+
             return res.status(200).json({ message: 'Task deleted successfully' });
         } catch (error) {
             console.error('Error in deleteTask:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Approve task (PM/Owner only)
+    static async approveTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const taskId = parseInt(req.params.id, 10);
+            if (isNaN(taskId)) return res.status(400).json({ message: 'Invalid Task ID' });
+
+            const details = await TaskService.getTaskDetails(taskId);
+            if (!details) return res.status(404).json({ message: 'Task not found' });
+
+            // Only PM/Owner can approve
+            const isPM = await isProjectManager(user.id, user.role, details.projectId);
+            if (!isPM) {
+                return res.status(403).json({ message: 'Access denied: Only project managers can approve tasks' });
+            }
+
+            if (details.status !== 'in_review' && details.status !== 'review') {
+                return res.status(400).json({ message: 'Only tasks with status "in_review" or "review" can be approved' });
+            }
+
+
+            const updated = await TaskService.approveTask(taskId);
+
+            // Notify assignee
+            if (updated.assigneeId && user.activeWorkspaceId) {
+                const [assignee] = await db.select().from(users).where(eq(users.id, updated.assigneeId));
+                const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
+                if (assignee) {
+                    await EmailTriggerService.sendTaskApproved(
+                        assignee.email,
+                        assignee.name,
+                        updated.title,
+                        projectDetails?.name || 'Project',
+                        user.name,
+                        user.activeWorkspaceId
+                    );
+                    await socketService.sendNotification(
+                        updated.assigneeId,
+                        'Task Approved',
+                        `Your task "${updated.title}" has been approved by ${user.name}.`,
+                        'task_approved'
+                    );
+                }
+                socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'approved', taskId: updated.id, projectId: updated.projectId });
+            }
+
+            return res.status(200).json({ message: 'Task approved successfully', task: updated });
+        } catch (error) {
+            console.error('Error in approveTask:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // Reject task (PM/Owner only)
+    static async rejectTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const taskId = parseInt(req.params.id, 10);
+            if (isNaN(taskId)) return res.status(400).json({ message: 'Invalid Task ID' });
+
+            const { reason } = req.body;
+
+            const details = await TaskService.getTaskDetails(taskId);
+            if (!details) return res.status(404).json({ message: 'Task not found' });
+
+            // Only PM/Owner can reject
+            const isPM = await isProjectManager(user.id, user.role, details.projectId);
+            if (!isPM) {
+                return res.status(403).json({ message: 'Access denied: Only project managers can reject tasks' });
+            }
+
+            if (details.status !== 'in_review' && details.status !== 'review') {
+                return res.status(400).json({ message: 'Only tasks with status "in_review" or "review" can be rejected' });
+            }
+
+
+            const updated = await TaskService.rejectTask(taskId);
+
+            // Notify assignee
+            if (updated.assigneeId && user.activeWorkspaceId) {
+                const [assignee] = await db.select().from(users).where(eq(users.id, updated.assigneeId));
+                const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
+                if (assignee) {
+                    await EmailTriggerService.sendTaskRejected(
+                        assignee.email,
+                        assignee.name,
+                        updated.title,
+                        reason || 'No reason provided',
+                        projectDetails?.name || 'Project',
+                        user.name,
+                        user.activeWorkspaceId
+                    );
+                    await socketService.sendNotification(
+                        updated.assigneeId,
+                        'Task Rejected',
+                        `Your task "${updated.title}" has been rejected by ${user.name}. Reason: ${reason || 'No reason provided'}`,
+                        'task_rejected'
+                    );
+                }
+                socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'rejected', taskId: updated.id, projectId: updated.projectId });
+            }
+
+            return res.status(200).json({ message: 'Task rejected', task: updated });
+        } catch (error) {
+            console.error('Error in rejectTask:', error);
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }
@@ -387,6 +547,374 @@ export class TaskController {
 
             await TaskService.deleteAttachment(attachmentId);
             return res.status(200).json({ message: 'Attachment deleted successfully' });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // LOCK & UNLOCK
+    static async lockTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isPM && task.assigneeId !== user.id) {
+                return res.status(403).json({ message: 'Access denied: Only project managers or assignee can lock a task' });
+            }
+
+            const updated = await TaskService.lockTask(taskId, user.id);
+            
+            // Notify assignee
+            if (task.assigneeId && task.assigneeId !== user.id) {
+                await socketService.sendNotification(task.assigneeId, 'Task Locked', `Task "${task.title}" has been locked by ${user.name}.`, 'task_locked');
+                const [assigneeUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
+                if (assigneeUser) {
+                    await EmailTriggerService.sendTaskLockedAlert(assigneeUser.email, assigneeUser.name, task.title, user.name, user.activeWorkspaceId || 0);
+                }
+            }
+
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'locked', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Task locked successfully', task: updated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async unlockTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isPM && task.lockedById !== user.id) {
+                return res.status(403).json({ message: 'Access denied: Only project managers or the locker can unlock a task' });
+            }
+
+            const updated = await TaskService.unlockTask(taskId, user.id);
+
+            // Notify assignee
+            if (task.assigneeId && task.assigneeId !== user.id) {
+                await socketService.sendNotification(task.assigneeId, 'Task Unlocked', `Task "${task.title}" has been unlocked by ${user.name}.`, 'task_unlocked');
+                const [assigneeUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
+                if (assigneeUser) {
+                    await EmailTriggerService.sendTaskUnlockedAlert(assigneeUser.email, assigneeUser.name, task.title, user.name, user.activeWorkspaceId || 0);
+                }
+            }
+
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'unlocked', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Task unlocked successfully', task: updated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // WATCHERS
+    static async watchTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+            const { role } = req.body;
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const watcher = await TaskService.watchTask(taskId, user.id, role || 'watcher');
+            return res.status(200).json({ message: 'Task watched successfully', watcher });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async unwatchTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            await TaskService.unwatchTask(taskId, user.id);
+            return res.status(200).json({ message: 'Task unwatched successfully' });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // UNDO & REDO
+    static async undoChange(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+
+            const updated = await TaskService.undoChange(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'updated', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Undo successful', task: updated });
+        } catch (error: any) {
+            return res.status(400).json({ message: error.message || 'Undo failed' });
+        }
+    }
+
+    static async redoChange(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+
+            const updated = await TaskService.redoChange(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'updated', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Redo successful', task: updated });
+        } catch (error: any) {
+            return res.status(400).json({ message: error.message || 'Redo failed' });
+        }
+    }
+
+    // ARCHIVE & RESTORE
+    static async archiveTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isPM) return res.status(403).json({ message: 'Access denied: Only project managers can archive tasks' });
+
+            const archived = await TaskService.archiveTask(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'archived', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Task archived successfully', task: archived });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async restoreTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isPM) return res.status(403).json({ message: 'Access denied: Only project managers can restore tasks' });
+
+            const restored = await TaskService.restoreTask(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'restored', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Task restored successfully', task: restored });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // DUPLICATE & CLONE
+    static async duplicateTask(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+
+            const duplicated = await TaskService.duplicateTask(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'created', taskId: duplicated.id, projectId: task.projectId });
+            return res.status(201).json({ message: 'Task duplicated successfully', task: duplicated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // TIMERS & POMODORO
+    static async startTimer(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isAssignee = task.assigneeId === user.id;
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isAssignee && !isPM) return res.status(403).json({ message: 'Access denied: Only assignee can track time' });
+
+            const updated = await TaskService.startTimer(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'timer_started', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Timer started', task: updated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async stopTimer(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isAssignee = task.assigneeId === user.id;
+            const isPM = await isProjectManager(user.id, user.role, task.projectId);
+            if (!isAssignee && !isPM) return res.status(403).json({ message: 'Access denied' });
+
+            const updated = await TaskService.stopTimer(taskId, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'timer_stopped', taskId, projectId: task.projectId });
+            return res.status(200).json({ message: 'Timer stopped', task: updated });
+        } catch (error: any) {
+            return res.status(400).json({ message: error.message || 'Failed to stop timer' });
+        }
+    }
+
+    static async startPomodoro(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const updated = await TaskService.startPomodoro(taskId, user.id);
+            return res.status(200).json({ message: 'Pomodoro focus timer started', task: updated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async stopPomodoro(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const task = await TaskService.getTaskDetails(taskId);
+            if (!task) return res.status(404).json({ message: 'Task not found' });
+
+            const updated = await TaskService.stopPomodoro(taskId, user.id);
+
+            // Send notification
+            await socketService.sendNotification(user.id, '🍅 Pomodoro Finished', `Pomodoro session finished for task "${task.title}".`, 'pomodoro_complete');
+            await EmailTriggerService.sendPomodoroCompletedAlert(user.email, user.name, task.title, updated.pomodoroCount, user.activeWorkspaceId || 0);
+
+            return res.status(200).json({ message: 'Pomodoro focus timer finished', task: updated });
+        } catch (error: any) {
+            return res.status(400).json({ message: error.message || 'Failed to stop Pomodoro' });
+        }
+    }
+
+    // BULK OPERATIONS
+    static async bulkUpdate(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const { taskIds, updates } = req.body;
+
+            if (!Array.isArray(taskIds) || taskIds.length === 0) {
+                return res.status(400).json({ message: 'taskIds array is required' });
+            }
+
+            const updated = await TaskService.bulkUpdate(taskIds, updates, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'bulk_updated', taskIds });
+            return res.status(200).json({ message: 'Bulk update successful', tasks: updated });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async bulkDelete(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const { taskIds } = req.body;
+
+            if (!Array.isArray(taskIds) || taskIds.length === 0) {
+                return res.status(400).json({ message: 'taskIds array is required' });
+            }
+
+            await TaskService.bulkDelete(taskIds, user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'bulk_deleted', taskIds });
+            return res.status(200).json({ message: 'Bulk delete successful' });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // TEMPLATES
+    static async createTemplate(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const { title, description, priority, workType, estimatedHours, labels, category } = req.body;
+
+            if (!user.activeWorkspaceId) return res.status(400).json({ message: 'Active workspace is required' });
+            if (!title) return res.status(400).json({ message: 'Template title is required' });
+
+            const tpl = await TaskService.createTemplate(user.activeWorkspaceId, {
+                title, description, priority, workType, estimatedHours, labels, category
+            });
+
+            return res.status(201).json({ message: 'Task template created successfully', template: tpl });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async getTemplates(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user.activeWorkspaceId) return res.status(400).json({ message: 'Active workspace is required' });
+
+            const templates = await TaskService.getTemplates(user.activeWorkspaceId);
+            return res.status(200).json(templates);
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    static async applyTemplate(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const templateId = parseInt(req.params.templateId, 10);
+            const { projectId } = req.body;
+
+            if (!projectId) return res.status(400).json({ message: 'Project ID is required' });
+
+            const isPM = await isProjectManager(user.id, user.role, parseInt(projectId, 10));
+            if (!isPM) return res.status(403).json({ message: 'Access denied' });
+
+            const task = await TaskService.applyTemplate(templateId, parseInt(projectId, 10), user.id);
+            socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'created', taskId: task.id, projectId });
+            return res.status(201).json({ message: 'Template applied successfully', task });
+        } catch (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // AI & RISK PREDICTIONS
+    static async getTaskAIScores(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            const taskId = parseInt(req.params.id, 10);
+
+            const details = await TaskService.getTaskDetails(taskId);
+            if (!details) return res.status(404).json({ message: 'Task not found' });
+
+            const isMember = await TaskController.verifyMembership(user.id, details.projectId);
+            if (!isMember) return res.status(403).json({ message: 'Access denied' });
+
+            const scores = await ProjectIntelligenceService.calculateTaskRiskAndAIScores(taskId);
+            return res.status(200).json(scores);
         } catch (error) {
             return res.status(500).json({ message: 'Internal Server Error' });
         }

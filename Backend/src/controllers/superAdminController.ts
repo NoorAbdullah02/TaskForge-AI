@@ -218,4 +218,75 @@ export class SuperAdminController {
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }
+
+    // 8. Toggle ban user
+    static async toggleBanUser(req: Request, res: Response) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            if (isNaN(userId)) return res.status(400).json({ message: 'Invalid User ID' });
+
+            const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
+            if (!userRecord) return res.status(404).json({ message: 'User not found' });
+
+            if (userRecord.role === 'super_admin') {
+                return res.status(400).json({ message: 'Cannot ban a super admin' });
+            }
+
+            const nextRole = userRecord.role === 'banned' ? 'employee' : 'banned';
+            await db.update(users).set({ role: nextRole }).where(eq(users.id, userId));
+
+            // Log activity
+            const adminUser = (req as any).user;
+            await db.insert(activityLogs).values({
+                userId: adminUser?.id || null,
+                action: nextRole === 'banned' ? 'BAN_USER' : 'UNBAN_USER',
+                entityType: 'user',
+                entityId: userId,
+                details: `User "${userRecord.name}" (${userRecord.email}) was ${nextRole === 'banned' ? 'banned' : 'unbanned'} by Super Admin`,
+                ipAddress: (req as any).clientIp || req.ip || null
+            });
+
+            return res.status(200).json({ message: `User status updated to ${nextRole}` });
+        } catch (error) {
+            console.error('Error toggling ban user:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // 9. Reset workspace
+    static async resetWorkspace(req: Request, res: Response) {
+        try {
+            const workspaceId = parseInt(req.params.id, 10);
+            if (isNaN(workspaceId)) return res.status(400).json({ message: 'Invalid Workspace ID' });
+
+            const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+            if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+            // Fetch all projects in workspace
+            const workspaceProjects = await db.select().from(projects).where(eq(projects.workspaceId, workspaceId));
+            const projectIds = workspaceProjects.map(p => p.id);
+
+            if (projectIds.length > 0) {
+                // Delete projects (cascade delete will clean up tasks, subtasks, comments, attachments)
+                await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
+            }
+
+            // Log activity
+            const adminUser = (req as any).user;
+            await db.insert(activityLogs).values({
+                workspaceId,
+                userId: adminUser?.id || null,
+                action: 'RESET_WORKSPACE',
+                entityType: 'workspace',
+                entityId: workspaceId,
+                details: `Workspace "${workspace.name}" was reset by Super Admin (deleted ${projectIds.length} projects and all associated tasks)`,
+                ipAddress: (req as any).clientIp || req.ip || null
+            });
+
+            return res.status(200).json({ message: 'Workspace successfully reset. All projects and tasks wiped.' });
+        } catch (error) {
+            console.error('Error resetting workspace:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
 }
