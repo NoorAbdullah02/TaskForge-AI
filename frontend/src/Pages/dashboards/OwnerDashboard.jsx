@@ -10,14 +10,14 @@ import {
   Users, Briefcase, CheckSquare, CalendarOff, TrendingUp, Activity,
   Building2, RefreshCw, Crown, BarChart3, Clock, Layers,
 } from 'lucide-react';
-import ThreeBackground from '../../Components/ThreeBackground';
-import GlassCard from '../../Components/GlassCard';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, CalendarHeatmap, StatRing, SparkBadge } from '../../Components/DashboardUtils';
+import { ChartTooltip, CalendarHeatmap, StatRing } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import { getExecutiveStats } from '../../Services/aiApi';
 import toast from 'react-hot-toast';
+import DSAppShell from '../../design-system/DSAppShell.jsx';
+import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PROJECT_STATUS_COLORS = { planning:'#94a3b8', active:'#8b5cf6', in_progress:'#a855f7', on_hold:'#f59e0b', completed:'#10b981' };
@@ -98,23 +98,22 @@ export default function OwnerDashboard({ user }) {
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-violet-500 border-r-violet-400/40 border-b-transparent border-l-transparent animate-spin" />
+    <DSAppShell backgroundMode="subtle">
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-violet-500 border-r-violet-400/40 border-b-transparent border-l-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-black text-violet-400 tracking-[0.35em] uppercase">Loading Workspace Overview</span>
         </div>
-        <span className="text-xs font-black text-violet-400 tracking-[0.35em] uppercase">Loading Workspace Overview</span>
       </div>
-    </div>
+    </DSAppShell>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden">
-      <ThreeBackground primaryColor="#8b5cf6" />
-      <div className="fixed inset-0 bg-gradient-to-br from-violet-950/15 via-slate-950 to-purple-950/10 pointer-events-none z-0" />
-
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+    <DSAppShell backgroundMode="subtle">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -136,8 +135,12 @@ export default function OwnerDashboard({ user }) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <SparkBadge label={`${projects.length} Active Projects`} color="#8b5cf6" />
-            <SparkBadge label={`${stats?.leaves?.pending || 0} Pending Leaves`} color="#f59e0b" pulse={stats?.leaves?.pending > 0} />
+            <Badge status="info">
+              {projects.length} Active Projects
+            </Badge>
+            <Badge status="warning" pulse={stats?.leaves?.pending > 0}>
+              {stats?.leaves?.pending || 0} Pending Leaves
+            </Badge>
             <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <RefreshCw className="h-4 w-4 text-slate-400" />
             </button>
@@ -152,7 +155,14 @@ export default function OwnerDashboard({ user }) {
             { icon: CalendarOff, label: 'Pending Leaves',    value: stats?.leaves?.pending || 0,            color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20' },
             { icon: Clock,       label: 'Attendance Rate',   value: stats?.attendance?.rate || 0, suffix:'%', color: 'text-fuchsia-400',bg: 'bg-fuchsia-500/10',border: 'border-fuchsia-500/20' },
           ].map((s, i) => (
-            <GlassCard key={i} delay={i * 0.08} className={`p-5 border ${s.border}`} hover>
+            <GlassCard
+              key={i}
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className={`p-5 border ${s.border}`}
+              hoverEffect={true}
+            >
               <div className={`p-2 rounded-xl ${s.bg} w-fit mb-3`}>
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
@@ -164,7 +174,12 @@ export default function OwnerDashboard({ user }) {
 
         {/* ── Row 1: Project Status + Sprint Velocity ─────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.3} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Project Status Distribution</h3>
@@ -203,7 +218,12 @@ export default function OwnerDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.35} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Sprint Velocity</h3>
@@ -226,7 +246,12 @@ export default function OwnerDashboard({ user }) {
 
         {/* ── Row 2: Resource Usage + Task Priority ────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.4} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Resource Utilization</h3>
@@ -261,7 +286,12 @@ export default function OwnerDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.45} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Task Priority Breakdown</h3>
@@ -285,7 +315,12 @@ export default function OwnerDashboard({ user }) {
 
         {/* ── Row 3: Attendance Heatmap + Leave Analytics ─────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.5} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Team Attendance Heatmap</h3>
             <p className="text-xs text-slate-500 mb-5">Check-in density — last 12 weeks</p>
             <div className="overflow-x-auto pb-1">
@@ -300,7 +335,12 @@ export default function OwnerDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.55} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Leave Analytics</h3>
@@ -334,7 +374,12 @@ export default function OwnerDashboard({ user }) {
 
         {/* ── Row 4: Member Productivity + Recent Activity ─────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <GlassCard delay={0.6} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Member Productivity</h3>
@@ -353,7 +398,12 @@ export default function OwnerDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.65} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Workspace Activity</h3>
@@ -388,9 +438,12 @@ export default function OwnerDashboard({ user }) {
                     </p>
                     <p className="text-[10px] text-slate-600">{new Date(log.createdAt).toLocaleString()}</p>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20 capitalize shrink-0">
-                    {log.entityType}
-                  </span>
+                    <Badge
+                      status={log.entityType === 'member' ? 'warning' : log.entityType === 'project' ? 'success' : 'info'}
+                      className="text-[10px] capitalize shrink-0 font-bold px-1.5 py-0.5 rounded"
+                    >
+                      {log.entityType}
+                    </Badge>
                 </motion.div>
               ))}
             </div>
@@ -398,6 +451,6 @@ export default function OwnerDashboard({ user }) {
         </div>
 
       </div>
-    </div>
+    </DSAppShell>
   );
 }

@@ -15,10 +15,11 @@ export default defineConfig({
           'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
           'vendor-animation': ['framer-motion', 'gsap'],
           'vendor-charts': ['recharts'],
-          'vendor-utils': ['axios', 'zustand']
+          'vendor-utils': ['axios', 'zustand', 'socket.io-client']
         }
       }
     },
-    chunkSizeWarningLimit: 1000
+    // three.js is a known large dependency; suppress warning for it
+    chunkSizeWarningLimit: 1500
   }
 })

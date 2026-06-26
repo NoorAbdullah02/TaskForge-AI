@@ -48,6 +48,13 @@ export const regenerateInviteCode = async (workspaceId) => {
     return response.data;
 };
 
+export const inviteWorkspaceMembers = async (workspaceId, payload) => {
+    const response = await api.post('/workspaces/invite', payload, {
+        headers: { 'x-workspace-id': workspaceId }
+    });
+    return response.data;
+};
+
 export const getWorkspaceMembers = async () => {
     const response = await api.get('/workspaces/members');
     return response.data;

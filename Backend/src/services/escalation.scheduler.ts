@@ -7,6 +7,7 @@ import { socketService } from './socket.service';
 import { generateJSONResponse, generateTextResponse } from '../lib/gemini';
 import { EmailTriggerService } from './emailTrigger.service';
 import { TaskService } from './task.service';
+import { NotificationService } from './notification.service';
 
 
 
@@ -209,14 +210,17 @@ async function triggerEscalation(userId: number, email: string, subject: string,
 
     // 2. In-app and socket notification
     try {
-        await socketService.sendNotification(
+        await NotificationService.dispatch({
+            event: 'task.deadline',
             userId,
-            subject,
-            content,
-            `escalation`
-        );
+            entityType: 'task',
+            entityId: taskId,
+            title: subject,
+            message: content,
+            skipEmail: true,
+        });
     } catch (err) {
-        console.error(`Failed to send socket notification to user ${userId}:`, err);
+        console.error(`Failed to dispatch notification to user ${userId}:`, err);
     }
 
     // 3. Update task escalation level and date in DB
@@ -376,11 +380,17 @@ export async function checkRecurringTasks() {
     console.log('⏰ Running check for recurring tasks...');
     try {
         const now = new Date();
-        const recurringTasksList = await db.select()
+        const recurringTasksList = await db.select({
+            task: tasks,
+            workspaceId: projects.workspaceId
+        })
             .from(tasks)
+            .leftJoin(projects, eq(tasks.projectId, projects.id))
             .where(eq(tasks.isRecurring, true));
 
-        for (const task of recurringTasksList) {
+        for (const row of recurringTasksList) {
+            const task = row.task;
+            const workspaceId = row.workspaceId;
             let nextDate = task.nextRecurrenceAt;
 
             // If nextRecurrenceAt is null, initialize it
@@ -412,12 +422,17 @@ export async function checkRecurringTasks() {
 
                 // Send notification to assignee/watchers if they exist
                 if (task.assigneeId) {
-                    await socketService.sendNotification(
-                        task.assigneeId,
-                        'Recurring Task Spawned',
-                        `Task "${task.title}" has recurred. New task: "${dup.title}".`,
-                        'task_created'
-                    );
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: task.assigneeId,
+                        workspaceId: workspaceId,
+                        entityType: 'task',
+                        entityId: dup.id,
+                        title: 'Recurring Task Spawned',
+                        message: `Task "${task.title}" has recurred. New task: "${dup.title}".`,
+                        link: `/tasks/${dup.id}`,
+                        skipEmail: true,
+                    });
                 }
             }
         }

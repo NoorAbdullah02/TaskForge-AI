@@ -11,14 +11,14 @@ import {
   Briefcase, CheckSquare, Users, AlertTriangle, TrendingDown, TrendingUp,
   RefreshCw, BarChart3, Target, Flame, Shield, Activity, Zap, Timer,
 } from 'lucide-react';
-import ThreeBackground from '../../Components/ThreeBackground';
-import GlassCard from '../../Components/GlassCard';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, StatRing, SparkBadge } from '../../Components/DashboardUtils';
+import { ChartTooltip, StatRing } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import { getExecutiveStats } from '../../Services/aiApi';
 import toast from 'react-hot-toast';
+import DSAppShell from '../../design-system/DSAppShell.jsx';
+import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const TASK_COLORS  = ['#94a3b8','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
 const RISK_COLORS  = { low: '#10b981', medium: '#f59e0b', high: '#ef4444' };
@@ -120,23 +120,22 @@ export default function PMDashboard({ user }) {
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-500/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 border-r-blue-400/40 border-b-transparent border-l-transparent animate-spin" />
+    <DSAppShell backgroundMode="subtle">
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-blue-500/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 border-r-blue-400/40 border-b-transparent border-l-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-black text-blue-400 tracking-[0.35em] uppercase">Loading Project Intelligence</span>
         </div>
-        <span className="text-xs font-black text-blue-400 tracking-[0.35em] uppercase">Loading Project Intelligence</span>
       </div>
-    </div>
+    </DSAppShell>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden">
-      <ThreeBackground primaryColor="#3b82f6" />
-      <div className="fixed inset-0 bg-gradient-to-br from-blue-950/15 via-slate-950 to-indigo-950/10 pointer-events-none z-0" />
-
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+    <DSAppShell backgroundMode="subtle">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -158,8 +157,12 @@ export default function PMDashboard({ user }) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <SparkBadge label={`${projects.length} Projects`} color="#3b82f6" />
-            <SparkBadge label={`${taskStatusPie.find(t => t.name === 'blocked')?.value || 0} Blocked`} color="#ef4444" pulse />
+            <Badge status="info">
+              {projects.length} Projects
+            </Badge>
+            <Badge status="danger" pulse={taskStatusPie.find(t => t.name === 'blocked')?.value > 0}>
+              {taskStatusPie.find(t => t.name === 'blocked')?.value || 0} Blocked
+            </Badge>
             <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <RefreshCw className="h-4 w-4 text-slate-400" />
             </button>
@@ -174,7 +177,14 @@ export default function PMDashboard({ user }) {
             { icon: Users,         label: 'Team Members',   value: execData?.teamSize || 12,                   color: 'text-cyan-400',   bg: 'bg-cyan-500/10',   border: 'border-cyan-500/20' },
             { icon: AlertTriangle, label: 'At Risk Tasks',  value: taskStatusPie.find(t=>t.name==='blocked')?.value || 0, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
           ].map((s, i) => (
-            <GlassCard key={i} delay={i * 0.08} className={`p-5 border ${s.border}`} hover>
+            <GlassCard
+              key={i}
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className={`p-5 border ${s.border}`}
+              hoverEffect={true}
+            >
               <div className={`p-2 rounded-xl ${s.bg} w-fit mb-3`}>
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
@@ -186,7 +196,12 @@ export default function PMDashboard({ user }) {
 
         {/* ── Row 1: Burndown + Burnup ──────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.3} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Sprint Burndown</h3>
@@ -206,7 +221,12 @@ export default function PMDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.35} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Sprint Burnup</h3>
@@ -239,7 +259,12 @@ export default function PMDashboard({ user }) {
 
         {/* ── Row 2: Task Status + Team Radar + Velocity Trend ─────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-          <GlassCard delay={0.4} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Task Status</h3>
             <p className="text-xs text-slate-500 mb-4">Current sprint distribution</p>
             <ResponsiveContainer width="100%" height={180}>
@@ -260,7 +285,12 @@ export default function PMDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.45} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Team Performance</h3>
             <p className="text-xs text-slate-500 mb-2">Radar — 5 core metrics</p>
             <ResponsiveContainer width="100%" height={240}>
@@ -275,7 +305,12 @@ export default function PMDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.5} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Velocity Trend</h3>
             <p className="text-xs text-slate-500 mb-4">Story pts/sprint vs average</p>
             <ResponsiveContainer width="100%" height={210}>
@@ -293,7 +328,12 @@ export default function PMDashboard({ user }) {
 
         {/* ── Row 3: Risk Matrix + Milestones + Activity ───────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <GlassCard delay={0.55} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Risk Matrix</h3>
@@ -306,12 +346,12 @@ export default function PMDashboard({ user }) {
                 <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold text-white">{r.name}</span>
-                    <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded"
-                      style={{ color: RISK_COLORS[r.level], backgroundColor: `${RISK_COLORS[r.level]}18` }}
+                    <Badge
+                      status={r.level === 'high' ? 'danger' : r.level === 'medium' ? 'warning' : 'success'}
+                      className="text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0"
                     >
-                      {r.level.toUpperCase()}
-                    </span>
+                      {r.level}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -330,7 +370,12 @@ export default function PMDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.6} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Milestone Timeline</h3>
@@ -365,7 +410,12 @@ export default function PMDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.65} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Project Activity</h3>
@@ -407,6 +457,6 @@ export default function PMDashboard({ user }) {
         </div>
 
       </div>
-    </div>
+    </DSAppShell>
   );
 }

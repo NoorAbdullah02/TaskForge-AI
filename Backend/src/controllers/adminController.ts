@@ -1,6 +1,6 @@
 import { db } from '../db/index';
 import { users, departments, systemSettings, activityLogs } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 
 async function logAdminAction(req: Request, action: string, entityType: string, entityId: number | null, details: string) {
@@ -73,22 +73,28 @@ export const updateSystemSettings = async (req: Request, res: Response) => {
 
 export const getAdminDepartments = async (req: Request, res: Response) => {
     try {
-        const depts = await db.select().from(departments);
-        const allUsers = await db.select().from(users);
+        const results = await db.select({
+            id: departments.id,
+            name: departments.name,
+            description: departments.description,
+            managerId: departments.managerId,
+            managerName: users.name,
+            managerEmail: users.email,
+            createdAt: departments.createdAt,
+            employeeCount: sql<number>`(SELECT COALESCE(COUNT(*), 0)::int FROM ${users} WHERE ${users.departmentId} = ${departments.id})`
+        })
+        .from(departments)
+        .leftJoin(users, eq(departments.managerId, users.id));
 
-        const list = depts.map(dept => {
-            const mgr = allUsers.find(u => u.id === dept.managerId);
-            const empCount = allUsers.filter(u => u.departmentId === dept.id).length;
-            return {
-                id: dept.id,
-                name: dept.name,
-                description: dept.description,
-                managerId: dept.managerId,
-                manager: mgr ? { id: mgr.id, name: mgr.name, email: mgr.email } : null,
-                employeeCount: empCount,
-                createdAt: dept.createdAt
-            };
-        });
+        const list = results.map(r => ({
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            managerId: r.managerId,
+            manager: r.managerId ? { id: r.managerId, name: r.managerName, email: r.managerEmail } : null,
+            employeeCount: r.employeeCount,
+            createdAt: r.createdAt
+        }));
 
         return res.status(200).json(list);
     } catch (error) {
@@ -207,17 +213,28 @@ export const getAdminUsers = async (req: Request, res: Response) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const allUsers = await db.select().from(users);
-        const depts = await db.select().from(departments);
+        const results = await db.select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            role: users.role,
+            position: users.position,
+            phone: users.phone,
+            departmentId: users.departmentId,
+            teamId: users.teamId,
+            shiftType: users.shiftType,
+            is2faEnabled: users.is2faEnabled,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+            departmentName: departments.name
+        })
+        .from(users)
+        .leftJoin(departments, eq(users.departmentId, departments.id));
 
-        const list = allUsers.map(u => {
-            const dept = depts.find(d => d.id === u.departmentId);
-            const { password, otpCode, otpExpiresAt, ...safeUser } = u;
-            return {
-                ...safeUser,
-                departmentName: dept ? dept.name : 'Not Assigned'
-            };
-        });
+        const list = results.map(r => ({
+            ...r,
+            departmentName: r.departmentName || 'Not Assigned'
+        }));
 
         return res.status(200).json(list);
     } catch (error) {
@@ -270,24 +287,26 @@ export const getAuditLogs = async (req: Request, res: Response) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const logs = await db.select().from(activityLogs);
-        const allUsers = await db.select().from(users);
+        const results = await db.select({
+            id: activityLogs.id,
+            userId: activityLogs.userId,
+            operatorName: users.name,
+            operatorEmail: users.email,
+            action: activityLogs.action,
+            entityType: activityLogs.entityType,
+            entityId: activityLogs.entityId,
+            details: activityLogs.details,
+            ipAddress: activityLogs.ipAddress,
+            createdAt: activityLogs.createdAt
+        })
+        .from(activityLogs)
+        .leftJoin(users, eq(activityLogs.userId, users.id))
+        .orderBy(desc(activityLogs.createdAt));
 
-        const list = logs.map(log => {
-            const operator = allUsers.find(u => u.id === log.userId);
-            return {
-                id: log.id,
-                userId: log.userId,
-                operatorName: operator ? operator.name : 'System / Unknown',
-                operatorEmail: operator ? operator.email : null,
-                action: log.action,
-                entityType: log.entityType,
-                entityId: log.entityId,
-                details: log.details,
-                ipAddress: log.ipAddress,
-                createdAt: log.createdAt
-            };
-        }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        const list = results.map(r => ({
+            ...r,
+            operatorName: r.operatorName || 'System / Unknown'
+        }));
 
         return res.status(200).json(list);
     } catch (error) {

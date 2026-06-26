@@ -27,8 +27,10 @@ import {
     Search,
     RefreshCw,
     ShieldCheck,
-    Eye
+    Eye,
+    X
 } from 'lucide-react';
+import { getEmailLogs, retryEmailLog, getAutomationLogs } from '../Services/notificationApi';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,6 +51,14 @@ const SuperAdminConsole = () => {
     // Filter/Search States
     const [searchTerm, setSearchTerm] = useState('');
     const [actionFilter, setActionFilter] = useState('all');
+
+    // Email & Automation logs States
+    const [emailLogsList, setEmailLogsList] = useState([]);
+    const [automationLogsList, setAutomationLogsList] = useState([]);
+    const [selectedEmail, setSelectedEmail] = useState(null);
+    const [emailFilter, setEmailFilter] = useState('all');
+    const [emailLogsLoading, setEmailLogsLoading] = useState(false);
+    const [automationLogsLoading, setAutomationLogsLoading] = useState(false);
 
     // Redirect if not super admin
     useEffect(() => {
@@ -90,6 +100,54 @@ const SuperAdminConsole = () => {
             loadData();
         }
     }, [isLoggedIn, user]);
+
+    // Fetch Email Logs & Automation Logs when email-logs tab is activated
+    useEffect(() => {
+        if (isLoggedIn && user?.role === 'super_admin' && activeTab === 'email-logs') {
+            fetchEmailLogs();
+            fetchAutomationLogs();
+        }
+    }, [activeTab, emailFilter]);
+
+    const fetchEmailLogs = async () => {
+        try {
+            setEmailLogsLoading(true);
+            const res = await getEmailLogs({
+                status: emailFilter === 'all' ? undefined : emailFilter,
+                limit: 50
+            });
+            setEmailLogsList(res?.data || []);
+        } catch (error) {
+            console.error('Failed to fetch email logs:', error);
+            toast.error('Failed to retrieve email logs');
+        } finally {
+            setEmailLogsLoading(false);
+        }
+    };
+
+    const fetchAutomationLogs = async () => {
+        try {
+            setAutomationLogsLoading(true);
+            const res = await getAutomationLogs({ limit: 50 });
+            setAutomationLogsList(res?.data || []);
+        } catch (error) {
+            console.error('Failed to fetch automation logs:', error);
+            toast.error('Failed to retrieve automation logs');
+        } finally {
+            setAutomationLogsLoading(false);
+        }
+    };
+
+    const handleRetryEmail = async (logId) => {
+        try {
+            toast.loading('Enqueuing email retry...', { id: 'retry-email' });
+            await retryEmailLog(logId);
+            toast.success('Email successfully enqueued for retry!', { id: 'retry-email' });
+            fetchEmailLogs();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to retry email delivery', { id: 'retry-email' });
+        }
+    };
 
     const handleToggleSuspend = async (workspaceId, currentStatus) => {
         const actionText = currentStatus === 'active' ? 'suspend' : 'reactivate';
@@ -276,7 +334,8 @@ const SuperAdminConsole = () => {
                         { id: 'users', name: 'User Directory', icon: Users },
                         { id: 'projects', name: 'Projects', icon: Briefcase },
                         { id: 'analytics', name: 'AI & Usage Analytics', icon: BarChart3 },
-                        { id: 'audit-logs', name: 'Global Audit Logs', icon: Activity }
+                        { id: 'audit-logs', name: 'Global Audit Logs', icon: Activity },
+                        { id: 'email-logs', name: 'Email & Automations', icon: Mail }
                     ].map(t => {
                         const Icon = t.icon;
                         return (
@@ -613,8 +672,233 @@ const SuperAdminConsole = () => {
                             )}
                         </div>
                     )}
+
+                    {/* TAB: EMAIL & AUTOMATIONS */}
+                    {activeTab === 'email-logs' && (
+                        <div className="space-y-8 animate-in fade-in duration-200">
+                            {/* Grid Layout for Emails & Automations */}
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                                
+                                {/* Email Delivery Queue (2/3 width) */}
+                                <div className="xl:col-span-2 bg-white/[0.01] border border-white/5 p-6 rounded-2xl space-y-4">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-white/5">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                                                <Mail className="w-4 h-4 text-blue-400" />
+                                                Email Delivery Queue & Logs
+                                            </h3>
+                                            <p className="text-[10px] text-slate-400 font-bold mt-0.5">Real-time status of outgoing transactional & automated emails</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5">
+                                            {['all', 'queued', 'sent', 'failed'].map((st) => (
+                                                <button
+                                                    key={st}
+                                                    onClick={() => setEmailFilter(st)}
+                                                    className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition cursor-pointer ${
+                                                        emailFilter === st
+                                                            ? 'bg-blue-600/20 text-blue-400 border-blue-500/30 font-extrabold'
+                                                            : 'bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-slate-200'
+                                                    }`}
+                                                >
+                                                    {st}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {emailLogsLoading && emailLogsList.length === 0 ? (
+                                        <div className="py-20 flex items-center justify-center">
+                                            <Loader className="w-6 h-6 text-blue-500 animate-spin" />
+                                        </div>
+                                    ) : emailLogsList.length === 0 ? (
+                                        <p className="text-xs text-slate-500 py-16 text-center font-sans">No email delivery logs found.</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs text-slate-350 font-sans border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-white/5 text-[9px] font-bold text-slate-450 uppercase tracking-wider">
+                                                        <th className="pb-3 pr-2">Recipient</th>
+                                                        <th className="pb-3 pr-2">Subject</th>
+                                                        <th className="pb-3 pr-2">Type</th>
+                                                        <th className="pb-3 pr-2">Status</th>
+                                                        <th className="pb-3 pr-2">Retries</th>
+                                                        <th className="pb-3 text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {emailLogsList.map((log) => (
+                                                        <tr key={log.id} className="hover:bg-white/[0.01] transition-colors">
+                                                            <td className="py-3 pr-2">
+                                                                <span className="font-semibold text-slate-200 block truncate max-w-[150px]">{log.recipient}</span>
+                                                                {log.sentAt && (
+                                                                    <span className="text-[9px] text-slate-500 block font-mono">
+                                                                        {new Date(log.sentAt).toLocaleTimeString()}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 pr-2 text-slate-400 max-w-[180px] truncate font-medium">{log.subject}</td>
+                                                            <td className="py-3 pr-2 font-mono text-[9px] text-indigo-400 uppercase">{log.eventType}</td>
+                                                            <td className="py-3 pr-2">
+                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase border ${
+                                                                    log.status === 'sent'
+                                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                        : log.status === 'failed'
+                                                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                                            : log.status === 'queued'
+                                                                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                                                : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                                                }`}>
+                                                                    {log.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 pr-2 font-mono text-center text-slate-400">{log.retryCount ?? 0}</td>
+                                                            <td className="py-3 text-right space-x-2">
+                                                                <button
+                                                                    onClick={() => setSelectedEmail(log)}
+                                                                    className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-slate-350 hover:bg-white/10 transition cursor-pointer"
+                                                                >
+                                                                    Preview HTML
+                                                                </button>
+                                                                {log.status === 'failed' && (
+                                                                    <button
+                                                                        onClick={() => handleRetryEmail(log.id)}
+                                                                        className="px-2 py-1 rounded bg-blue-600/20 border border-blue-500/30 text-[9px] font-bold text-blue-400 hover:bg-blue-600 hover:text-white transition cursor-pointer"
+                                                                    >
+                                                                        Retry
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Cron Job Automation Logs (1/3 width) */}
+                                <div className="bg-white/[0.01] border border-white/5 p-6 rounded-2xl space-y-4">
+                                    <div className="pb-4 border-b border-white/5">
+                                        <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                                            <RefreshCw className="w-4 h-4 text-purple-400" />
+                                            Cron Job Scheduler Logs
+                                        </h3>
+                                        <p className="text-[10px] text-slate-400 font-bold mt-0.5">Audit history of automated daily, weekly, & trigger jobs</p>
+                                    </div>
+
+                                    {automationLogsLoading && automationLogsList.length === 0 ? (
+                                        <div className="py-16 flex items-center justify-center">
+                                            <Loader className="w-6 h-6 text-purple-500 animate-spin" />
+                                        </div>
+                                    ) : automationLogsList.length === 0 ? (
+                                        <p className="text-xs text-slate-500 py-12 text-center font-sans">No automation logs recorded.</p>
+                                    ) : (
+                                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                                            {automationLogsList.map((log) => (
+                                                <div 
+                                                    key={log.id} 
+                                                    className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1.5 hover:border-white/10 transition"
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-black text-slate-200 uppercase tracking-wide">{log.jobName}</span>
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase border ${
+                                                            log.status === 'success'
+                                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                        }`}>
+                                                            {log.status}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <p className="text-[10px] text-slate-400 leading-normal font-sans">{log.summary}</p>
+                                                    
+                                                    <div className="flex justify-between items-center text-[8px] font-semibold text-slate-500 font-mono pt-1">
+                                                        <span>ID: {log.id}</span>
+                                                        <span>{new Date(log.runAt).toLocaleTimeString()} {new Date(log.runAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* HTML Email Preview Modal */}
+            <AnimatePresence>
+                {selectedEmail && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedEmail(null)}
+                            className="absolute inset-0 bg-slate-950/65 backdrop-blur-sm"
+                        />
+                        
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+                            className="relative bg-slate-900 border border-white/10 w-full max-w-3xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col z-10"
+                        >
+                            {/* Modal Header */}
+                            <div className="px-6 py-4 border-b border-white/5 bg-slate-950/50 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Email HTML Content Preview</h3>
+                                    <span className="text-[10px] text-slate-500 font-bold block mt-0.5">{selectedEmail.subject}</span>
+                                </div>
+                                <button 
+                                    onClick={() => setSelectedEmail(null)}
+                                    className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Modal Iframe Content */}
+                            <div className="flex-1 bg-slate-950 p-2">
+                                <iframe
+                                    title="Email Preview"
+                                    srcDoc={selectedEmail.htmlContent}
+                                    className="w-full h-full border-none rounded-xl bg-slate-950"
+                                    sandbox="allow-same-origin"
+                                />
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-6 py-4 border-t border-white/5 bg-slate-950/30 flex justify-between items-center">
+                                <div className="text-[9px] font-bold text-slate-500">
+                                    Recipient: <span className="text-slate-300 font-mono">{selectedEmail.recipient}</span>
+                                </div>
+                                <div className="space-x-3">
+                                    {selectedEmail.status === 'failed' && (
+                                        <button
+                                            onClick={() => {
+                                                handleRetryEmail(selectedEmail.id);
+                                                setSelectedEmail(null);
+                                            }}
+                                            className="px-4 py-2 bg-blue-600 text-white font-extrabold rounded-xl text-xs hover:shadow-lg transition cursor-pointer"
+                                        >
+                                            Retry Sending Email
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setSelectedEmail(null)}
+                                        className="px-4 py-2 bg-white/5 text-slate-350 hover:bg-white/10 font-bold rounded-xl text-xs transition cursor-pointer"
+                                    >
+                                        Close Preview
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

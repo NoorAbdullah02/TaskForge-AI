@@ -1,113 +1,136 @@
-import React from 'react'
-import RegisterPage from './Pages/RegisterPage.jsx'
-import LoginPage from './Pages/LoginPage.jsx'
-import Dashboard from './Pages/Dashboard.jsx'
-import ProfilePage from './Pages/ProfilePage.jsx'
-import VerifyEmailToken from './Pages/VerifyEmailToken.jsx'
-import VerifyEmailResult from './Pages/VerifyEmailResult.jsx'
-import ResetPassword from './Pages/ResetPassword.jsx'
-import ForgotPassword from './Pages/ForgotPassword.jsx'
-import ProjectsPage from './Pages/ProjectsPage.jsx'
-import ProjectDetailsPage from './Pages/ProjectDetailsPage.jsx'
-import TasksPage from './Pages/TasksPage.jsx'
-import TaskDetailsPage from './Pages/TaskDetailsPage.jsx'
-import AttendancePage from './Pages/AttendancePage.jsx'
-import LeavePage from './Pages/LeavePage.jsx'
-import AIWorkspace from './Pages/AIWorkspace.jsx'
-import EnterpriseAIPage from './Pages/EnterpriseAIPage.jsx'
-import AdminSettingsPage from './Pages/AdminSettingsPage.jsx'
-import AICopilot from './Components/AICopilot.jsx'
-import LandingPage from './Pages/LandingPage.jsx'
-import SuperAdminConsole from './Pages/SuperAdminConsole.jsx'
-import ReportsPage from './Pages/ReportsPage.jsx'
-import ProjectIntelligenceDashboard from './Pages/ProjectIntelligenceDashboard.jsx'
-import ExecutiveDashboard from './Pages/ExecutiveDashboard.jsx'
-import ChatHub from './Pages/ChatHub.jsx'
-import KnowledgeBase from './Pages/KnowledgeBase.jsx'
-import TimeTracker from './Pages/TimeTracker.jsx'
-import WorkspaceCalendar from './Pages/WorkspaceCalendar.jsx'
+import React, { lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom';
-
-
-
 import { useAuth } from './context/AuthContext.jsx'
-import { Toaster } from 'react-hot-toast';
+import { Navigate } from 'react-router-dom';
 import Header from './Components/Header.jsx'
-import AfterRegister from './Pages/AfterRegister.jsx'
-import { Navigate, useNavigate } from 'react-router-dom';
+import DesignSystemProviderWrapper from './design-system/DesignSystemProviderWrapper.jsx'
+import DSAppShell from './design-system/DSAppShell.jsx'
 
+// ─── Eagerly loaded (critical path — minimal, always needed) ─────────────────
+import LoginPage from './Pages/LoginPage.jsx'
+import RegisterPage from './Pages/RegisterPage.jsx'
+
+// ─── Lazily loaded (code-split — loaded only when navigated to) ──────────────
+const LandingPage                 = lazy(() => import('./Pages/LandingPage.jsx'))
+
+// ─── Lazily loaded (code-split — loaded only when navigated to) ──────────────
+const Dashboard                   = lazy(() => import('./Pages/Dashboard.jsx'))
+const ProfilePage                 = lazy(() => import('./Pages/ProfilePage.jsx'))
+const VerifyEmailToken            = lazy(() => import('./Pages/VerifyEmailToken.jsx'))
+const VerifyEmailResult           = lazy(() => import('./Pages/VerifyEmailResult.jsx'))
+const ResetPassword               = lazy(() => import('./Pages/ResetPassword.jsx'))
+const ForgotPassword              = lazy(() => import('./Pages/ForgotPassword.jsx'))
+const ProjectsPage                = lazy(() => import('./Pages/ProjectsPage.jsx'))
+const ProjectDetailsPage          = lazy(() => import('./Pages/ProjectDetailsPage.jsx'))
+const TasksPage                   = lazy(() => import('./Pages/TasksPage.jsx'))
+const TaskDetailsPage             = lazy(() => import('./Pages/TaskDetailsPage.jsx'))
+const AttendancePage              = lazy(() => import('./Pages/AttendancePage.jsx'))
+const LeavePage                   = lazy(() => import('./Pages/LeavePage.jsx'))
+const AIWorkspace                 = lazy(() => import('./Pages/AIWorkspace.jsx'))
+const EnterpriseAIPage            = lazy(() => import('./Pages/EnterpriseAIPage.jsx'))
+const AdminSettingsPage           = lazy(() => import('./Pages/AdminSettingsPage.jsx'))
+const AICopilot                   = lazy(() => import('./Components/AICopilot.jsx'))
+const SuperAdminConsole           = lazy(() => import('./Pages/SuperAdminConsole.jsx'))
+const ReportsPage                 = lazy(() => import('./Pages/ReportsPage.jsx'))
+const ProjectIntelligenceDashboard = lazy(() => import('./Pages/ProjectIntelligenceDashboard.jsx'))
+const ExecutiveDashboard          = lazy(() => import('./Pages/ExecutiveDashboard.jsx'))
+const ChatHub                     = lazy(() => import('./Pages/ChatHub.jsx'))
+const KnowledgeBase               = lazy(() => import('./Pages/KnowledgeBase.jsx'))
+const TimeTracker                 = lazy(() => import('./Pages/TimeTracker.jsx'))
+const WorkspaceCalendar           = lazy(() => import('./Pages/WorkspaceCalendar.jsx'))
+const AfterRegister               = lazy(() => import('./Pages/AfterRegister.jsx'))
+const SprintPlanningPage          = lazy(() => import('./Pages/SprintPlanningPage.jsx'))
+
+// ─── Page-level loading fallback ─────────────────────────────────────────────
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-950">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+      <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
+    </div>
+  </div>
+);
+
+// ─── Auth guard ───────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }) => {
   const { isLoggedIn, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
   return isLoggedIn ? children : <Navigate to="/login" replace />;
 };
 
+// ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
-
   const { isLoggedIn, loading } = useAuth();
   const location = useLocation();
 
-  // Hide header & copilot on auth and landing pages for immersive dark experience
-  const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/after-register', '/verify-email-token', '/verify-email-result'];
-  const isFullscreenPage = (!isLoggedIn && location.pathname === '/') || authPaths.slice(1).includes(location.pathname);
+  // Hide header & copilot on auth/landing pages for immersive dark experience
+  const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password',
+    '/after-register', '/verify-email-token', '/verify-email-result'];
+  const isFullscreenPage = (!isLoggedIn && location.pathname === '/') ||
+    authPaths.slice(1).includes(location.pathname);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   return (
-    <>
-      <div className='min-h-screen bg-base-100'>
-        {!isFullscreenPage && <Header />}
-        <main>
-          <Toaster position="top-right" />
+    <DesignSystemProviderWrapper>
+      <DSAppShell
+        showHeader={!isFullscreenPage}
+        header={!isFullscreenPage ? <Header /> : null}
+        showCopilot={!isFullscreenPage}
+        copilot={null}
+        backgroundMode={isFullscreenPage ? 'hero' : 'subtle'}
+      >
+        <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/verify-email-token" element={<VerifyEmailToken />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-            <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+
+            {/* Public routes */}
+            <Route path="/register"              element={<RegisterPage />} />
+            <Route path="/login"                 element={<LoginPage />} />
+            <Route path="/forgot-password"       element={<ForgotPassword />} />
+            <Route path="/reset-password"        element={<ResetPassword />} />
+            <Route path="/verify-email-token"    element={<VerifyEmailToken />} />
+            <Route path="/verify-email-result"   element={<VerifyEmailResult />} />
+            <Route path="/after-register"        element={<AfterRegister />} />
+
+            {/* Protected routes */}
+            <Route path="/profile"               element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/projects"              element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+            <Route path="/projects/:id"          element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
             <Route path="/projects/:id/intelligence" element={<ProtectedRoute><ProjectIntelligenceDashboard /></ProtectedRoute>} />
-            <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
-            <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
-            <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
-            <Route path="/leaves" element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><ChatHub /></ProtectedRoute>} />
-            <Route path="/kb" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
-            <Route path="/time-tracker" element={<ProtectedRoute><TimeTracker /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><WorkspaceCalendar /></ProtectedRoute>} />
-            <Route path="/ai-workspace" element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />
-            <Route path="/enterprise-ai" element={<ProtectedRoute><EnterpriseAIPage /></ProtectedRoute>} />
-            <Route path="/admin-settings" element={<ProtectedRoute><AdminSettingsPage /></ProtectedRoute>} />
-            <Route path="/super-admin" element={<ProtectedRoute><SuperAdminConsole /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/executive-dashboard" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
-            <Route path="/" element={isLoggedIn ? <Dashboard /> : <LandingPage />} />
+            <Route path="/tasks"                 element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
+            <Route path="/tasks/:id"             element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
+            <Route path="/attendance"            element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
+            <Route path="/leaves"                element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
+            <Route path="/chat"                  element={<ProtectedRoute><ChatHub /></ProtectedRoute>} />
+            <Route path="/kb"                    element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+            <Route path="/time-tracker"          element={<ProtectedRoute><TimeTracker /></ProtectedRoute>} />
+            <Route path="/calendar"              element={<ProtectedRoute><WorkspaceCalendar /></ProtectedRoute>} />
+            <Route path="/ai-workspace"          element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />
+            <Route path="/enterprise-ai"         element={<ProtectedRoute><EnterpriseAIPage /></ProtectedRoute>} />
+            <Route path="/admin-settings"        element={<ProtectedRoute><AdminSettingsPage /></ProtectedRoute>} />
+            <Route path="/super-admin"           element={<ProtectedRoute><SuperAdminConsole /></ProtectedRoute>} />
+            <Route path="/reports"               element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/dashboard"             element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/executive-dashboard"   element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
+            <Route path="/sprint-planning"       element={<ProtectedRoute><SprintPlanningPage /></ProtectedRoute>} />
 
-            <Route path="/after-register" element={<AfterRegister />} />
-            <Route path="/verify-email-result" element={<VerifyEmailResult />} />
+            {/* Root — dashboard if logged in, landing page otherwise */}
+            <Route path="/"                      element={isLoggedIn ? <Dashboard /> : <LandingPage />} />
 
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* Catch-all */}
+            <Route path="*"                      element={<Navigate to="/" />} />
 
           </Routes>
-        </main>
-        {!isFullscreenPage && <AICopilot />}
-      </div>
-    </>
+        </Suspense>
+
+        {/* Lazy-loaded AI Copilot floating widget */}
+        {!isFullscreenPage && (
+          <Suspense fallback={null}>
+            <AICopilot />
+          </Suspense>
+        )}
+      </DSAppShell>
+    </DesignSystemProviderWrapper>
   );
 }
 

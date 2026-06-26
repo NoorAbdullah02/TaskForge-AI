@@ -7,6 +7,7 @@ import * as queries from '../db/queries';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { socketService } from '../services/socket.service';
 import { env } from '../config/env';
+import { NotificationService } from '../services/notification.service';
 
 // Utility to generate random invite code TF-XXXXXX
 function generateInviteCode(): string {
@@ -23,8 +24,8 @@ export class WorkspaceController {
     static async createWorkspace(req: Request, res: Response) {
         try {
             const { name, email, password, workspaceName, workspaceSlug } = req.body;
-            if (!name || !email || !password || !workspaceName || !workspaceSlug) {
-                return res.status(400).json({ message: 'All fields are required' });
+            if (!name || !email || !password) {
+                return res.status(400).json({ message: 'Name, email, and password are required' });
             }
 
             // Check if user already exists
@@ -33,18 +34,24 @@ export class WorkspaceController {
                 return res.status(400).json({ message: 'User with this email already exists' });
             }
 
-            // Check if slug is taken
-            const [existingWorkspace] = await db.select().from(workspaces).where(eq(workspaces.slug, workspaceSlug.toLowerCase()));
-            if (existingWorkspace) {
-                return res.status(400).json({ message: 'Workspace slug is already taken' });
+            // Determine whether this is the first user in the system
+            const allUsers = await db.select().from(users).limit(1);
+            const isFirstUser = allUsers.length === 0;
+
+            if (!isFirstUser && (!workspaceName || !workspaceSlug)) {
+                return res.status(400).json({ message: 'Workspace name and slug are required for non-super-admin registration' });
+            }
+
+            // Check if slug is taken when workspace details are provided
+            if (!isFirstUser) {
+                const [existingWorkspace] = await db.select().from(workspaces).where(eq(workspaces.slug, workspaceSlug.toLowerCase()));
+                if (existingWorkspace) {
+                    return res.status(400).json({ message: 'Workspace slug is already taken' });
+                }
             }
 
             // Hash password and create user
             const hashedPassword = await bcrypt.hash(password, 10);
-            
-            // Register user
-            const allUsers = await db.select().from(users).limit(1);
-            const isFirstUser = allUsers.length === 0;
             const userRole = isFirstUser ? 'super_admin' : 'workspace_owner';
 
             const [newUser] = await db.insert(users).values({
@@ -55,52 +62,68 @@ export class WorkspaceController {
                 isEmailVerified: isFirstUser // super admin verified by default
             }).returning();
 
-            // Create workspace
-            const inviteCode = generateInviteCode();
-            const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
-
-            const [newWorkspace] = await db.insert(workspaces).values({
-                name: workspaceName,
-                slug: workspaceSlug.toLowerCase().trim(),
-                inviteCode,
-                inviteLink,
-                ownerId: newUser.id,
-                status: 'active'
-            }).returning();
-
-            // Add owner to workspaceMembers
-            await db.insert(workspaceMembers).values({
-                workspaceId: newWorkspace.id,
-                userId: newUser.id,
-                role: 'owner',
-                status: 'active'
-            });
-
-            // Log activity
-            await db.insert(activityLogs).values({
-                workspaceId: newWorkspace.id,
-                userId: newUser.id,
-                action: 'CREATE_WORKSPACE',
-                entityType: 'workspace',
-                entityId: newWorkspace.id,
-                details: `Workspace ${workspaceName} created by owner ${name}`,
-                ipAddress: (req as any).clientIp || req.ip || null
-            });
-
-            // Trigger Brevo Emails
-            // 1. Account verification (only if not bootstrapped first user)
+            let newWorkspace = null;
             if (!isFirstUser) {
-                const otp = queries.generateRandomToken(6);
-                const expires = new Date(Date.now() + 15 * 60 * 1000);
-                await queries.saveEmailVerificationToken(newUser.id, otp, expires);
-                await EmailTriggerService.sendAccountVerification(newUser.email, newUser.name, otp);
+                // Create workspace when this is not the initial super admin
+                const inviteCode = generateInviteCode();
+                const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
+
+                const [workspaceRecord] = await db.insert(workspaces).values({
+                    name: workspaceName,
+                    slug: workspaceSlug.toLowerCase().trim(),
+                    inviteCode,
+                    inviteLink,
+                    ownerId: newUser.id,
+                    status: 'active'
+                }).returning();
+                newWorkspace = workspaceRecord;
+
+                // Add owner to workspaceMembers
+                await db.insert(workspaceMembers).values({
+                    workspaceId: newWorkspace.id,
+                    userId: newUser.id,
+                    role: 'owner',
+                    status: 'active'
+                });
+
+                // Log activity
+                await db.insert(activityLogs).values({
+                    workspaceId: newWorkspace.id,
+                    userId: newUser.id,
+                    action: 'CREATE_WORKSPACE',
+                    entityType: 'workspace',
+                    entityId: newWorkspace.id,
+                    details: `Workspace ${workspaceName} created by owner ${name}`,
+                    ipAddress: (req as any).clientIp || req.ip || null
+                });
             }
 
-            // 2. Workspace created confirmation email
-            await EmailTriggerService.sendWorkspaceCreated(newUser.email, newUser.name, workspaceName, newWorkspace.id);
+            // Trigger verification email for the new workspace owner
+            if (!isFirstUser) {
+                const emailResult = await queries.sendNewVerificationEmail(newUser.id, newUser.email);
+                if (!emailResult?.success) {
+                    console.warn('Workspace creation verification email failed:', emailResult?.error || emailResult?.message);
+                }
+
+                await NotificationService.dispatch({
+                    event: 'workspace.created',
+                    userId: newUser.id,
+                    workspaceId: newWorkspace!.id,
+                    entityType: 'workspace',
+                    entityId: newWorkspace!.id,
+                    title: 'Workspace Created Successfully',
+                    message: `Your workspace "${workspaceName}" was successfully set up.`,
+                    link: '/settings/general',
+                    emailTemplate: 'workspaceCreated',
+                    emailData: {
+                        workspaceName: workspaceName,
+                        link: `${env.FRONTEND_URL}/settings/general`,
+                    },
+                });
+            }
 
             return res.status(201).json({
-                message: 'Workspace created successfully. Please verify your email to log in.',
+                message: isFirstUser ? 'Super admin created successfully.' : 'Workspace created successfully. Please verify your email to log in.',
                 workspace: newWorkspace,
                 user: { id: newUser.id, name: newUser.name, email: newUser.email }
             });
@@ -142,6 +165,13 @@ export class WorkspaceController {
                 if (membership) {
                     return res.status(400).json({ message: `You have already requested or joined this workspace (Status: ${membership.status})` });
                 }
+
+                if (!user.isEmailVerified) {
+                    const emailResult = await queries.sendNewVerificationEmail(user.id, user.email);
+                    if (!emailResult?.success) {
+                        console.warn('Existing user verification email failed for join request:', emailResult?.error || emailResult?.message);
+                    }
+                }
             } else {
                 // Create user
                 const hashedPassword = await bcrypt.hash(password, 10);
@@ -153,11 +183,7 @@ export class WorkspaceController {
                     isEmailVerified: false
                 }).returning();
 
-                // Send email verification OTP
-                const otp = queries.generateRandomToken(6);
-                const expires = new Date(Date.now() + 15 * 60 * 1000);
-                await queries.saveEmailVerificationToken(user.id, otp, expires);
-                await EmailTriggerService.sendAccountVerification(user.email, user.name, otp);
+                await queries.sendNewVerificationEmail(user.id, user.email);
             }
 
             // Insert pending workspace membership
@@ -183,13 +209,24 @@ export class WorkspaceController {
             });
 
             if (owner) {
-                // 1. In-App DB Notification
-                await socketService.sendNotification(
-                    owner.id,
-                    'New Join Request',
-                    `${name} (${email}) has requested to join your workspace "${workspace.name}".`,
-                    'join_request'
-                );
+                // 1. Unified Notification (saves to DB, emits real-time Socket.io, queues email)
+                await NotificationService.dispatch({
+                    event: 'workspace.joinRequest',
+                    userId: owner.id,
+                    workspaceId: workspace.id,
+                    entityType: 'workspace',
+                    entityId: workspace.id,
+                    title: 'New Join Request Pending',
+                    message: `${name} has requested to join your workspace "${workspace.name}".`,
+                    link: '/settings/members',
+                    emailTemplate: 'workspaceJoinRequest',
+                    emailData: {
+                        requesterName: name,
+                        requesterEmail: email,
+                        workspaceName: workspace.name,
+                        link: `${env.FRONTEND_URL}/settings/members`,
+                    },
+                });
 
                 // 2. Real-Time Socket.io Alert to Owner Room
                 socketService.broadcastToWorkspace(workspace.id, 'join_request_alert', {
@@ -197,16 +234,6 @@ export class WorkspaceController {
                     requesterName: name,
                     requesterEmail: email
                 });
-
-                // 3. Trigger Brevo Email
-                await EmailTriggerService.sendWorkspaceJoinRequest(
-                    owner.email,
-                    owner.name,
-                    name,
-                    email,
-                    workspace.name,
-                    workspace.id
-                );
             }
 
             return res.status(201).json({
@@ -245,14 +272,14 @@ export class WorkspaceController {
                 email: users.email,
                 joinedAt: workspaceMembers.joinedAt
             })
-            .from(workspaceMembers)
-            .innerJoin(users, eq(workspaceMembers.userId, users.id))
-            .where(
-                and(
-                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
-                    eq(workspaceMembers.status, 'pending')
-                )
-            );
+                .from(workspaceMembers)
+                .innerJoin(users, eq(workspaceMembers.userId, users.id))
+                .where(
+                    and(
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.status, 'pending')
+                    )
+                );
 
             return res.status(200).json(pendingList);
         } catch (error) {
@@ -312,14 +339,21 @@ export class WorkspaceController {
                 });
 
                 if (targetUser && workspace) {
-                    // Send approval and welcome email
-                    await EmailTriggerService.sendWorkspaceApproval(targetUser.email, targetUser.name, workspace.name, workspace.id);
-                    await socketService.sendNotification(
-                        targetUser.id,
-                        'Join Request Approved',
-                        `Your request to join "${workspace.name}" has been approved!`,
-                        'workspace_update'
-                    );
+                    await NotificationService.dispatch({
+                        event: 'workspace.approval',
+                        userId: targetUser.id,
+                        workspaceId: workspace.id,
+                        entityType: 'workspace',
+                        entityId: workspace.id,
+                        title: 'Join Request Approved 🎉',
+                        message: `Your request to join "${workspace.name}" has been approved!`,
+                        link: '/dashboard',
+                        emailTemplate: 'workspaceApproval',
+                        emailData: {
+                            workspaceName: workspace.name,
+                            link: `${env.FRONTEND_URL}/dashboard`,
+                        },
+                    });
                 }
             } else {
                 await db.update(workspaceMembers).set({
@@ -338,7 +372,19 @@ export class WorkspaceController {
                 });
 
                 if (targetUser && workspace) {
-                    await EmailTriggerService.sendWorkspaceRejection(targetUser.email, targetUser.name, workspace.name, workspace.id);
+                    await NotificationService.dispatch({
+                        event: 'workspace.rejection',
+                        userId: targetUser.id,
+                        workspaceId: workspace.id,
+                        entityType: 'workspace',
+                        entityId: workspace.id,
+                        title: 'Join Request Rejected',
+                        message: `Your request to join "${workspace.name}" was not approved at this time.`,
+                        emailTemplate: 'workspaceRejection',
+                        emailData: {
+                            workspaceName: workspace.name,
+                        },
+                    });
                 }
             }
 
@@ -402,13 +448,21 @@ export class WorkspaceController {
                     });
 
                     if (targetUser && workspace) {
-                        await EmailTriggerService.sendWorkspaceApproval(targetUser.email, targetUser.name, workspace.name, workspace.id);
-                        await socketService.sendNotification(
-                            targetUser.id,
-                            'Join Request Approved',
-                            `Your request to join "${workspace.name}" has been approved!`,
-                            'workspace_update'
-                        );
+                        await NotificationService.dispatch({
+                            event: 'workspace.approval',
+                            userId: targetUser.id,
+                            workspaceId: workspace.id,
+                            entityType: 'workspace',
+                            entityId: workspace.id,
+                            title: 'Join Request Approved 🎉',
+                            message: `Your request to join "${workspace.name}" has been approved!`,
+                            link: '/dashboard',
+                            emailTemplate: 'workspaceApproval',
+                            emailData: {
+                                workspaceName: workspace.name,
+                                link: `${env.FRONTEND_URL}/dashboard`,
+                            },
+                        });
                     }
                 } else {
                     await db.update(workspaceMembers).set({
@@ -427,7 +481,19 @@ export class WorkspaceController {
                     });
 
                     if (targetUser && workspace) {
-                        await EmailTriggerService.sendWorkspaceRejection(targetUser.email, targetUser.name, workspace.name, workspace.id);
+                        await NotificationService.dispatch({
+                            event: 'workspace.rejection',
+                            userId: targetUser.id,
+                            workspaceId: workspace.id,
+                            entityType: 'workspace',
+                            entityId: workspace.id,
+                            title: 'Join Request Rejected',
+                            message: `Your request to join "${workspace.name}" was not approved at this time.`,
+                            emailTemplate: 'workspaceRejection',
+                            emailData: {
+                                workspaceName: workspace.name,
+                            },
+                        });
                     }
                 }
             }
@@ -533,9 +599,9 @@ export class WorkspaceController {
                 role: workspaceMembers.role,
                 status: workspaceMembers.status
             })
-            .from(workspaceMembers)
-            .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-            .where(eq(workspaceMembers.userId, user.id));
+                .from(workspaceMembers)
+                .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+                .where(eq(workspaceMembers.userId, user.id));
 
             return res.status(200).json(list);
         } catch (error) {
@@ -569,9 +635,9 @@ export class WorkspaceController {
                 ));
 
             const fullUser = await queries.findUserById(user.id);
-            const isAuthorized = fullUser?.role === 'super_admin' || 
-                                 membership?.role === 'owner' || 
-                                 membership?.role === 'admin';
+            const isAuthorized = fullUser?.role === 'super_admin' ||
+                membership?.role === 'owner' ||
+                membership?.role === 'admin';
 
             if (!isAuthorized) {
                 return res.status(403).json({ message: 'Only workspace owners and admins can view workspace details' });
@@ -692,6 +758,72 @@ export class WorkspaceController {
         }
     }
 
+    static async inviteMembers(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const activeWorkspaceId = parseInt(req.headers['x-workspace-id'] as string, 10);
+            if (isNaN(activeWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
+
+            const [membership] = await db.select().from(workspaceMembers).where(
+                and(
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.userId, user.id)
+                )
+            );
+            if (!membership || (membership.role !== 'owner' && membership.role !== 'admin')) {
+                return res.status(403).json({ message: 'Only workspace owners or admins can invite members' });
+            }
+
+            const { emails, note } = req.body;
+            if (!emails || (!Array.isArray(emails) && typeof emails !== 'string')) {
+                return res.status(400).json({ message: 'Email or list of emails is required' });
+            }
+
+            const emailList = Array.isArray(emails) ? emails : [emails];
+            const validEmails = emailList
+                .map((email: string) => String(email || '').trim().toLowerCase())
+                .filter((email: string) => email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+            if (validEmails.length === 0) {
+                return res.status(400).json({ message: 'At least one valid email is required' });
+            }
+
+            const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, activeWorkspaceId));
+            if (!workspace) {
+                return res.status(404).json({ message: 'Workspace not found' });
+            }
+
+            const inviteLink = workspace.inviteLink || `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${workspace.inviteCode}`;
+            const inviteNote = String(note || '').trim();
+
+            for (const inviteEmail of validEmails) {
+                try {
+                    await EmailTriggerService.sendInviteEmail(inviteEmail, workspace.name, inviteLink, workspace.id, inviteNote);
+                } catch (emailErr) {
+                    console.warn(`Failed to send workspace invite to ${inviteEmail}:`, emailErr);
+                }
+            }
+
+            await db.insert(activityLogs).values({
+                workspaceId: activeWorkspaceId,
+                userId: user.id,
+                action: 'SEND_WORKSPACE_INVITES',
+                entityType: 'workspace',
+                entityId: activeWorkspaceId,
+                details: `Invited ${validEmails.length} member(s) to workspace ${workspace.name}`,
+                ipAddress: (req as any).clientIp || req.ip || null,
+                createdAt: new Date()
+            });
+
+            return res.status(200).json({ message: `Sent invite email to ${validEmails.length} recipient(s).` });
+        } catch (error) {
+            console.error('Error in inviteMembers:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
     static async getWorkspaceMembers(req: Request, res: Response) {
         try {
             const user = (req as any).user;
@@ -708,14 +840,14 @@ export class WorkspaceController {
                 role: workspaceMembers.role,
                 position: users.position
             })
-            .from(workspaceMembers)
-            .innerJoin(users, eq(workspaceMembers.userId, users.id))
-            .where(
-                and(
-                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
-                    eq(workspaceMembers.status, 'active')
-                )
-            );
+                .from(workspaceMembers)
+                .innerJoin(users, eq(workspaceMembers.userId, users.id))
+                .where(
+                    and(
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.status, 'active')
+                    )
+                );
 
             return res.status(200).json(list);
         } catch (error) {
@@ -757,15 +889,15 @@ export class WorkspaceController {
                 email: users.email,
                 name: users.name
             })
-            .from(workspaceMembers)
-            .innerJoin(users, eq(workspaceMembers.userId, users.id))
-            .where(
-                and(
-                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
-                    eq(workspaceMembers.userId, userId),
-                    eq(workspaceMembers.status, 'active')
-                )
-            );
+                .from(workspaceMembers)
+                .innerJoin(users, eq(workspaceMembers.userId, users.id))
+                .where(
+                    and(
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.userId, userId),
+                        eq(workspaceMembers.status, 'active')
+                    )
+                );
 
             if (!targetMember) {
                 return res.status(404).json({ message: 'User is not an active member of this workspace' });
@@ -790,21 +922,22 @@ export class WorkspaceController {
                     });
             }
 
-            // 4. Send Email
-            await EmailTriggerService.sendProjectManagerAssigned(
-                targetMember.email,
-                targetMember.name,
-                project.name,
-                activeWorkspaceId
-            );
-
-            // 5. Realtime & Dashboard Notification
-            await socketService.sendNotification(
-                userId,
-                'Project Manager Appointment',
-                `You have been appointed as the Project Manager for project "${project.name}" in workspace "${user.workspaceName || 'your organization'}".`,
-                'pm_assigned'
-            );
+            // 4. Send Unified Notification via NotificationService
+            await NotificationService.dispatch({
+                event: 'project.assigned',
+                userId: userId,
+                workspaceId: activeWorkspaceId,
+                entityType: 'project',
+                entityId: projectId,
+                title: 'Appointed Project Manager',
+                message: `You have been officially appointed as the Project Manager for project "${project.name}".`,
+                link: `/projects/${projectId}`,
+                emailTemplate: 'projectManagerAssigned',
+                emailData: {
+                    projectName: project.name,
+                    link: `${env.FRONTEND_URL}/projects/${projectId}`,
+                },
+            });
 
             // 6. Log activity
             await db.insert(activityLogs).values({

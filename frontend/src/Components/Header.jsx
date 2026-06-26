@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Bell, Search, Building2, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import { logoutUser } from '../Services/authApi.js';
 import { getUserWorkspaces, switchWorkspace } from '../Services/workspaceApi.js';
+import NotificationCenter from './NotificationCenter.jsx';
+import { socket } from '../Services/socket';
+import api from '../Services/api';
+import { getNotifications } from '../Services/notificationApi';
 
 const Header = () => {
     const { user, login, logout, isLoggedIn } = useAuth();
@@ -12,7 +16,34 @@ const Header = () => {
     const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
     const [workspaces, setWorkspaces] = useState([]);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const navigate = useNavigate();
+
+    const fetchUnreadCount = useCallback(async () => {
+        if (!isLoggedIn) return;
+        try {
+            const res = await getNotifications({ status: 'all', limit: 1 });
+            setUnreadCount(res?.unreadCount ?? 0);
+        } catch {
+            // silently ignore — non-critical UI feature
+        }
+    }, [isLoggedIn]);
+
+    useEffect(() => {
+        fetchUnreadCount();
+    }, [fetchUnreadCount]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleNewNotification = () => {
+            setUnreadCount((prev) => prev + 1);
+        };
+        socket.on('notification', handleNewNotification);
+        return () => {
+            socket.off('notification', handleNewNotification);
+        };
+    }, []);
 
     // Fetch workspaces on login
     useEffect(() => {
@@ -48,7 +79,6 @@ const Header = () => {
             toast.success(res.message || 'Switched workspace!');
             
             // Re-fetch current user profile to update AuthContext state and re-render pages!
-            const { default: api } = await import('../Services/api');
             const meRes = await api.get('/users/me');
             if (meRes?.data?.user) {
                 login(meRes.data.user); 
@@ -241,11 +271,18 @@ const Header = () => {
                                     )}
                                 </div>
 
-                                {/* Notifications */}
-                                <button className="relative p-2.5 hover:bg-blue-100/50 rounded-xl transition group cursor-pointer">
-                                    <Bell className="w-4 h-4 text-gray-650 group-hover:text-blue-600 transition animate-pulse" />
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                                </button>
+                                 {/* Notifications */}
+                                 <button 
+                                     onClick={() => setNotificationCenterOpen(true)}
+                                     className="relative p-2.5 hover:bg-blue-100/50 rounded-xl transition group cursor-pointer"
+                                 >
+                                     <Bell className={`w-4 h-4 transition ${unreadCount > 0 ? 'text-blue-650' : 'text-gray-650'}`} />
+                                     {unreadCount > 0 && (
+                                         <span className="absolute top-1.5 right-1.5 bg-red-500 text-white font-extrabold text-[8px] flex items-center justify-center min-w-[12px] h-[12px] rounded-full border border-white animate-pulse">
+                                             {unreadCount}
+                                         </span>
+                                     )}
+                                 </button>
 
                                 {/* Profile Section */}
                                 <div className="relative">
@@ -339,6 +376,11 @@ const Header = () => {
                     </div>
                 </div>
             </div>
+            <NotificationCenter 
+                isOpen={notificationCenterOpen} 
+                onClose={() => setNotificationCenterOpen(false)} 
+                onUnreadCountChange={setUnreadCount} 
+            />
         </header>
     );
 };

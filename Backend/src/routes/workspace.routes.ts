@@ -20,6 +20,7 @@ router.post('/approve', WorkspaceController.approveMember);
 router.post('/bulk-approve', WorkspaceController.bulkApproveMembers);
 router.put('/settings', WorkspaceController.updateSettings);
 router.post('/regenerate-invite', WorkspaceController.regenerateInvite);
+router.post('/invite', WorkspaceController.inviteMembers);
 router.post('/assign-pm', WorkspaceController.assignProjectManager);
 
 export default router;

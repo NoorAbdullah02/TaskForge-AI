@@ -10,13 +10,13 @@ import {
   Globe, Users, Briefcase, CheckSquare, Cpu, Database, Mail, Server,
   Crown, Activity, Shield, TrendingUp, RefreshCw, AlertTriangle, Eye,
 } from 'lucide-react';
-import ThreeBackground from '../../Components/ThreeBackground';
-import GlassCard from '../../Components/GlassCard';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, CalendarHeatmap, StatRing, SparkBadge } from '../../Components/DashboardUtils';
+import { ChartTooltip, CalendarHeatmap, StatRing } from '../../Components/DashboardUtils';
 import { getWorkspaces, getUsers, getAnalytics, getAuditLogs } from '../../Services/superAdminApi';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import toast from 'react-hot-toast';
+import DSAppShell from '../../design-system/DSAppShell.jsx';
+import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TASK_COLORS = ['#94a3b8','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
@@ -110,23 +110,22 @@ export default function SuperAdminDashboard({ user }) {
   });
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-2 border-red-500/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-red-400/40 border-b-transparent border-l-transparent animate-spin" />
+    <DSAppShell backgroundMode="subtle">
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-red-500/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-red-500 border-r-red-400/40 border-b-transparent border-l-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-black text-red-400 tracking-[0.35em] uppercase">Initializing Command Center</span>
         </div>
-        <span className="text-xs font-black text-red-400 tracking-[0.35em] uppercase">Initializing Command Center</span>
       </div>
-    </div>
+    </DSAppShell>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden">
-      <ThreeBackground primaryColor="#ef4444" />
-      <div className="fixed inset-0 bg-gradient-to-br from-red-950/15 via-slate-950 to-orange-950/10 pointer-events-none z-0" />
-
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+    <DSAppShell backgroundMode="subtle">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -148,8 +147,12 @@ export default function SuperAdminDashboard({ user }) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <SparkBadge label="All Systems Operational" color="#10b981" pulse />
-            <SparkBadge label={`${totalWs} Workspaces Active`} color="#ef4444" />
+            <Badge status="success" pulse>
+              All Systems Operational
+            </Badge>
+            <Badge status="danger">
+              {totalWs} Workspaces Active
+            </Badge>
             <button
               onClick={fetchAll}
               className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
@@ -171,7 +174,14 @@ export default function SuperAdminDashboard({ user }) {
             { icon: Mail,        label: 'Emails Sent',  value: analytics?.emailsSent       || 3240,  color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
             { icon: Server,      label: 'Uptime %',     value: 99.9, decimals: 1, suffix: '%',       color: 'text-emerald-400',bg: 'bg-emerald-500/10',border: 'border-emerald-500/20' },
           ].map((s, i) => (
-            <GlassCard key={i} delay={i * 0.05} className={`p-4 border ${s.border}`} hover>
+            <GlassCard
+              key={i}
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+              className={`p-4 border ${s.border}`}
+              hoverEffect={true}
+            >
               <div className={`p-1.5 rounded-lg ${s.bg} w-fit mb-2.5`}>
                 <s.icon className={`h-4 w-4 ${s.color}`} />
               </div>
@@ -188,7 +198,12 @@ export default function SuperAdminDashboard({ user }) {
 
         {/* ── Row 1: Platform Growth + AI Analytics ──────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.3} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Platform Growth</h3>
@@ -218,7 +233,12 @@ export default function SuperAdminDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.35} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">AI Engine Analytics</h3>
@@ -241,7 +261,12 @@ export default function SuperAdminDashboard({ user }) {
 
         {/* ── Row 2: Storage + System Health + Task Status ───────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-          <GlassCard delay={0.4} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Storage Distribution</h3>
             <p className="text-xs text-slate-500 mb-4">48 GB total platform storage</p>
             <ResponsiveContainer width="100%" height={180}>
@@ -262,7 +287,12 @@ export default function SuperAdminDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.45} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">System Health Radar</h3>
             <p className="text-xs text-slate-500 mb-2">Real-time service reliability</p>
             <ResponsiveContainer width="100%" height={230}>
@@ -275,7 +305,12 @@ export default function SuperAdminDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.5} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Global Task Status</h3>
             <p className="text-xs text-slate-500 mb-4">Platform-wide distribution</p>
             <ResponsiveContainer width="100%" height={180}>
@@ -299,7 +334,12 @@ export default function SuperAdminDashboard({ user }) {
 
         {/* ── Row 3: Email Trend + Activity Heatmap ─────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.52} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.52, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Email Analytics</h3>
@@ -319,7 +359,12 @@ export default function SuperAdminDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.56} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.56, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Platform Activity Heatmap</h3>
             <p className="text-xs text-slate-500 mb-4">Audit log density — last 12 weeks</p>
             <div className="overflow-x-auto pb-1">
@@ -337,7 +382,12 @@ export default function SuperAdminDashboard({ user }) {
 
         {/* ── Row 4: Audit Logs + Workspace Health ──────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.6} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Recent Audit Log</h3>
@@ -375,15 +425,23 @@ export default function SuperAdminDashboard({ user }) {
                       {new Date(log.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20 capitalize shrink-0">
-                    {log.entityType}
-                  </span>
+                    <Badge
+                      status={log.entityType === 'user' ? 'warning' : log.entityType === 'workspace' ? 'danger' : 'info'}
+                      className="text-[10px] capitalize shrink-0 font-bold px-1.5 py-0.5 rounded"
+                    >
+                      {log.entityType}
+                    </Badge>
                 </motion.div>
               ))}
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.65} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Workspace Health</h3>
@@ -407,6 +465,6 @@ export default function SuperAdminDashboard({ user }) {
         </div>
 
       </div>
-    </div>
+    </DSAppShell>
   );
 }

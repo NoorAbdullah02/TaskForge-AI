@@ -2,8 +2,9 @@ import type { Request, Response } from 'express';
 import { LeaveService } from '../services/leave.service';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { db } from '../db/index';
-import { users } from '../db/schema';
+import { users, leaveRequests } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { NotificationService } from '../services/notification.service';
 
 export class LeaveController {
     // Apply for leave request
@@ -35,6 +36,22 @@ export class LeaveController {
                 endDate: end,
                 reason: reason.trim()
             });
+
+            // Notify managers about new leave request
+            // Find workspace admins/managers to notify
+            if (user.activeWorkspaceId) {
+                await NotificationService.dispatch({
+                    event: 'leave.request',
+                    userId: user.id,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'leave',
+                    entityId: record.id,
+                    title: `Leave Request Submitted`,
+                    message: `Your ${leaveType} leave request from ${start.toLocaleDateString()} to ${end.toLocaleDateString()} has been submitted.`,
+                    link: `/leaves/${record.id}`,
+                    skipEmail: true, // Employee doesn't need email — managers get notified separately
+                });
+            }
 
             return res.status(201).json({
                 message: 'Leave application submitted successfully',
@@ -87,17 +104,26 @@ export class LeaveController {
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'approved', user.id);
 
-            // Send notification email
-            const [targetUser] = await db.select().from(users).where(eq(users.id, record.userId));
-            if (targetUser && user.activeWorkspaceId) {
-                await EmailTriggerService.sendLeaveApproval(
-                    targetUser.email,
-                    targetUser.name,
-                    record.leaveType,
-                    record.startDate.toLocaleDateString(),
-                    record.endDate.toLocaleDateString(),
-                    user.activeWorkspaceId
-                );
+            // Send unified notification via NotificationService
+            if (user.activeWorkspaceId) {
+                await NotificationService.dispatch({
+                    event: 'leave.approved',
+                    userId: record.userId,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'leave',
+                    entityId: leaveId,
+                    title: 'Leave Request Approved ✅',
+                    message: `Your ${record.leaveType} leave from ${record.startDate.toLocaleDateString()} to ${record.endDate.toLocaleDateString()} has been approved.`,
+                    link: '/leaves',
+                    emailTemplate: 'leaveApproved',
+                    emailData: {
+                        leaveType: record.leaveType,
+                        startDate: record.startDate.toLocaleDateString(),
+                        endDate: record.endDate.toLocaleDateString(),
+                        approvedBy: user.name,
+                        link: '/leaves',
+                    },
+                });
             }
 
             return res.status(200).json({
@@ -123,17 +149,27 @@ export class LeaveController {
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'rejected', user.id);
 
-            // Send notification email
-            const [targetUser] = await db.select().from(users).where(eq(users.id, record.userId));
-            if (targetUser && user.activeWorkspaceId) {
-                await EmailTriggerService.sendLeaveRejection(
-                    targetUser.email,
-                    targetUser.name,
-                    record.leaveType,
-                    record.startDate.toLocaleDateString(),
-                    record.endDate.toLocaleDateString(),
-                    user.activeWorkspaceId
-                );
+            // Send unified notification via NotificationService
+            if (user.activeWorkspaceId) {
+                await NotificationService.dispatch({
+                    event: 'leave.rejected',
+                    userId: record.userId,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'leave',
+                    entityId: leaveId,
+                    title: 'Leave Request Rejected',
+                    message: `Your ${record.leaveType} leave from ${record.startDate.toLocaleDateString()} to ${record.endDate.toLocaleDateString()} was not approved.`,
+                    link: '/leaves',
+                    emailTemplate: 'leaveRejected',
+                    emailData: {
+                        leaveType: record.leaveType,
+                        startDate: record.startDate.toLocaleDateString(),
+                        endDate: record.endDate.toLocaleDateString(),
+                        rejectedBy: user.name,
+                        reason: null,
+                        link: '/leaves',
+                    },
+                });
             }
 
             return res.status(200).json({

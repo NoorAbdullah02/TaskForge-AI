@@ -11,13 +11,13 @@ import {
   Users, CheckSquare, AlertTriangle, Activity, RefreshCw,
   Award, Flame, Clock, TrendingUp, BarChart3, Shield,
 } from 'lucide-react';
-import ThreeBackground from '../../Components/ThreeBackground';
-import GlassCard from '../../Components/GlassCard';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, StatRing, SparkBadge } from '../../Components/DashboardUtils';
+import { ChartTooltip, StatRing } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import toast from 'react-hot-toast';
+import DSAppShell from '../../design-system/DSAppShell.jsx';
+import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const PRIORITY_COLORS = { low: '#10b981', medium: '#3b82f6', high: '#f59e0b', urgent: '#ef4444' };
 const STATUS_COLORS   = { todo: '#475569', 'in-progress': '#06b6d4', done: '#10b981', review: '#8b5cf6', blocked: '#ef4444' };
@@ -101,23 +101,22 @@ export default function TeamLeaderDashboard({ user }) {
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-emerald-500 border-r-emerald-400/40 border-b-transparent border-l-transparent animate-spin" />
+    <DSAppShell backgroundMode="subtle">
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-emerald-500 border-r-emerald-400/40 border-b-transparent border-l-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-black text-emerald-400 tracking-[0.35em] uppercase">Loading Team Overview</span>
         </div>
-        <span className="text-xs font-black text-emerald-400 tracking-[0.35em] uppercase">Loading Team Overview</span>
       </div>
-    </div>
+    </DSAppShell>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden">
-      <ThreeBackground primaryColor="#10b981" />
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-950/15 via-slate-950 to-teal-950/10 pointer-events-none z-0" />
-
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+    <DSAppShell backgroundMode="subtle">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -139,8 +138,12 @@ export default function TeamLeaderDashboard({ user }) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <SparkBadge label={`${MEMBERS.length} Team Members`} color="#10b981" />
-            <SparkBadge label={`${blockedTasks} Blocked`} color="#ef4444" pulse={blockedTasks > 0} />
+            <Badge status="success">
+              {MEMBERS.length} Team Members
+            </Badge>
+            <Badge status="danger" pulse={blockedTasks > 0}>
+              {blockedTasks} Blocked
+            </Badge>
             <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <RefreshCw className="h-4 w-4 text-slate-400" />
             </button>
@@ -155,7 +158,14 @@ export default function TeamLeaderDashboard({ user }) {
             { icon: Award,         label: 'Completed',    value: doneTasks,         color: 'text-cyan-400',    bg: 'bg-cyan-500/10',    border: 'border-cyan-500/20' },
             { icon: AlertTriangle, label: 'Blocked',      value: blockedTasks,      color: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20' },
           ].map((s, i) => (
-            <GlassCard key={i} delay={i * 0.08} className={`p-5 border ${s.border}`} hover>
+            <GlassCard
+              key={i}
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className={`p-5 border ${s.border}`}
+              hoverEffect={true}
+            >
               <div className={`p-2 rounded-xl ${s.bg} w-fit mb-3`}>
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
@@ -167,7 +177,12 @@ export default function TeamLeaderDashboard({ user }) {
 
         {/* ── Row 1: Member Tasks Bar + Team Radar ────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.3} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Task Distribution by Member</h3>
@@ -188,7 +203,12 @@ export default function TeamLeaderDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.35} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Team Performance Radar</h3>
@@ -211,7 +231,12 @@ export default function TeamLeaderDashboard({ user }) {
 
         {/* ── Row 2: Sprint Velocity + Attendance + Task Status Pie ───────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-          <GlassCard delay={0.4} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Sprint Velocity</h3>
             <p className="text-xs text-slate-500 mb-4">Tasks done/sprint vs average</p>
             <ResponsiveContainer width="100%" height={200}>
@@ -226,7 +251,12 @@ export default function TeamLeaderDashboard({ user }) {
             </ResponsiveContainer>
           </GlassCard>
 
-          <GlassCard delay={0.45} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Attendance Summary</h3>
             <p className="text-xs text-slate-500 mb-3">This month per member</p>
             <div className="space-y-2.5 overflow-y-auto max-h-[220px]">
@@ -249,7 +279,12 @@ export default function TeamLeaderDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.5} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <h3 className="text-sm font-bold text-white mb-1">Task Status</h3>
             <p className="text-xs text-slate-500 mb-4">Team task breakdown</p>
             <ResponsiveContainer width="100%" height={185}>
@@ -273,7 +308,12 @@ export default function TeamLeaderDashboard({ user }) {
 
         {/* ── Row 3: Member Scores + Activity Feed ─────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <GlassCard delay={0.55} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Member Performance Scores</h3>
@@ -288,7 +328,12 @@ export default function TeamLeaderDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.6} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Team Activity</h3>
@@ -323,9 +368,12 @@ export default function TeamLeaderDashboard({ user }) {
                     </p>
                     <p className="text-[10px] text-slate-600">{new Date(log.createdAt).toLocaleTimeString()}</p>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 capitalize shrink-0">
-                    {log.action}
-                  </span>
+                    <Badge
+                      status={log.action === 'completed' ? 'success' : log.action === 'blocked' ? 'danger' : 'info'}
+                      className="text-[10px] capitalize shrink-0"
+                    >
+                      {log.action}
+                    </Badge>
                 </motion.div>
               ))}
             </div>
@@ -333,6 +381,6 @@ export default function TeamLeaderDashboard({ user }) {
         </div>
 
       </div>
-    </div>
+    </DSAppShell>
   );
 }

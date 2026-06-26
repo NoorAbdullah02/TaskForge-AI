@@ -10,13 +10,13 @@ import {
   CheckSquare, Clock, AlertCircle, CalendarOff, TrendingUp,
   RefreshCw, Sparkles, Target, Star, Flame, Activity, ChevronRight,
 } from 'lucide-react';
-import ThreeBackground from '../../Components/ThreeBackground';
-import GlassCard from '../../Components/GlassCard';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, CalendarHeatmap, StatRing, SparkBadge } from '../../Components/DashboardUtils';
+import { ChartTooltip, CalendarHeatmap, StatRing } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getDailyStandup } from '../../Services/aiApi';
 import toast from 'react-hot-toast';
+import DSAppShell from '../../design-system/DSAppShell.jsx';
+import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const TASK_COLORS   = { todo: '#475569', 'in-progress': '#f59e0b', done: '#10b981', review: '#8b5cf6', blocked: '#ef4444' };
 const PRIORITY_ICONS = { urgent: '🔴', high: '🟠', medium: '🟡', low: '🟢' };
@@ -131,23 +131,22 @@ export default function EmployeeDashboard({ user }) {
   const workingDays    = stats?.attendance?.workingDays || 22;
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-2 border-amber-500/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 border-r-amber-400/40 border-b-transparent border-l-transparent animate-spin" />
+    <DSAppShell backgroundMode="subtle">
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-amber-500/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 border-r-amber-400/40 border-b-transparent border-l-transparent animate-spin" />
+          </div>
+          <span className="text-xs font-black text-amber-400 tracking-[0.35em] uppercase">Loading Your Workspace</span>
         </div>
-        <span className="text-xs font-black text-amber-400 tracking-[0.35em] uppercase">Loading Your Workspace</span>
       </div>
-    </div>
+    </DSAppShell>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-x-hidden">
-      <ThreeBackground primaryColor="#f59e0b" />
-      <div className="fixed inset-0 bg-gradient-to-br from-amber-950/12 via-slate-950 to-yellow-950/08 pointer-events-none z-0" />
-
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8">
+    <DSAppShell backgroundMode="subtle">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -170,8 +169,14 @@ export default function EmployeeDashboard({ user }) {
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <SparkBadge label={`${myInProgress} In Progress`} color="#f59e0b" pulse={myInProgress > 0} />
-            {myBlocked > 0 && <SparkBadge label={`${myBlocked} Blocked`} color="#ef4444" pulse />}
+            <Badge status="warning" pulse={myInProgress > 0}>
+              {myInProgress} In Progress
+            </Badge>
+            {myBlocked > 0 && (
+              <Badge status="danger" pulse>
+                {myBlocked} Blocked
+              </Badge>
+            )}
             <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
               <RefreshCw className="h-4 w-4 text-slate-400" />
             </button>
@@ -186,7 +191,14 @@ export default function EmployeeDashboard({ user }) {
             { icon: AlertCircle,   label: 'Pending Review',   value: taskStatusPie.find(t=>t.name==='Review')?.value||0, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
             { icon: CalendarOff,   label: 'Leave Balance',    value: LEAVE_TYPES.reduce((s,l)=>s+(l.total-l.used),0), color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
           ].map((s, i) => (
-            <GlassCard key={i} delay={i * 0.08} className={`p-5 border ${s.border}`} hover>
+            <GlassCard
+              key={i}
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className={`p-5 border ${s.border}`}
+              hoverEffect={true}
+            >
               <div className={`p-2 rounded-xl ${s.bg} w-fit mb-3`}>
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
@@ -198,7 +210,12 @@ export default function EmployeeDashboard({ user }) {
 
         {/* ── Row 1: Task Donut + Weekly Productivity Area ────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.3} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">My Task Overview</h3>
@@ -240,7 +257,12 @@ export default function EmployeeDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.35} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">My Productivity Trend</h3>
@@ -281,7 +303,12 @@ export default function EmployeeDashboard({ user }) {
 
         {/* ── Row 2: Attendance Heatmap + Leave Balance ───────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.4} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">My Attendance Heatmap</h3>
@@ -306,7 +333,12 @@ export default function EmployeeDashboard({ user }) {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.45} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Leave Balance</h3>
@@ -350,7 +382,12 @@ export default function EmployeeDashboard({ user }) {
 
         {/* ── Row 3: Today's Tasks + Weekly Day Trend ──────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard delay={0.5} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">Today's Priority Tasks</h3>
@@ -372,23 +409,28 @@ export default function EmployeeDashboard({ user }) {
                     <p className="text-xs font-semibold text-white truncate">{task.title}</p>
                     <p className="text-[10px] text-slate-500 mt-0.5">Due {task.due}</p>
                   </div>
-                  <span
-                    className="text-[10px] px-2 py-0.5 rounded-full border capitalize shrink-0"
-                    style={{
-                      color: TASK_COLORS[task.status] || '#6366f1',
-                      backgroundColor: `${TASK_COLORS[task.status] || '#6366f1'}18`,
-                      borderColor: `${TASK_COLORS[task.status] || '#6366f1'}35`,
-                    }}
+                  <Badge
+                    status={
+                      task.status === 'done' ? 'success' :
+                      task.status === 'blocked' ? 'danger' :
+                      task.status === 'in-progress' || task.status === 'review' ? 'warning' : 'info'
+                    }
+                    className="capitalize shrink-0 text-[10px]"
                   >
                     {task.status.replace('-', ' ')}
-                  </span>
+                  </Badge>
                   <ChevronRight className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors shrink-0" />
                 </motion.div>
               ))}
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.55} className="p-6">
+          <GlassCard
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            padding="p-6"
+          >
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-sm font-bold text-white">This Week's Activity</h3>
@@ -420,7 +462,14 @@ export default function EmployeeDashboard({ user }) {
         </div>
 
         {/* ── Row 4: AI Daily Standup Card ────────────────────────────────── */}
-        <GlassCard delay={0.6} glow glowColor="rgba(245,158,11,0.15)" className="p-6 border border-amber-500/20">
+        <GlassCard
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="border border-amber-500/20"
+          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.45), 0 0 60px rgba(245,158,11,0.15)' }}
+          padding="p-6"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/25">
@@ -496,6 +545,6 @@ export default function EmployeeDashboard({ user }) {
         </GlassCard>
 
       </div>
-    </div>
+    </DSAppShell>
   );
 }

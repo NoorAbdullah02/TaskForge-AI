@@ -14,4 +14,8 @@ export const env = {
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || '',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   MISTRAL_API_KEY: process.env.MISTRAL_API_KEY || '',
+  REDIS_URL: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+  IMAGEKIT_PUBLIC_KEY: process.env.IMAGEKIT_PUBLIC_KEY || '',
+  IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY || '',
+  IMAGEKIT_URL_ENDPOINT: process.env.IMAGEKIT_URL_ENDPOINT || '',
 };

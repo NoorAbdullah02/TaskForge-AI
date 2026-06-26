@@ -135,7 +135,7 @@ async function triggerEmail(
     try {
         const htmlContent = getBaseTemplate(subject, bodyHtml);
         await sendMail(recipient, subject, htmlContent);
-        
+
         // Log in the db
         await db.insert(emailLogs).values({
             workspaceId,
@@ -169,7 +169,7 @@ export class EmailTriggerService {
         const body = `
             <h2 class="title">Verify Your Account</h2>
             <p>Hi <span class="highlight">${name}</span>,</p>
-            <p>Welcome to TaskForge AI. Please verify your email address by entering the 6-digit OTP code below:</p>
+            <p>Welcome to TaskForge AI. Please verify your email address by entering the 8-digit OTP code below:</p>
             <div class="otp">${otp}</div>
             <p>This code will expire in 15 minutes. If you did not request this, you can safely ignore this email.</p>
         `;
@@ -233,11 +233,13 @@ export class EmailTriggerService {
     }
 
     // 7. Invite Email
-    static async sendInviteEmail(email: string, workspaceName: string, inviteLink: string, workspaceId: number) {
+    static async sendInviteEmail(email: string, workspaceName: string, inviteLink: string, workspaceId: number, note?: string) {
+        const noteSection = note ? `<p><strong>Message from your administrator:</strong></p><p>${note}</p>` : '';
         const body = `
             <h2 class="title">You've Been Invited!</h2>
             <p>Hi there,</p>
             <p>You have been invited to join the workforce workspace <span class="highlight">${workspaceName}</span> on TaskForge AI.</p>
+            ${noteSection}
             <p>Click the link below to verify your email and set up your password to join the team:</p>
             <div class="button-container">
               <a href="${inviteLink}" class="button">Accept Invitation</a>

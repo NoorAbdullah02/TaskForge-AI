@@ -1,7 +1,8 @@
 import ImageKit from 'imagekit';
+import { env } from '../config/env';
 
 export const imagekit = new ImageKit({
-    publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
-    privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
-    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || '',
+    publicKey: env.IMAGEKIT_PUBLIC_KEY,
+    privateKey: env.IMAGEKIT_PRIVATE_KEY,
+    urlEndpoint: env.IMAGEKIT_URL_ENDPOINT,
 });

@@ -9,6 +9,7 @@ import {
     Zap, Shield, BarChart3, Brain, Layers, Globe, ArrowRight,
     CheckCircle, Sparkles, Code, Cpu, Star, ChevronRight, Play
 } from 'lucide-react';
+import { GlassCard, Button } from '../design-system/primitives';
 
 /* ═══════════════════════════════════════════════════════════
    THREE.JS COMPONENTS
@@ -361,19 +362,15 @@ const LandingPage = () => {
 
                         {/* CTA Buttons */}
                         <div className="hero-buttons flex flex-wrap gap-4 mb-16">
-                            <Link
-                                to="/register"
-                                className="group relative inline-flex items-center gap-2 px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-lg shadow-white/10"
-                            >
-                                Get Started Free
-                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            <Link to="/register">
+                                <Button size="lg" variant="primary" icon={ArrowRight} iconPosition="right">
+                                    Get Started Free
+                                </Button>
                             </Link>
-                            <Link
-                                to="/login"
-                                className="inline-flex items-center gap-2 px-8 py-4 border border-white/20 text-white font-semibold rounded-xl hover:bg-white/5 hover:border-white/40 transition-all backdrop-blur-sm"
-                            >
-                                <Play className="w-4 h-4" />
-                                Live Demo
+                            <Link to="/login">
+                                <Button size="lg" variant="outline" icon={Play}>
+                                    Live Demo
+                                </Button>
                             </Link>
                         </div>
 
@@ -461,24 +458,24 @@ const LandingPage = () => {
                         {features.map((feature, i) => {
                             const Icon = feature.icon;
                             return (
-                                <motion.div
+                                <GlassCard
                                     key={i}
-                                    className="group relative p-8 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-sm hover:bg-white/[0.05] hover:border-white/10 transition-all duration-500"
+                                    padding="p-8"
+                                    className="group"
                                     initial={{ opacity: 0, y: 30 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: i * 0.08 }}
                                     viewport={{ once: true }}
-                                    whileHover={{ y: -5 }}
                                 >
                                     {/* Hover glow */}
-                                    <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500`} />
+                                    <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500 pointer-events-none`} />
 
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg`}>
                                         <Icon className="w-6 h-6 text-white" />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
                                     <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
-                                </motion.div>
+                                </GlassCard>
                             );
                         })}
                     </div>
@@ -505,14 +502,15 @@ const LandingPage = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {/* Large card - AI */}
-                        <motion.div
-                            className="lg:col-span-2 relative group rounded-2xl border border-white/5 bg-gradient-to-br from-indigo-950/40 to-violet-950/20 p-10 overflow-hidden min-h-[320px]"
+                        <GlassCard
+                            padding="p-10"
+                            className="lg:col-span-2 group min-h-[320px] bg-gradient-to-br from-indigo-950/40 to-violet-950/20"
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6 }}
                             viewport={{ once: true }}
                         >
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-all duration-700" />
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-all duration-700 pointer-events-none" />
                             <div className="relative z-10">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
@@ -539,11 +537,12 @@ const LandingPage = () => {
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
+                        </GlassCard>
 
                         {/* Small card - Kanban */}
-                        <motion.div
-                            className="group rounded-2xl border border-white/5 bg-white/[0.02] p-8 overflow-hidden"
+                        <GlassCard
+                            padding="p-8"
+                            className="group"
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.1 }}
@@ -568,11 +567,12 @@ const LandingPage = () => {
                                     </div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </GlassCard>
 
                         {/* Small card - Attendance */}
-                        <motion.div
-                            className="group rounded-2xl border border-white/5 bg-white/[0.02] p-8 overflow-hidden"
+                        <GlassCard
+                            padding="p-8"
+                            className="group"
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.2 }}
@@ -592,11 +592,12 @@ const LandingPage = () => {
                                     <div key={i} className="flex-1 bg-emerald-500/30 rounded-t" style={{ height: `${h}%` }} />
                                 ))}
                             </div>
-                        </motion.div>
+                        </GlassCard>
 
                         {/* Wide card - Analytics */}
-                        <motion.div
-                            className="lg:col-span-2 group rounded-2xl border border-white/5 bg-gradient-to-br from-slate-900/80 to-slate-950/40 p-10 overflow-hidden"
+                        <GlassCard
+                            padding="p-10"
+                            className="lg:col-span-2 group bg-gradient-to-br from-slate-900/80 to-slate-950/40"
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: 0.3 }}
@@ -629,7 +630,7 @@ const LandingPage = () => {
                                     </div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </GlassCard>
                     </div>
                 </div>
             </section>
@@ -660,9 +661,9 @@ const LandingPage = () => {
                             { name: 'Marcus Ali', role: 'Product Manager', review: 'Finally a tool that combines project management with attendance and leave tracking. No more juggling 5 apps.', avatar: 'MA' },
                             { name: 'Priya Sharma', role: 'Full-Stack Dev', review: 'The codebase is clean TypeScript + Drizzle ORM. Easy to extend and customize for our team\'s needs.', avatar: 'PS' },
                         ].map((testimonial, i) => (
-                            <motion.div
+                            <GlassCard
                                 key={i}
-                                className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-sm"
+                                padding="p-8"
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: i * 0.1 }}
@@ -683,7 +684,7 @@ const LandingPage = () => {
                                         <p className="text-xs text-gray-500">{testimonial.role}</p>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </GlassCard>
                         ))}
                     </div>
                 </div>
@@ -716,12 +717,10 @@ const LandingPage = () => {
                         </p>
 
                         <div className="flex flex-wrap justify-center gap-4">
-                            <Link
-                                to="/register"
-                                className="group relative inline-flex items-center gap-2 px-10 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-xl shadow-white/10"
-                            >
-                                Start Building — It's Free
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            <Link to="/register">
+                                <Button size="lg" variant="primary" icon={ArrowRight} iconPosition="right">
+                                    Start Building — It's Free
+                                </Button>
                             </Link>
                         </div>
 

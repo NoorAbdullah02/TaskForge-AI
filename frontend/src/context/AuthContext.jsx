@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../Services/api';
+import { connectSocket, disconnectSocket } from '../Services/socket';
 
 const AuthContext = createContext();
 
@@ -7,32 +9,29 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Check if user is already logged in when app loads
+    // Check if user is already logged in when app loads (via httpOnly cookie)
     useEffect(() => {
-        // Try to fetch current user using httpOnly cookie (backend must set cookie and expose /me)
         let mounted = true;
-        import('../Services/api').then(({ default: api }) => {
-            api.get('/users/me')
-                .then((res) => {
-                    if (!mounted) return;
-                    if (res?.data?.user) {
-                        setUser(res.data.user);
-                        setIsLoggedIn(true);
-                    } else {
-                        setIsLoggedIn(false);
-                    }
-                })
-                .catch(() => {
-                    if (!mounted) return;
+        api.get('/users/me')
+            .then((res) => {
+                if (!mounted) return;
+                if (res?.data?.user) {
+                    setUser(res.data.user);
+                    setIsLoggedIn(true);
+                } else {
                     setIsLoggedIn(false);
-                })
-                .finally(() => {
-                    if (!mounted) return;
-                    setLoading(false);
-                });
-        });
+                }
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setIsLoggedIn(false);
+            })
+            .finally(() => {
+                if (!mounted) return;
+                setLoading(false);
+            });
 
-        return () => { mounted = false };
+        return () => { mounted = false; };
     }, []);
 
     const login = (userData) => {
@@ -44,6 +43,15 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsLoggedIn(false);
     };
+
+    // Synchronize global socket connection with auth state
+    useEffect(() => {
+        if (isLoggedIn && user?.id) {
+            connectSocket(user.id);
+        } else {
+            disconnectSocket();
+        }
+    }, [isLoggedIn, user?.id]);
 
     const value = {
         isLoggedIn,
@@ -62,7 +70,6 @@ export const AuthProvider = ({ children }) => {
 
 
 // USE THIS HOOK IN ANY COMPONENT
-
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {

@@ -18,6 +18,7 @@ export const users = pgTable("users", {
     is2faEnabled: boolean("is_2fa_enabled").notNull().default(false),
     otpCode: varchar("otp_code", { length: 8 }),
     otpExpiresAt: timestamp("otp_expires_at", { mode: "date" }),
+    dateOfBirth: timestamp("date_of_birth", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -124,7 +125,8 @@ export const workspaces = pgTable("workspaces", {
     holidays: text("holidays").notNull().default("[]"),
     leavePolicy: text("leave_policy").notNull().default('{"sick": 14, "casual": 10, "annual": 15}'),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date" })
 });
 
 export const workspaceMembers = pgTable("workspace_members", {
@@ -144,6 +146,12 @@ export const emailLogs = pgTable("email_logs", {
     eventType: varchar("event_type", { length: 100 }).notNull(),
     status: varchar("status", { length: 50 }).notNull().default("sent"),
     errorMessage: text("error_message"),
+    messageId: varchar("message_id", { length: 255 }),
+    retryCount: integer("retry_count").notNull().default(0),
+    scheduledAt: timestamp("scheduled_at", { mode: "date" }),
+    sentAt: timestamp("sent_at", { mode: "date" }),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
+    htmlContent: text("html_content"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
 });
 
@@ -173,7 +181,8 @@ export const projects = pgTable("projects", {
     isArchived: boolean("is_archived").notNull().default(false),
     clonedFromId: integer("cloned_from_id").references((): any => projects.id, { onDelete: 'set null' }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date" })
 });
 
 export const projectMembers = pgTable("project_members", {
@@ -217,7 +226,8 @@ export const tasks = pgTable("tasks", {
     activePomodoroSession: boolean("active_pomodoro_session").notNull().default(false),
     pomodoroTimerStartedAt: timestamp("pomodoro_timer_started_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date" })
 });
 
 
@@ -270,6 +280,11 @@ export const notifications = pgTable("notifications", {
     message: text("message").notNull(),
     type: varchar("type", { length: 50 }).notNull(),
     isRead: boolean("is_read").notNull().default(false),
+    isArchived: boolean("is_archived").notNull().default(false),
+    link: varchar("link", { length: 500 }),
+    entityType: varchar("entity_type", { length: 100 }),
+    entityId: integer("entity_id"),
+    actionType: varchar("action_type", { length: 100 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
 });
 
@@ -839,3 +854,34 @@ export type TaskTemplate = typeof taskTemplates.$inferSelect;
 export type NewTaskTemplate = typeof taskTemplates.$inferInsert;
 export type TaskHistory = typeof taskHistory.$inferSelect;
 export type NewTaskHistory = typeof taskHistory.$inferInsert;
+
+export const notificationPreferences = pgTable("notification_preferences", {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+    emailEnabled: boolean("email_enabled").notNull().default(true),
+    pushEnabled: boolean("push_enabled").notNull().default(true),
+    reminderEnabled: boolean("reminder_enabled").notNull().default(true),
+    taskAssign: boolean("task_assign").notNull().default(true),
+    taskDeadline: boolean("task_deadline").notNull().default(true),
+    taskComment: boolean("task_comment").notNull().default(true),
+    leaveApproval: boolean("leave_approval").notNull().default(true),
+    attendanceAlert: boolean("attendance_alert").notNull().default(true),
+    projectUpdate: boolean("project_update").notNull().default(true),
+    weeklyDigest: boolean("weekly_digest").notNull().default(true),
+    monthlyReport: boolean("monthly_report").notNull().default(true),
+    birthdayWish: boolean("birthday_wish").notNull().default(true)
+});
+
+export const automationLogs = pgTable("automation_logs", {
+    id: serial("id").primaryKey(),
+    jobType: varchar("job_type", { length: 100 }).notNull(),
+    status: varchar("status", { length: 50 }).notNull(), // "success", "failed"
+    details: text("details"),
+    ranAt: timestamp("ran_at", { mode: "date" }).defaultNow().notNull(),
+    duration: integer("duration") // in milliseconds
+});
+
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type NewNotificationPreference = typeof notificationPreferences.$inferInsert;
+export type AutomationLog = typeof automationLogs.$inferSelect;
+export type NewAutomationLog = typeof automationLogs.$inferInsert;

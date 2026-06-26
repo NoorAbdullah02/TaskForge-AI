@@ -8,6 +8,7 @@ import { imagekit } from '../lib/imagekit';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { socketService } from '../services/socket.service';
 import { isProjectManager, isProjectMember } from '../lib/projectAuth';
+import { NotificationService } from '../services/notification.service';
 
 
 
@@ -95,13 +96,23 @@ export class ProjectController {
             });
 
             if (user.activeWorkspaceId) {
-                await EmailTriggerService.sendProjectCreated(
-                    user.email,
-                    user.name,
-                    project.name,
-                    user.workspaceName || 'Your Workspace',
-                    user.activeWorkspaceId
-                );
+                await NotificationService.dispatch({
+                    event: 'project.created',
+                    userId: user.id,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'project',
+                    entityId: project.id,
+                    title: `New Project Initiated: ${project.name}`,
+                    message: `A new project "${project.name}" has been initiated in your workspace ${user.workspaceName || 'Your Workspace'}.`,
+                    link: `/projects/${project.id}`,
+                    emailTemplate: 'projectCreated',
+                    emailData: {
+                        projectName: project.name,
+                        workspaceName: user.workspaceName || 'Your Workspace',
+                        description: project.description || 'No description provided.',
+                        link: `/projects/${project.id}`,
+                    },
+                });
                 socketService.broadcastToWorkspace(user.activeWorkspaceId, 'project_updated', { action: 'created', projectId: project.id });
             }
 
@@ -209,19 +220,37 @@ export class ProjectController {
 
             if (user.activeWorkspaceId) {
                 if (role === 'manager' || role === 'project_manager') {
-                    await EmailTriggerService.sendProjectManagerAssigned(
-                        targetUser.email,
-                        targetUser.name,
-                        details.name,
-                        user.activeWorkspaceId
-                    );
+                    await NotificationService.dispatch({
+                        event: 'project.assigned',
+                        userId: targetUser.id,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'project',
+                        entityId: projectId,
+                        title: 'Appointed Project Manager',
+                        message: `You have been officially appointed as the Project Manager for "${details.name}".`,
+                        link: `/projects/${projectId}`,
+                        emailTemplate: 'projectManagerAssigned',
+                        emailData: {
+                            projectName: details.name,
+                            link: `/projects/${projectId}`,
+                        },
+                    });
                 } else {
-                    await EmailTriggerService.sendProjectAssignment(
-                        targetUser.email,
-                        targetUser.name,
-                        details.name,
-                        user.activeWorkspaceId
-                    );
+                    await NotificationService.dispatch({
+                        event: 'project.assigned',
+                        userId: targetUser.id,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'project',
+                        entityId: projectId,
+                        title: 'Assigned to Project',
+                        message: `You have been assigned as a member of project "${details.name}".`,
+                        link: `/projects/${projectId}`,
+                        emailTemplate: 'projectAssignment',
+                        emailData: {
+                            projectName: details.name,
+                            link: `/projects/${projectId}`,
+                        },
+                    });
                 }
             }
 
@@ -301,24 +330,26 @@ export class ProjectController {
                 dueDate: dueDate ? new Date(dueDate) : null,
             });
 
-            // Send notification to assignee
-            if (task.assigneeId) {
-                const [assigneeUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
-                if (assigneeUser) {
-                    await EmailTriggerService.sendTaskAssigned(
-                        assigneeUser.email,
-                        assigneeUser.name,
-                        task.title,
-                        details.name,
-                        user.activeWorkspaceId || 0
-                    );
-                    await socketService.sendNotification(
-                        task.assigneeId,
-                        'New Task Assigned',
-                        `You have been assigned to task "${task.title}" in project "${details.name}".`,
-                        'task_assigned'
-                    );
-                }
+            // Send notification to assignee using unified NotificationService
+            if (task.assigneeId && user.activeWorkspaceId) {
+                await NotificationService.dispatch({
+                    event: 'task.assigned',
+                    userId: task.assigneeId,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'task',
+                    entityId: task.id,
+                    title: `New Task Assigned: ${task.title}`,
+                    message: `You have been assigned to task "${task.title}" in project "${details.name}".`,
+                    link: `/tasks/${task.id}`,
+                    emailTemplate: 'taskAssigned',
+                    emailData: {
+                        taskTitle: task.title,
+                        projectName: details.name,
+                        priority: task.priority || 'medium',
+                        estimatedHours: task.estimatedHours || null,
+                        link: `/tasks/${task.id}`,
+                    },
+                });
             }
 
             if (user.activeWorkspaceId) {
@@ -390,12 +421,17 @@ export class ProjectController {
                 const details = await ProjectService.getProjectDetails(task.projectId);
                 const ownerOrManager = details?.members?.find(m => m.role === 'owner' || m.role === 'manager');
                 if (ownerOrManager) {
-                    await socketService.sendNotification(
-                        ownerOrManager.id,
-                        'Task Status Updated',
-                        `Task "${task.title}" status was updated to "${status}" by ${user.name}.`,
-                        'task_status'
-                    );
+                    await NotificationService.dispatch({
+                        event: 'project.assigned',
+                        userId: ownerOrManager.id,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: task.id,
+                        title: 'Task Status Updated',
+                        message: `Task "${task.title}" status was updated to "${status}" by ${user.name}.`,
+                        link: `/tasks/${task.id}`,
+                        skipEmail: true,
+                    });
                 }
             }
 
@@ -805,12 +841,17 @@ export class ProjectController {
 
             // Send notification
             if (targetUser) {
-                await socketService.sendNotification(
-                    targetUserId,
-                    'Project Ownership Transferred',
-                    `You are now the owner/creator of project "${details.name}".`,
-                    'project_transfer'
-                );
+                await NotificationService.dispatch({
+                    event: 'project.assigned',
+                    userId: targetUserId,
+                    workspaceId: details.workspaceId,
+                    entityType: 'project',
+                    entityId: projectId,
+                    title: 'Project Ownership Transferred',
+                    message: `You are now the owner/creator of project "${details.name}".`,
+                    link: `/projects/${projectId}`,
+                    skipEmail: true,
+                });
             }
 
             if (user.activeWorkspaceId) {

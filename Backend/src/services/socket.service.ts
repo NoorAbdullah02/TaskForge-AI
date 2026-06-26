@@ -1,6 +1,18 @@
 import { Server } from 'socket.io';
 import { db } from '../db/index';
 import { notifications } from '../db/schema';
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
+
+const parseCookies = (cookieString: string) => {
+    const list: Record<string, string> = {};
+    if (!cookieString) return list;
+    cookieString.split(';').forEach((cookie) => {
+        const parts = cookie.split('=');
+        list[parts.shift()!.trim()] = decodeURI(parts.join('='));
+    });
+    return list;
+};
 
 class SocketService {
     private io: Server | null = null;
@@ -9,20 +21,64 @@ class SocketService {
     init(server: any) {
         this.io = new Server(server, {
             cors: {
-                origin: '*',
+                origin: env.FRONTEND_URL || 'http://localhost:5173',
                 methods: ['GET', 'POST', 'PUT', 'DELETE'],
                 credentials: true
             }
         });
 
-        this.io.on('connection', (socket) => {
-            console.log('⚡ Socket connected:', socket.id);
+        // Add Socket.IO JWT authentication middleware
+        this.io.use((socket, next) => {
+            try {
+                const cookieHeader = socket.handshake.headers.cookie;
+                let token: string | undefined = undefined;
 
-            socket.on('auth', (userId: number) => {
-                if (userId) {
-                    this.userSockets.set(userId, socket.id);
-                    socket.join(`user_${userId}`);
-                    console.log(`👤 User authenticated on socket: User ID ${userId} -> Socket ID ${socket.id}`);
+                if (cookieHeader) {
+                    const cookies = parseCookies(cookieHeader);
+                    token = cookies.accessToken;
+                }
+
+                // Fallback to auth header or query param for flexibility
+                if (!token && socket.handshake.headers.authorization) {
+                    const authHeader = socket.handshake.headers.authorization;
+                    if (authHeader.startsWith('Bearer ')) {
+                        token = authHeader.slice(7);
+                    }
+                }
+
+                if (!token && socket.handshake.query?.token) {
+                    token = socket.handshake.query.token as string;
+                }
+
+                if (!token) {
+                    return next(new Error('Authentication error: Access token missing'));
+                }
+
+                const decoded = jwt.verify(token, env.JWT_SECRET) as any;
+                (socket as any).user = decoded;
+                next();
+            } catch (err) {
+                return next(new Error('Authentication error: Invalid access token'));
+            }
+        });
+
+        this.io.on('connection', (socket) => {
+            const user = (socket as any).user;
+            if (!user || !user.id) {
+                console.log('🔌 Socket connection rejected: Unauthenticated');
+                socket.disconnect();
+                return;
+            }
+
+            const userId = Number(user.id);
+            this.userSockets.set(userId, socket.id);
+            socket.join(`user_${userId}`);
+            console.log(`⚡ Socket connected & verified: User ID ${userId} -> Socket ID ${socket.id}`);
+
+            socket.on('auth', (clientUserId: number) => {
+                console.log(`👤 Client auth request for user ID: ${clientUserId} (Verified ID: ${userId})`);
+                if (Number(clientUserId) !== userId) {
+                    console.warn(`⚠️ Impersonation attempt blocked: User ${userId} tried to auth as ${clientUserId}`);
                 }
             });
 
@@ -49,13 +105,7 @@ class SocketService {
 
             socket.on('disconnect', () => {
                 console.log('🔌 Socket disconnected:', socket.id);
-                for (const [userId, socketId] of this.userSockets.entries()) {
-                    if (socketId === socket.id) {
-                        this.userSockets.delete(userId);
-                        console.log(`❌ Removed user authentication: User ID ${userId}`);
-                        break;
-                    }
-                }
+                this.userSockets.delete(userId);
             });
         });
     }
@@ -81,6 +131,13 @@ class SocketService {
             return notif;
         } catch (err) {
             console.error('Error sending/saving notification:', err);
+        }
+    }
+
+    emitToUser(userId: number, event: string, data: any) {
+        if (this.io) {
+            this.io.to(`user_${userId}`).emit(event, data);
+            console.log(`⚡ Emitted "${event}" to user_${userId}`);
         }
     }
 

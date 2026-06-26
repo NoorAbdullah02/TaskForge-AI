@@ -1,5 +1,5 @@
 import { db } from '../db/index';
-import { eq, and, inArray, desc } from 'drizzle-orm';
+import { eq, and, inArray, desc, SQL } from 'drizzle-orm';
 import { 
     tasks, 
     projects, 
@@ -57,8 +57,23 @@ export class TaskService {
 
         const projectIds = memberships.map((m) => m.projectId);
 
-        // Build base query
-        let query = db.select({
+        // Build all filter conditions directly in the DB query (no in-memory filtering)
+        const conditions: SQL[] = [
+            inArray(tasks.projectId, projectIds),
+            eq(tasks.isArchived, false)
+        ];
+
+        if (filters?.projectId) {
+            conditions.push(eq(tasks.projectId, filters.projectId));
+        }
+        if (filters?.status) {
+            conditions.push(eq(tasks.status, filters.status as any));
+        }
+        if (filters?.priority) {
+            conditions.push(eq(tasks.priority, filters.priority as any));
+        }
+
+        const results = await db.select({
             task: tasks,
             projectName: projects.name,
             assigneeName: users.name,
@@ -67,30 +82,14 @@ export class TaskService {
         .from(tasks)
         .innerJoin(projects, eq(tasks.projectId, projects.id))
         .leftJoin(users, eq(tasks.assigneeId, users.id))
-        .where(and(inArray(tasks.projectId, projectIds), eq(tasks.isArchived, false)));
+        .where(and(...conditions));
 
-        // Execute query and filter in memory or extend Drizzle conditions
-        const results = await query;
-        let filtered = results.map(r => ({
+        return results.map(r => ({
             ...r.task,
             projectName: r.projectName,
             assigneeName: r.assigneeName,
             assigneeEmail: r.assigneeEmail
         }));
-
-        if (filters) {
-            if (filters.projectId) {
-                filtered = filtered.filter(f => f.projectId === filters.projectId);
-            }
-            if (filters.status) {
-                filtered = filtered.filter(f => f.status === filters.status);
-            }
-            if (filters.priority) {
-                filtered = filtered.filter(f => f.priority === filters.priority);
-            }
-        }
-
-        return filtered;
     }
 
     // Get detailed view of task including project details, subtasks, comments, and attachments
@@ -98,67 +97,61 @@ export class TaskService {
         const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
         if (!task) return null;
 
-        const [project] = await db.select().from(projects).where(eq(projects.id, task.projectId));
+        // Fetch all related data in parallel — reduces 6 sequential round-trips to 1
+        const [project, taskSubtasks, taskComments, taskAttachments, watchersList, historyList, assigneeResult] =
+            await Promise.all([
+                db.select().from(projects).where(eq(projects.id, task.projectId)).then(r => r[0] ?? null),
 
-        // Fetch subtasks
-        const taskSubtasks = await db.select().from(subtasks).where(eq(subtasks.taskId, taskId));
+                db.select().from(subtasks).where(eq(subtasks.taskId, taskId)),
 
-        // Fetch comments with author names
-        const taskComments = await db.select({
-            id: comments.id,
-            content: comments.content,
-            userId: comments.userId,
-            userName: users.name,
-            createdAt: comments.createdAt,
-        })
-        .from(comments)
-        .innerJoin(users, eq(comments.userId, users.id))
-        .where(eq(comments.taskId, taskId));
+                db.select({
+                    id: comments.id,
+                    content: comments.content,
+                    userId: comments.userId,
+                    userName: users.name,
+                    createdAt: comments.createdAt,
+                })
+                .from(comments)
+                .innerJoin(users, eq(comments.userId, users.id))
+                .where(eq(comments.taskId, taskId)),
 
-        // Fetch attachments
-        const taskAttachments = await db.select().from(attachments).where(eq(attachments.taskId, taskId));
+                db.select().from(attachments).where(eq(attachments.taskId, taskId)),
 
-        // Fetch assignee details if any
-        let assignee = null;
-        if (task.assigneeId) {
-            const [user] = await db.select({
-                id: users.id,
-                name: users.name,
-                email: users.email
-            }).from(users).where(eq(users.id, task.assigneeId));
-            assignee = user || null;
-        }
+                db.select({
+                    id: users.id,
+                    name: users.name,
+                    email: users.email,
+                    role: taskWatchers.role
+                })
+                .from(taskWatchers)
+                .innerJoin(users, eq(taskWatchers.userId, users.id))
+                .where(eq(taskWatchers.taskId, taskId)),
 
-        // Fetch watchers
-        const watchersList = await db.select({
-            id: users.id,
-            name: users.name,
-            email: users.email,
-            role: taskWatchers.role
-        })
-        .from(taskWatchers)
-        .innerJoin(users, eq(taskWatchers.userId, users.id))
-        .where(eq(taskWatchers.taskId, taskId));
+                db.select({
+                    id: taskHistory.id,
+                    userName: users.name,
+                    fieldName: taskHistory.fieldName,
+                    oldValue: taskHistory.oldValue,
+                    newValue: taskHistory.newValue,
+                    changeType: taskHistory.changeType,
+                    createdAt: taskHistory.createdAt
+                })
+                .from(taskHistory)
+                .leftJoin(users, eq(taskHistory.userId, users.id))
+                .where(eq(taskHistory.taskId, taskId))
+                .orderBy(desc(taskHistory.createdAt)),
 
-        // Fetch history timeline
-        const historyList = await db.select({
-            id: taskHistory.id,
-            userName: users.name,
-            fieldName: taskHistory.fieldName,
-            oldValue: taskHistory.oldValue,
-            newValue: taskHistory.newValue,
-            changeType: taskHistory.changeType,
-            createdAt: taskHistory.createdAt
-        })
-        .from(taskHistory)
-        .leftJoin(users, eq(taskHistory.userId, users.id))
-        .where(eq(taskHistory.taskId, taskId))
-        .orderBy(desc(taskHistory.createdAt));
+                // Conditionally fetch assignee — resolves to null if no assigneeId
+                task.assigneeId
+                    ? db.select({ id: users.id, name: users.name, email: users.email })
+                        .from(users).where(eq(users.id, task.assigneeId)).then(r => r[0] ?? null)
+                    : Promise.resolve(null)
+            ]);
 
         return {
             ...task,
             project,
-            assignee,
+            assignee: assigneeResult,
             subtasks: taskSubtasks,
             comments: taskComments,
             attachments: taskAttachments,
@@ -534,23 +527,13 @@ export class TaskService {
         return task;
     }
 
-    // BULK OPERATIONS
+    // BULK OPERATIONS — run concurrently for performance
     static async bulkUpdate(taskIds: number[], updates: Partial<NewTask>, userId: number) {
-        const updatedTasks = [];
-        for (const id of taskIds) {
-            const updated = await TaskService.updateTask(id, updates, userId);
-            updatedTasks.push(updated);
-        }
-        return updatedTasks;
+        return Promise.all(taskIds.map(id => TaskService.updateTask(id, updates, userId)));
     }
 
     static async bulkDelete(taskIds: number[], userId: number) {
-        const deleted = [];
-        for (const id of taskIds) {
-            const del = await TaskService.deleteTask(id, userId);
-            deleted.push(del);
-        }
-        return deleted;
+        return Promise.all(taskIds.map(id => TaskService.deleteTask(id, userId)));
     }
 
     // TEMPLATES

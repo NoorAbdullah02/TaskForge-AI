@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { AttendanceService } from '../services/attendance.service';
 import { EmailTriggerService } from '../services/emailTrigger.service';
+import { NotificationService } from '../services/notification.service';
 
 export class AttendanceController {
     // Get today's check-in/out status
@@ -35,13 +36,20 @@ export class AttendanceController {
             const record = await AttendanceService.checkIn(user.id, date, location, ipAddress);
 
             if (record.status === 'late' && user.activeWorkspaceId) {
-                await EmailTriggerService.sendAttendanceWarning(
-                    user.email,
-                    user.name,
-                    record.date,
-                    'Late Check-in Warning',
-                    user.activeWorkspaceId
-                );
+                await NotificationService.dispatch({
+                    event: 'attendance.reminder',
+                    userId: user.id,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'attendance',
+                    title: 'Late Check-In Recorded ⚠️',
+                    message: `Your check-in on ${record.date} was recorded as late. Consistent late arrivals may impact your attendance score.`,
+                    link: '/attendance',
+                    emailTemplate: 'attendanceReminder',
+                    emailData: {
+                        date: record.date,
+                        shiftType: user.shiftType || 'morning',
+                    },
+                });
             }
 
             return res.status(201).json({

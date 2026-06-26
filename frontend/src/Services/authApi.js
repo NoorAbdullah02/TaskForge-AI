@@ -11,10 +11,8 @@ export const checkEmailExists = async (email) => {
         const response = await api.post('/users/check-email', { email });
         return response.data.exists;
     } catch (err) {
-        if (err.response?.status === 409) {
-            return true;
-        }
-        throw err;
+        const message = err?.response?.data?.message || err?.message || 'Unable to verify email. Please try again.';
+        throw new Error(message);
     }
 }
 

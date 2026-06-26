@@ -9,6 +9,7 @@ import { EmailTriggerService } from '../services/emailTrigger.service';
 import { isProjectManager } from '../lib/projectAuth';
 import { socketService } from '../services/socket.service';
 import { ProjectIntelligenceService } from '../services/projectIntelligence.service';
+import { NotificationService } from '../services/notification.service';
 
 
 export class TaskController {
@@ -97,13 +98,25 @@ export class TaskController {
                 const [targetUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
                 if (targetUser) {
                     const projectDetails = await ProjectService.getProjectDetails(task.projectId);
-                    await EmailTriggerService.sendTaskAssigned(
-                        targetUser.email,
-                        targetUser.name,
-                        task.title,
-                        projectDetails?.name || 'Project',
-                        user.activeWorkspaceId
-                    );
+                    // Use new NotificationService.dispatch for unified notification
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: task.assigneeId,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: task.id,
+                        title: `New Task Assigned: ${task.title}`,
+                        message: `You have been assigned a new task "${task.title}" in project ${projectDetails?.name || 'Unknown'}.`,
+                        link: `/tasks/${task.id}`,
+                        emailTemplate: 'taskAssigned',
+                        emailData: {
+                            taskTitle: task.title,
+                            projectName: projectDetails?.name || 'Unknown Project',
+                            priority: task.priority || 'medium',
+                            estimatedHours: task.estimatedHours || null,
+                            link: `/tasks/${task.id}`,
+                        },
+                    });
                 }
             }
 
@@ -172,18 +185,26 @@ export class TaskController {
             if (user.activeWorkspaceId) {
                 const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
                 
-                // If assignee changed, send task assigned email
+                // If assignee changed, send unified notification
                 if (assigneeId !== undefined && assigneeId !== details.assigneeId && updated.assigneeId) {
-                    const [targetUser] = await db.select().from(users).where(eq(users.id, updated.assigneeId));
-                    if (targetUser) {
-                        await EmailTriggerService.sendTaskAssigned(
-                            targetUser.email,
-                            targetUser.name,
-                            updated.title,
-                            projectDetails?.name || 'Project',
-                            user.activeWorkspaceId
-                        );
-                    }
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: updated.assigneeId,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: updated.id,
+                        title: `New Task Assigned: ${updated.title}`,
+                        message: `You have been assigned task "${updated.title}" in project ${projectDetails?.name || 'Unknown'}.`,
+                        link: `/tasks/${updated.id}`,
+                        emailTemplate: 'taskAssigned',
+                        emailData: {
+                            taskTitle: updated.title,
+                            projectName: projectDetails?.name || 'Unknown Project',
+                            priority: updated.priority || 'medium',
+                            estimatedHours: updated.estimatedHours || null,
+                            link: `/tasks/${updated.id}`,
+                        },
+                    });
                 }
                 
                 // If status is changed to completed (done) and it is milestone
@@ -282,12 +303,17 @@ export class TaskController {
                         user.name,
                         user.activeWorkspaceId
                     );
-                    await socketService.sendNotification(
-                        updated.assigneeId,
-                        'Task Approved',
-                        `Your task "${updated.title}" has been approved by ${user.name}.`,
-                        'task_approved'
-                    );
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: updated.assigneeId,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: updated.id,
+                        title: 'Task Approved',
+                        message: `Your task "${updated.title}" has been approved by ${user.name}.`,
+                        link: `/tasks/${updated.id}`,
+                        skipEmail: true,
+                    });
                 }
                 socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'approved', taskId: updated.id, projectId: updated.projectId });
             }
@@ -340,12 +366,17 @@ export class TaskController {
                         user.name,
                         user.activeWorkspaceId
                     );
-                    await socketService.sendNotification(
-                        updated.assigneeId,
-                        'Task Rejected',
-                        `Your task "${updated.title}" has been rejected by ${user.name}. Reason: ${reason || 'No reason provided'}`,
-                        'task_rejected'
-                    );
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: updated.assigneeId,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: updated.id,
+                        title: 'Task Rejected',
+                        message: `Your task "${updated.title}" has been rejected by ${user.name}. Reason: ${reason || 'No reason provided'}`,
+                        link: `/tasks/${updated.id}`,
+                        skipEmail: true,
+                    });
                 }
                 socketService.broadcastToWorkspace(user.activeWorkspaceId, 'task_updated', { action: 'rejected', taskId: updated.id, projectId: updated.projectId });
             }
@@ -459,6 +490,26 @@ export class TaskController {
                 content: content.trim()
             });
 
+            // Notify task assignee about comment if different from commenter
+            if (task.assigneeId && task.assigneeId !== user.id) {
+                await NotificationService.dispatch({
+                    event: 'task.comment',
+                    userId: task.assigneeId,
+                    entityType: 'task',
+                    entityId: taskId,
+                    title: `New Comment on: ${task.title}`,
+                    message: `${user.name} commented on your task: "${content.trim().substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+                    link: `/tasks/${taskId}`,
+                    emailTemplate: 'taskComment',
+                    emailData: {
+                        taskTitle: task.title,
+                        commentText: content.trim().substring(0, 200),
+                        authorName: user.name,
+                        link: `/tasks/${taskId}`,
+                    },
+                });
+            }
+
             return res.status(201).json({ message: 'Comment posted successfully', comment });
         } catch (error) {
             return res.status(500).json({ message: 'Internal Server Error' });
@@ -569,7 +620,17 @@ export class TaskController {
             
             // Notify assignee
             if (task.assigneeId && task.assigneeId !== user.id) {
-                await socketService.sendNotification(task.assigneeId, 'Task Locked', `Task "${task.title}" has been locked by ${user.name}.`, 'task_locked');
+                await NotificationService.dispatch({
+                    event: 'task.assigned',
+                    userId: task.assigneeId,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'task',
+                    entityId: task.id,
+                    title: 'Task Locked',
+                    message: `Task "${task.title}" has been locked by ${user.name}.`,
+                    link: `/tasks/${task.id}`,
+                    skipEmail: true,
+                });
                 const [assigneeUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
                 if (assigneeUser) {
                     await EmailTriggerService.sendTaskLockedAlert(assigneeUser.email, assigneeUser.name, task.title, user.name, user.activeWorkspaceId || 0);
@@ -599,7 +660,17 @@ export class TaskController {
 
             // Notify assignee
             if (task.assigneeId && task.assigneeId !== user.id) {
-                await socketService.sendNotification(task.assigneeId, 'Task Unlocked', `Task "${task.title}" has been unlocked by ${user.name}.`, 'task_unlocked');
+                await NotificationService.dispatch({
+                    event: 'task.assigned',
+                    userId: task.assigneeId,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'task',
+                    entityId: task.id,
+                    title: 'Task Unlocked',
+                    message: `Task "${task.title}" has been unlocked by ${user.name}.`,
+                    link: `/tasks/${task.id}`,
+                    skipEmail: true,
+                });
                 const [assigneeUser] = await db.select().from(users).where(eq(users.id, task.assigneeId));
                 if (assigneeUser) {
                     await EmailTriggerService.sendTaskUnlockedAlert(assigneeUser.email, assigneeUser.name, task.title, user.name, user.activeWorkspaceId || 0);
@@ -807,7 +878,17 @@ export class TaskController {
             const updated = await TaskService.stopPomodoro(taskId, user.id);
 
             // Send notification
-            await socketService.sendNotification(user.id, '🍅 Pomodoro Finished', `Pomodoro session finished for task "${task.title}".`, 'pomodoro_complete');
+            await NotificationService.dispatch({
+                event: 'task.assigned',
+                userId: user.id,
+                workspaceId: user.activeWorkspaceId,
+                entityType: 'task',
+                entityId: task.id,
+                title: '🍅 Pomodoro Finished',
+                message: `Pomodoro session finished for task "${task.title}".`,
+                link: `/tasks/${task.id}`,
+                skipEmail: true,
+            });
             await EmailTriggerService.sendPomodoroCompletedAlert(user.email, user.name, task.title, updated.pomodoroCount, user.activeWorkspaceId || 0);
 
             return res.status(200).json({ message: 'Pomodoro focus timer finished', task: updated });
