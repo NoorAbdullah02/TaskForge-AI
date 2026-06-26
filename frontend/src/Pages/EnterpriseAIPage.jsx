@@ -223,7 +223,7 @@ const EnterpriseAIPage = () => {
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
             
             {/* Sidebar Navigation */}
-            <aside className="w-full md:w-80 bg-slate-900 border-r border-slate-800 p-6 flex flex-col justify-between shrink-0">
+            <aside className="w-full md:w-80 bg-slate-900 border-r border-slate-800 px-6 pb-6 pt-24 flex flex-col justify-between shrink-0">
                 <div>
                     <div className="flex items-center gap-3 mb-8">
                         <div className="p-2 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl">
