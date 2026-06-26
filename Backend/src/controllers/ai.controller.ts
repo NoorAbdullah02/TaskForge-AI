@@ -1,11 +1,13 @@
 import type { Request, Response } from 'express';
 import { db } from '../db/index';
-import { aiRequests, projects, tasks, attendance } from '../db/schema';
+import { aiRequests, projects, tasks, attendance, users, workspaceMembers, projectMembers, sprints } from '../db/schema';
 import { generateJSONResponse, generateTextResponse } from '../lib/gemini';
 import { ProjectService } from '../services/project.service';
 import { TaskService } from '../services/task.service';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and, gte, count, sql, ne, desc } from 'drizzle-orm';
 import { EmailTriggerService } from '../services/emailTrigger.service';
+import { MLService } from '../services/ml.service';
+
 
 export class AIController {
     static async generateTasks(req: Request, res: Response) {
@@ -65,7 +67,7 @@ JSON structure:
                 return res.status(400).json({ message: 'Meeting notes are required' });
             }
 
-            const prompt = `You are an expert AI productivity assistant. Analyze the following meeting notes and generate a summary along with key action items.
+            const prompt = `You are an expert AI productivity assistant. Analyze the following meeting notes and generate a summary, key action items, risks identified, and concrete tasks that should be added to the project management system.
 Meeting Notes:
 "${meetingNotes}"
 
@@ -76,8 +78,21 @@ JSON structure:
   "summary": "High-level summary of the meeting goals, topics discussed, and final outcomes (1-2 paragraphs).",
   "actionItems": [
     {
-      "task": "Specific task to perform, e.g., Prepare financial spreadsheet",
-      "assigneeHint": "Name of person suggested or implied for this task, or 'Unassigned' if none"
+      "task": "Specific action item description",
+      "assigneeHint": "Name of person suggested or implied, or 'Unassigned' if none"
+    }
+  ],
+  "risks": [
+    {
+      "risk": "Description of risk or blocker identified",
+      "severity": "low" | "medium" | "high"
+    }
+  ],
+  "generatedTasks": [
+    {
+      "title": "Clear task title",
+      "description": "Task description derived from action items",
+      "priority": "low" | "medium" | "high" | "critical"
     }
   ]
 }`;
@@ -111,7 +126,7 @@ JSON structure:
             }
 
             // Fetch user projects and tasks context to make it context-aware!
-            const projectsList = await ProjectService.getUserProjects(user.id);
+            const projectsList = await ProjectService.getUserProjects(user.id, user.activeWorkspaceId || 0, user.role || 'employee') as any[];
             const tasksList = await TaskService.getUserTasks(user.id);
 
             const activeProjectsContext = projectsList.map(p => `- ${p.name} (Status: ${p.status})`).join('\n');
@@ -379,6 +394,486 @@ Please generate a professional weekly executive summary. Highlight achievements,
         } catch (error: any) {
             console.error('Error in sendWeeklySummaryEmail AI controller:', error);
             return res.status(500).json({ message: error.message || 'AI Weekly summary failed' });
+        }
+    }
+
+    static async planSprintV2(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { projectDescription } = req.body;
+            if (!projectDescription || projectDescription.trim().length === 0) {
+                return res.status(400).json({ message: 'Project description is required' });
+            }
+
+            const prompt = `You are an expert Agile Scrum Master and Project Architect. Based on the following project description, generate an optimized sprint planning blueprint.
+Project Description:
+"${projectDescription}"
+
+Respond ONLY with a JSON object.
+Do not include any markdown formatting, prefix or suffix like \`\`\`json. Return only the raw JSON.
+JSON structure:
+{
+  "sprintBreakdown": [
+    {
+      "sprintName": "Sprint 1: Setup & MVP Features",
+      "durationDays": 14,
+      "goal": "Establish primary workspace environment, base navigation, and databases.",
+      "tasks": [
+        { "title": "Configure Drizzle ORM Schema", "description": "Define database relations and models", "points": 3, "role": "Developer" },
+        { "title": "Wireframe Core Pages", "description": "Create Figma mockups for task board and dashboard", "points": 2, "role": "Designer" }
+      ]
+    }
+  ],
+  "teamAllocation": [
+    { "role": "Developer", "count": 2, "allocation": "Primary backend development and database schema creation." },
+    { "role": "Designer", "count": 1, "allocation": "UI mockup, wireframes, and design system setup." },
+    { "role": "Tester", "count": 1, "allocation": "Writing automation tests, manual verification, and API validation." }
+  ],
+  "timeline": {
+    "startDate": "${new Date().toISOString().split('T')[0]}",
+    "endDate": "${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}",
+    "totalDurationDays": 30
+  },
+  "risks": [
+    { "risk": "Database migration conflicts", "severity": "medium", "mitigation": "Use branching migrations and staging checks." }
+  ]
+}`;
+
+            const responseJSON = await generateJSONResponse(prompt);
+
+            await db.insert(aiRequests).values({
+                userId: user.id,
+                promptType: 'sprint-planner-v2',
+                promptText: projectDescription.slice(0, 500),
+                responseText: JSON.stringify(responseJSON),
+                status: 'success'
+            });
+
+            return res.status(200).json(responseJSON);
+        } catch (error: any) {
+            console.error('Error in planSprintV2 controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Sprint Planning failed' });
+        }
+    }
+
+    static async resourcePlanner(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { projectId } = req.params;
+            const pId = parseInt(projectId, 10);
+            if (isNaN(pId)) return res.status(400).json({ message: 'Invalid Project ID' });
+
+            const [project] = await db.select().from(projects).where(eq(projects.id, pId));
+            if (!project) return res.status(404).json({ message: 'Project not found' });
+
+            // Fetch workspace members
+            const workspaceMembersList = await db.select({
+                id: users.id,
+                name: users.name,
+                role: users.role,
+                position: users.position,
+                departmentId: users.departmentId
+            })
+            .from(workspaceMembers)
+            .innerJoin(users, eq(workspaceMembers.userId, users.id))
+            .where(eq(workspaceMembers.workspaceId, project.workspaceId || 0));
+
+            // Fetch tasks for current workload calculation
+            const availableMembersPayload = [];
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            for (const member of workspaceMembersList) {
+                // Task workload count
+                const [activeTasksRow] = await db.select({ cnt: count() })
+                    .from(tasks)
+                    .where(
+                        and(
+                            eq(tasks.assigneeId, member.id),
+                            ne(tasks.status, 'done'),
+                            ne(tasks.status, 'completed')
+                        )
+                    );
+                const activeTasks = Number(activeTasksRow?.cnt || 0);
+
+                // Fetch historical productivity score (fallback to 80)
+                const [completedRow] = await db.select({ cnt: count() })
+                    .from(tasks)
+                    .where(
+                        and(
+                            eq(tasks.assigneeId, member.id),
+                            inArray(tasks.status, ['done', 'completed'])
+                        )
+                    );
+                const completedTasks = Number(completedRow?.cnt || 0);
+                const productivity = completedTasks > 0 ? Math.min(100, 60 + completedTasks * 5) : 80;
+
+                // Department name mapper
+                let deptName = 'Engineering';
+                if (member.role === 'designer' || member.position?.toLowerCase().includes('design')) {
+                    deptName = 'Design';
+                } else if (member.role === 'qa' || member.position?.toLowerCase().includes('qa')) {
+                    deptName = 'Quality Assurance';
+                }
+
+                availableMembersPayload.push({
+                    userId: member.id,
+                    name: member.name,
+                    role: member.role === 'admin' ? 'Project Manager' : (member.role === 'designer' ? 'Designer' : (member.role === 'qa' ? 'QA' : 'Developer')),
+                    current_task_load: activeTasks,
+                    historical_productivity: productivity,
+                    department: deptName
+                });
+            }
+
+            const payload = {
+                project_category: project.workTypes || 'Web App',
+                complexity_score: 7,
+                target_duration_days: project.endDate && project.startDate ? Math.max(1, Math.round((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))) : 60,
+                budget_tier: 3,
+                available_members: availableMembersPayload
+            };
+
+            const mlResponse = await MLService.recommendResources(payload);
+
+            // Extract best developer, best designer, best tester
+            const bestDev = mlResponse.recommended_members.find(m => m.role === 'Developer');
+            const bestDesigner = mlResponse.recommended_members.find(m => m.role === 'Designer');
+            const bestTester = mlResponse.recommended_members.find(m => m.role === 'QA');
+
+            return res.status(200).json({
+                bestDeveloper: bestDev || null,
+                bestDesigner: bestDesigner || null,
+                bestTester: bestTester || null,
+                recommendedTeamSize: mlResponse.recommended_team_size,
+                recommendedRoles: mlResponse.recommended_roles,
+                recommendedMembers: mlResponse.recommended_members
+            });
+        } catch (error: any) {
+            console.error('Error in resourcePlanner controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Resource Planning failed' });
+        }
+    }
+
+    static async predictDeadline(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { type, id } = req.params;
+            const targetId = parseInt(id, 10);
+            if (isNaN(targetId)) return res.status(400).json({ message: 'Invalid Target ID' });
+
+            let taskCount = 1;
+            let completedCount = 0;
+            let teamSize = 1;
+            let daysRemaining = 5;
+            let avgProductivity = 85.0;
+            let highPriorityRatio = 0.2;
+
+            if (type === 'task') {
+                const [task] = await db.select().from(tasks).where(eq(tasks.id, targetId));
+                if (!task) return res.status(404).json({ message: 'Task not found' });
+                taskCount = 1;
+                completedCount = (task.status === 'done' || task.status === 'completed') ? 1 : 0;
+                highPriorityRatio = (task.priority === 'critical' || task.priority === 'high') ? 1.0 : 0.0;
+                if (task.dueDate) {
+                    daysRemaining = Math.max(0.5, (new Date(task.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                }
+            } else if (type === 'sprint') {
+                const [sprint] = await db.select().from(sprints).where(eq(sprints.id, targetId));
+                if (!sprint) return res.status(404).json({ message: 'Sprint not found' });
+
+                const sprintTasks = await db.select().from(tasks).where(eq(tasks.sprintId, targetId));
+                taskCount = sprintTasks.length || 1;
+                completedCount = sprintTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+                const highCount = sprintTasks.filter(t => t.priority === 'critical' || t.priority === 'high').length;
+                highPriorityRatio = highCount / taskCount;
+                
+                const uniqueAssignees = Array.from(new Set(sprintTasks.map(t => t.assigneeId).filter(Boolean)));
+                teamSize = uniqueAssignees.length || 1;
+
+                if (sprint.endDate) {
+                    daysRemaining = Math.max(0.5, (new Date(sprint.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                } else {
+                    daysRemaining = 14;
+                }
+            } else if (type === 'project') {
+                const [project] = await db.select().from(projects).where(eq(projects.id, targetId));
+                if (!project) return res.status(404).json({ message: 'Project not found' });
+
+                const projectTasks = await db.select().from(tasks).where(eq(tasks.projectId, targetId));
+                taskCount = projectTasks.length || 1;
+                completedCount = projectTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+                const highCount = projectTasks.filter(t => t.priority === 'critical' || t.priority === 'high').length;
+                highPriorityRatio = highCount / taskCount;
+                
+                const uniqueAssignees = Array.from(new Set(projectTasks.map(t => t.assigneeId).filter(Boolean)));
+                teamSize = uniqueAssignees.length || 1;
+
+                if (project.endDate) {
+                    daysRemaining = Math.max(0.5, (new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                } else {
+                    daysRemaining = 30;
+                }
+            } else {
+                return res.status(400).json({ message: 'Invalid target type. Must be task, sprint, or project' });
+            }
+
+            const payload = {
+                type: type as 'task' | 'sprint' | 'project',
+                task_count: taskCount,
+                completed_count: completedCount,
+                team_size: teamSize,
+                days_remaining: daysRemaining,
+                avg_productivity: avgProductivity,
+                high_priority_ratio: highPriorityRatio
+            };
+
+            const mlResponse = await MLService.predictDeadline(payload);
+            return res.status(200).json(mlResponse);
+        } catch (error: any) {
+            console.error('Error in predictDeadline controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Deadline Prediction failed' });
+        }
+    }
+
+    static async predictProjectSuccess(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { projectId } = req.params;
+            const pId = parseInt(projectId, 10);
+            if (isNaN(pId)) return res.status(400).json({ message: 'Invalid Project ID' });
+
+            const [project] = await db.select().from(projects).where(eq(projects.id, pId));
+            if (!project) return res.status(404).json({ message: 'Project not found' });
+
+            const projectTasks = await db.select().from(tasks).where(eq(tasks.projectId, pId));
+            const totalTasks = projectTasks.length || 1;
+            const milestoneCount = projectTasks.filter(t => t.isMilestone).length;
+            const uniqueAssignees = Array.from(new Set(projectTasks.map(t => t.assigneeId).filter(Boolean)));
+            const teamSize = uniqueAssignees.length || 1;
+
+            const daysTotal = project.endDate && project.startDate 
+                ? Math.max(1, Math.round((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24)))
+                : 30;
+
+            const highCount = projectTasks.filter(t => t.priority === 'critical' || t.priority === 'high').length;
+            const priorityHighRatio = highCount / totalTasks;
+            const avgTaskDurationEst = daysTotal / totalTasks;
+            
+            const daysRemaining = project.endDate 
+                ? Math.max(0.5, (new Date(project.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : 15;
+
+            const completedCount = projectTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+            const currentProgress = completedCount / totalTasks;
+
+            const payload = {
+                task_count: totalTasks,
+                milestone_count: milestoneCount,
+                team_size: teamSize,
+                days_total: daysTotal,
+                priority_high_ratio: priorityHighRatio,
+                avg_task_duration_est: avgTaskDurationEst,
+                days_remaining: daysRemaining,
+                current_progress: currentProgress
+            };
+
+            const mlResponse = await MLService.predictProjectSuccess(payload);
+            return res.status(200).json(mlResponse);
+        } catch (error: any) {
+            console.error('Error in predictProjectSuccess controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Project Success Prediction failed' });
+        }
+    }
+
+    static async predictProductivity(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { userId } = req.params;
+            const uId = parseInt(userId, 10);
+            if (isNaN(uId)) return res.status(400).json({ message: 'Invalid User ID' });
+
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            const userTasks = await db.select().from(tasks).where(eq(tasks.assigneeId, uId));
+            const tasksAssigned = userTasks.filter(t => t.createdAt >= thirtyDaysAgo).length;
+            const tasksCompleted = userTasks.filter(t => (t.status === 'done' || t.status === 'completed') && t.updatedAt >= thirtyDaysAgo).length;
+
+            const attendances = await db.select().from(attendance)
+                .where(and(eq(attendance.userId, uId), gte(sql`CAST(${attendance.date} AS DATE)`, sql`${thirtyDaysAgo.toISOString().split('T')[0]}::DATE`)));
+            const presentCount = attendances.filter(a => a.status === 'present' || a.status === 'late').length;
+            const attendanceRate = Math.min(1.0, presentCount / 22);
+
+            let overtimeHours = 0;
+            attendances.forEach(att => {
+                if (att.checkIn && att.checkOut) {
+                    const diffHrs = (new Date(att.checkOut).getTime() - new Date(att.checkIn).getTime()) / (1000 * 60 * 60);
+                    if (diffHrs > 8.5) {
+                        overtimeHours += (diffHrs - 8.5);
+                    }
+                }
+            });
+
+            const payload = {
+                tasks_assigned_last_30d: tasksAssigned,
+                tasks_completed_last_30d: tasksCompleted,
+                avg_task_completion_days: 3.5,
+                attendance_rate_30d: attendanceRate,
+                overtime_hours_30d: overtimeHours,
+                collaboration_score: 80.0
+            };
+
+            const mlResponse = await MLService.predictProductivity(payload);
+            return res.status(200).json(mlResponse);
+        } catch (error: any) {
+            console.error('Error in predictProductivity controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Productivity Prediction failed' });
+        }
+    }
+
+    static async getDailyStandup(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const { regenerate } = req.query;
+
+            // Check for existing standup today
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
+            if (regenerate !== 'true') {
+                const existing = await db.select().from(aiRequests)
+                    .where(
+                        and(
+                            eq(aiRequests.userId, user.id),
+                            eq(aiRequests.promptType, 'daily-standup'),
+                            gte(aiRequests.createdAt, todayStart)
+                        )
+                    )
+                    .orderBy(desc(aiRequests.createdAt))
+                    .limit(1);
+
+                if (existing.length > 0) {
+                    return res.status(200).json(JSON.parse(existing[0].responseText));
+                }
+            }
+
+            // Generate a new daily standup
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0);
+
+            const userTasks = await db.select().from(tasks).where(eq(tasks.assigneeId, user.id));
+            const completedYesterday = userTasks.filter(t => (t.status === 'done' || t.status === 'completed') && t.updatedAt >= yesterday);
+            const pendingToday = userTasks.filter(t => t.status !== 'done' && t.status !== 'completed');
+            const blockers = pendingToday.filter(t => t.dueDate && new Date(t.dueDate) < new Date());
+
+            const prompt = `You are a professional Scrum Master. Based on the user's task updates, compile a clean, structured Daily Standup report.
+User: ${user.name}
+Completed Yesterday:
+${completedYesterday.map(t => `- ${t.title}`).join('\n') || "None"}
+In Progress / Planned for Today:
+${pendingToday.slice(0, 5).map(t => `- ${t.title} (Priority: ${t.priority})`).join('\n') || "None"}
+Blockers & Overdue items:
+${blockers.map(t => `- ${t.title} is overdue! (Due: ${t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'N/A'})`).join('\n') || "None"}
+
+Respond ONLY with a JSON object.
+Do not include any markdown formatting, prefix or suffix like \`\`\`json. Return only the raw JSON.
+JSON structure:
+{
+  "yesterday": "Detailed summary of achievements from yesterday.",
+  "today": "List of planned activities and focus areas for today.",
+  "blockers": "Any blockers, warnings, or overdue risk summaries, or 'None' if clear."
+}`;
+
+            const responseJSON = await generateJSONResponse(prompt);
+
+            await db.insert(aiRequests).values({
+                userId: user.id,
+                promptType: 'daily-standup',
+                promptText: 'System dynamic standup generation',
+                responseText: JSON.stringify(responseJSON),
+                status: 'success'
+            });
+
+            return res.status(200).json(responseJSON);
+        } catch (error: any) {
+            console.error('Error in getDailyStandup controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Standup generation failed' });
+        }
+    }
+
+    static async getExecutiveStats(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const activeWorkspaceId = user.activeWorkspaceId;
+            if (!activeWorkspaceId) return res.status(400).json({ message: 'No active workspace selected' });
+
+            // 1. Project Health
+            const wsProjects = await db.select().from(projects).where(eq(projects.workspaceId, activeWorkspaceId));
+            if (wsProjects.length === 0) {
+                return res.status(200).json({
+                    projectHealth: 100,
+                    teamProductivity: 85,
+                    aiRiskScore: 10,
+                    forecasts: { delayDays: 0, completionRate: 100, risksDetected: 0 }
+                });
+            }
+
+            const projectIds = wsProjects.map(p => p.id);
+            const wsTasks = await db.select().from(tasks).where(inArray(tasks.projectId, projectIds));
+            
+            const totalTasks = wsTasks.length;
+            const completedTasks = wsTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+            const projectHealth = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 100;
+
+            // 2. Team Productivity
+            const workspaceMembersList = await db.select().from(workspaceMembers).where(eq(workspaceMembers.workspaceId, activeWorkspaceId));
+            let totalProductivity = 0;
+            
+            for (const member of workspaceMembersList) {
+                const userTasks = wsTasks.filter(t => t.assigneeId === member.userId);
+                const completed = userTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+                const score = completed > 0 ? Math.min(100, 65 + completed * 5) : 80;
+                totalProductivity += score;
+            }
+            const teamProductivity = workspaceMembersList.length > 0 ? Math.round(totalProductivity / workspaceMembersList.length) : 85;
+
+            // 3. AI Risk Score
+            const delayedCount = wsTasks.filter(t => t.status !== 'done' && t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()).length;
+            const highPriorityCount = wsTasks.filter(t => t.priority === 'critical' || t.priority === 'high').length;
+            
+            const delayRatio = totalTasks > 0 ? (delayedCount / totalTasks) : 0;
+            const priorityRatio = totalTasks > 0 ? (highPriorityCount / totalTasks) : 0;
+            const aiRiskScore = Math.min(100, Math.round((delayRatio * 60) + (priorityRatio * 40)));
+
+            return res.status(200).json({
+                projectHealth,
+                teamProductivity,
+                aiRiskScore,
+                forecasts: {
+                    delayDays: delayedCount > 0 ? Math.round(delayedCount * 1.5) : 0,
+                    completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 100,
+                    risksDetected: delayedCount + (highPriorityCount > 2 ? 1 : 0)
+                }
+            });
+        } catch (error: any) {
+            console.error('Error in getExecutiveStats controller:', error);
+            return res.status(500).json({ message: error.message || 'AI Executive Dashboard fetch failed' });
         }
     }
 }
