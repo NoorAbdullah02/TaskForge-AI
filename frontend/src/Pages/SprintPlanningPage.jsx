@@ -10,10 +10,12 @@ import { getSprints, createSprint, updateSprint, deleteSprint, startSprint, comp
 import { getProjects } from '../Services/projectApi';
 import { getTasks, updateTask } from '../Services/taskApi';
 import { getAdminUsers } from '../Services/adminApi';
+import { socket } from '../Services/socket';
+
 
 export default function SprintPlanningPage() {
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
     const isManager = user?.role === 'manager';
 
     const [loading, setLoading] = useState(true);
@@ -78,6 +80,31 @@ export default function SprintPlanningPage() {
     useEffect(() => {
         loadSprintData();
     }, [selectedProjectId]);
+
+    useEffect(() => {
+        if (!selectedProjectId) return;
+
+        const handleSprintUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(selectedProjectId)) {
+                loadSprintData();
+            }
+        };
+
+        const handleTaskUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(selectedProjectId)) {
+                loadSprintData();
+            }
+        };
+
+        socket.on('sprint_updated', handleSprintUpdated);
+        socket.on('task_updated', handleTaskUpdated);
+
+        return () => {
+            socket.off('sprint_updated', handleSprintUpdated);
+            socket.off('task_updated', handleTaskUpdated);
+        };
+    }, [selectedProjectId]);
+
 
     // Backlog tasks (no sprintId assigned)
     const backlogTasks = tasksList.filter(t => 

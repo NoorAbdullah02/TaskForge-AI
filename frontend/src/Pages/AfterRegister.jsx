@@ -1,123 +1,152 @@
 import { useState } from 'react';
-import { Mail, Inbox, RefreshCw, CheckCircle, AlertCircle, Sparkles, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Mail, Inbox, RefreshCw, CheckCircle, AlertCircle, Sparkles, Loader, ArrowRight } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { resendVerificationEmail } from '../Services/authApi';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 const AfterRegister = () => {
+    const [searchParams] = useSearchParams();
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
     const [error, setError] = useState('');
 
     // Get email from URL params or localStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email') || localStorage.getItem('registrationEmail') || '';
+    const email = searchParams.get('email') || localStorage.getItem('registrationEmail') || '';
 
     const handleResendEmail = async () => {
+        if (!email) {
+            setError('No email address found. Please register again.');
+            return;
+        }
+
         setIsResending(true);
         setError('');
         setResendSuccess(false);
 
         try {
-            // Your API call here
-            // await resendVerificationEmail(email);
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
+            await resendVerificationEmail(email);
             setResendSuccess(true);
-            setTimeout(() => setResendSuccess(false), 5000);
+            toast.success('Verification email sent!');
+            setTimeout(() => setResendSuccess(false), 8000);
         } catch (err) {
-            setError('Failed to resend email. Please try again.');
+            const msg = err?.response?.data?.message || 'Failed to resend email. Please try again.';
+            setError(msg);
+            toast.error(msg);
         } finally {
             setIsResending(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-white overflow-hidden flex items-center justify-center p-4 relative">
-            {/* Animated Background */}
-            <div className="fixed inset-0 -z-10">
-                <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-400/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="min-h-screen bg-[#07070d] flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background effects */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[140px]" />
+                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-600/5 rounded-full blur-[120px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-600/3 rounded-full blur-[100px]" />
             </div>
 
-            <div className="max-w-2xl w-full relative z-10">
-                {/* Success Animation */}
-                <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="w-full max-w-2xl relative z-10">
+                {/* Header Animation */}
+                <motion.div 
+                    className="text-center mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                >
                     {/* Floating Email Icon */}
-                    <div className="relative inline-block mb-8">
-                        <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl transform -rotate-6 hover:rotate-0 transition-transform duration-500">
+                    <motion.div 
+                        className="relative inline-block mb-8"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                    >
+                        <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-blue-500/30">
                             <Mail className="w-16 h-16 text-white" strokeWidth={2.5} />
                         </div>
                         {/* Success Badge */}
-                        <div className="absolute -top-2 -right-2 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                        <motion.div 
+                            className="absolute -top-2 -right-2 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+                        >
                             <CheckCircle className="w-7 h-7 text-white" strokeWidth={3} />
-                        </div>
+                        </motion.div>
                         {/* Sparkles */}
                         <Sparkles className="absolute -top-4 -left-4 w-8 h-8 text-yellow-400 animate-pulse" />
                         <Sparkles className="absolute -bottom-2 -right-6 w-6 h-6 text-blue-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                    </div>
+                    </motion.div>
 
-                    <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 leading-tight">
+                    <h1 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
                         Check Your Email!
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-xl mx-auto leading-relaxed">
+                    <p className="text-slate-400 text-lg">
                         We've sent a verification link to
                     </p>
-                    <p className="text-2xl font-bold text-gray-800 mt-2 mb-6">
+                    <p className="text-xl font-bold text-white mt-2">
                         {email || 'your email address'}
                     </p>
-                </div>
+                </motion.div>
 
                 {/* Main Card */}
-                <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-bottom-8 duration-700" style={{ animationDelay: '200ms' }}>
-                    <div className="p-8 md:p-12">
+                <motion.div 
+                    className="bg-[#0d1117] border border-slate-800 rounded-2xl overflow-hidden"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.6 }}
+                >
+                    <div className="p-8 md:p-10">
                         {/* Steps */}
-                        <div className="space-y-6 mb-8">
+                        <div className="space-y-5 mb-8">
                             {[
-                                { icon: Inbox, title: 'Check your inbox', desc: 'Open your email and look for our message' },
-                                { icon: Mail, title: 'Click the verification link', desc: 'Click the button in the email to verify' },
-                                { icon: CheckCircle, title: 'Start using your account', desc: 'You\'ll be redirected to login automatically' }
+                                { icon: Inbox, title: 'Check your inbox', desc: 'Open your email and look for our message', color: 'from-blue-500 to-indigo-500' },
+                                { icon: ArrowRight, title: 'Click the verification link', desc: 'Click the button in the email — instant verification!', color: 'from-purple-500 to-pink-500' },
+                                { icon: CheckCircle, title: 'Start using your account', desc: 'You\'ll be redirected to login automatically', color: 'from-emerald-500 to-green-500' }
                             ].map((step, index) => (
-                                <div
+                                <motion.div
                                     key={index}
-                                    className="flex gap-4 p-4 rounded-2xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.5 + index * 0.15 }}
+                                    className="flex gap-4 p-4 rounded-xl hover:bg-slate-800/50 transition-all group"
                                 >
                                     <div className="flex-shrink-0">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <div className={`w-12 h-12 bg-gradient-to-br ${step.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                                             <step.icon className="w-6 h-6 text-white" />
                                         </div>
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold text-gray-800 text-lg mb-1">
+                                        <h3 className="font-bold text-white text-lg mb-0.5">
                                             {index + 1}. {step.title}
                                         </h3>
-                                        <p className="text-gray-600 text-sm leading-relaxed">
+                                        <p className="text-slate-400 text-sm">
                                             {step.desc}
                                         </p>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
 
                         {/* Important Notice */}
-                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
+                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5 mb-6">
                             <div className="flex items-start gap-3">
-                                <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <h4 className="font-bold text-amber-900 mb-2 text-lg">Can't find the email?</h4>
-                                    <ul className="space-y-2 text-amber-800 text-sm">
+                                    <h4 className="font-bold text-amber-300 mb-2">Can't find the email?</h4>
+                                    <ul className="space-y-1.5 text-amber-200/80 text-sm">
                                         <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
-                                            Check your <strong>spam or junk</strong> folder
+                                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                                            Check your <strong className="text-amber-200">spam or junk</strong> folder
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
+                                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
                                             Make sure you entered the correct email address
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
-                                            Wait a few minutes - emails can be delayed
+                                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                                            Wait a few minutes — emails can be delayed
                                         </li>
                                     </ul>
                                 </div>
@@ -126,62 +155,84 @@ const AfterRegister = () => {
 
                         {/* Success Message */}
                         {resendSuccess && (
-                            <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 mb-6 animate-in fade-in slide-in-from-top-4">
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6"
+                            >
                                 <div className="flex items-center gap-3">
-                                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                    <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
                                     <div>
-                                        <h4 className="font-bold text-green-900 mb-1">Email Sent!</h4>
-                                        <p className="text-green-700 text-sm">Check your inbox again. Don't forget to check spam!</p>
+                                        <h4 className="font-bold text-emerald-300 mb-0.5">Email Sent!</h4>
+                                        <p className="text-emerald-200/80 text-sm">A new verification email has been sent. Check your inbox!</p>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
                         {/* Error Message */}
                         {error && (
-                            <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-6 animate-in fade-in slide-in-from-top-4">
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+                            >
                                 <div className="flex items-center gap-3">
-                                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
                                     <div>
-                                        <h4 className="font-bold text-red-900 mb-1">Oops!</h4>
-                                        <p className="text-red-700 text-sm">{error}</p>
+                                        <h4 className="font-bold text-red-300 mb-0.5">Oops!</h4>
+                                        <p className="text-red-200/80 text-sm">{error}</p>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* Resend Button */}
-                        <Link
-                            to="/verify-email-token"
-                            disabled={isResending}
-                            className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-3 group mb-6"
-                        >
-                            Enter Email Again & Resend Verification Email
-                        </Link>
+                        {/* Actions */}
+                        <div className="space-y-3">
+                            {/* Resend Button */}
+                            <button
+                                onClick={handleResendEmail}
+                                disabled={isResending}
+                                className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-3 group"
+                            >
+                                {isResending ? (
+                                    <>
+                                        <Loader className="w-5 h-5 animate-spin" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                                        Resend Verification Email
+                                    </>
+                                )}
+                            </button>
 
-                        {/* Enter Code Link */}
-                        <div className="text-center">
-                            <p className="text-gray-600 text-sm mb-3">
-                                Already have a verification code?
-                            </p>
-
+                            {/* Enter Code Manually */}
+                            <Link
+                                to={`/verify-email-token?email=${encodeURIComponent(email)}`}
+                                className="w-full px-6 py-3 border border-slate-700 text-slate-300 font-semibold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Mail className="w-5 h-5" />
+                                Enter Verification Code Manually
+                            </Link>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Footer Links */}
                 <div className="text-center mt-8 space-y-3">
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-slate-500 text-sm">
                         Wrong email?{' '}
-                        <a href="/register" className="text-blue-600 font-bold hover:underline">
+                        <Link to="/register" className="text-blue-400 font-semibold hover:underline">
                             Sign up again
-                        </a>
+                        </Link>
                     </p>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-slate-500 text-sm">
                         Already verified?{' '}
-                        <a href="/login" className="text-blue-600 font-bold hover:underline">
+                        <Link to="/login" className="text-blue-400 font-semibold hover:underline">
                             Go to Login
-                        </a>
+                        </Link>
                     </p>
                 </div>
             </div>

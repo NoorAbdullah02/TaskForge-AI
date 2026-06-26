@@ -476,4 +476,71 @@ export class EmailTriggerService {
         `;
         await triggerEmail(workspaceId, email, `🏆 Milestone Met: ${milestoneTitle}`, 'milestone_achieved', body);
     }
+
+    // Task Approved
+    static async sendTaskApproved(email: string, userName: string, taskTitle: string, projectName: string, approverName: string, workspaceId: number) {
+        const body = `
+            <h2 class="title">✅ Task Approved</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>Your task <span class="highlight">${taskTitle}</span> in project <span class="highlight">${projectName}</span> has been approved by <span class="highlight">${approverName}</span>.</p>
+            <p>Great work! The task has been marked as approved and is now ready for completion.</p>
+        `;
+        await triggerEmail(workspaceId, email, `✅ Task Approved: ${taskTitle}`, 'task_approved', body);
+    }
+
+    // Task Rejected
+    static async sendTaskRejected(email: string, userName: string, taskTitle: string, reason: string, projectName: string, rejectorName: string, workspaceId: number) {
+        const body = `
+            <h2 class="title">❌ Task Rejected</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>Your task <span class="highlight">${taskTitle}</span> in project <span class="highlight">${projectName}</span> has been rejected by <span class="highlight">${rejectorName}</span>.</p>
+            <p><strong>Reason:</strong> ${reason || 'No reason provided.'}</p>
+            <p>Please review the feedback and update your task accordingly.</p>
+        `;
+        await triggerEmail(workspaceId, email, `❌ Task Rejected: ${taskTitle}`, 'task_rejected', body);
+    }
+
+    // Task Locked
+    static async sendTaskLockedAlert(email: string, userName: string, taskTitle: string, lockerName: string, workspaceId: number) {
+        const body = `
+            <h2 class="title">🔒 Task Locked</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>The task <span class="highlight">${taskTitle}</span> has been locked by <span class="highlight">${lockerName}</span>.</p>
+            <p>Edits to this task are now restricted to prevent conflicting changes.</p>
+        `;
+        await triggerEmail(workspaceId, email, `🔒 Task Locked: ${taskTitle}`, 'task_locked', body);
+    }
+
+    // Task Unlocked
+    static async sendTaskUnlockedAlert(email: string, userName: string, taskTitle: string, unlockerName: string, workspaceId: number) {
+        const body = `
+            <h2 class="title">🔓 Task Unlocked</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>The task <span class="highlight">${taskTitle}</span> has been unlocked by <span class="highlight">${unlockerName}</span>.</p>
+            <p>Task edits are now open.</p>
+        `;
+        await triggerEmail(workspaceId, email, `🔓 Task Unlocked: ${taskTitle}`, 'task_unlocked', body);
+    }
+
+    // Watcher Status Alert
+    static async sendWatcherUpdateAlert(email: string, userName: string, taskTitle: string, updateDetails: string, workspaceId: number) {
+        const body = `
+            <h2 class="title">🔔 Watcher Update</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>A task you are watching/following, <span class="highlight">${taskTitle}</span>, was updated:</p>
+            <p><strong>Details:</strong> ${updateDetails}</p>
+        `;
+        await triggerEmail(workspaceId, email, `🔔 Task Update: ${taskTitle}`, 'task_watcher_update', body);
+    }
+
+    // Pomodoro Completed Alert
+    static async sendPomodoroCompletedAlert(email: string, userName: string, taskTitle: string, currentCount: number, workspaceId: number) {
+        const body = `
+            <h2 class="title">🍅 Pomodoro Completed!</h2>
+            <p>Hi <span class="highlight">${userName}</span>,</p>
+            <p>Congratulations! You have completed a Pomodoro focus session for task <span class="highlight">${taskTitle}</span>.</p>
+            <p>You have now completed <span class="highlight">${currentCount}</span> focus sessions for this task. Keep up the great work! 🍅</p>
+        `;
+        await triggerEmail(workspaceId, email, `🍅 Pomodoro Complete: ${taskTitle}`, 'pomodoro_complete', body);
+    }
 }

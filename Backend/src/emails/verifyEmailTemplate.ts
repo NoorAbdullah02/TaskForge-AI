@@ -80,17 +80,57 @@ export const verifyEmailTemplate = ({
       margin-top: 0;
       margin-bottom: 28px;
     }
+    .cta-wrapper {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 18px 48px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.3px;
+      box-shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.5);
+    }
+    .cta-subtext {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 12px;
+      margin-bottom: 0;
+    }
+    .divider-container {
+      display: flex;
+      align-items: center;
+      margin: 28px 0;
+    }
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background-color: #1f2937;
+    }
+    .divider-text {
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 0 16px;
+    }
     .code-container {
       background: #111827;
       border: 1px dashed rgba(59, 130, 246, 0.3);
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px;
       margin-bottom: 28px;
       text-align: center;
     }
     .code-label {
       color: #6b7280;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.5px;
@@ -99,30 +139,12 @@ export const verifyEmailTemplate = ({
     }
     .code-value {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 800;
       letter-spacing: 6px;
       color: #60a5fa;
       margin: 0;
       padding: 4px 0;
-    }
-    .cta-button {
-      display: inline-block;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-      color: #ffffff !important;
-      text-decoration: none;
-      padding: 16px 36px;
-      border-radius: 14px;
-      font-weight: 600;
-      font-size: 15px;
-      box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
-      margin: 8px 0;
-    }
-    .divider {
-      border: 0;
-      height: 1px;
-      background-color: #1f2937;
-      margin: 32px 0;
     }
     .security-notice {
       background-color: rgba(245, 158, 11, 0.05);
@@ -136,6 +158,17 @@ export const verifyEmailTemplate = ({
       font-size: 13px;
       line-height: 1.5;
       margin: 0;
+    }
+    .link-fallback {
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 16px 0 0;
+      word-break: break-all;
+    }
+    .link-fallback a {
+      color: #60a5fa;
+      text-decoration: underline;
     }
     .footer {
       background-color: #080c14;
@@ -158,9 +191,6 @@ export const verifyEmailTemplate = ({
       font-size: 12px;
       margin: 0 8px;
     }
-    .footer-link:hover {
-      color: #9ca3af;
-    }
   </style>
 </head>
 <body>
@@ -179,30 +209,50 @@ export const verifyEmailTemplate = ({
           <div class="content">
             <p class="greeting">Welcome to the team!</p>
             <p class="text">
-              Thank you for choosing TaskForge AI. We are thrilled to help you automate, optimize, and streamline your workflow. Please confirm your email address using the validation code below or by clicking the button to activate your account.
+              Thank you for choosing TaskForge AI. We're thrilled to help you automate, optimize, and streamline your workflow. Click the button below to verify your email address and activate your account.
             </p>
 
-            <!-- Verification Code -->
-            <div class="code-container">
+            <!-- Primary CTA Button -->
+            <div class="cta-wrapper">
+              <a href="${verifyEmailLink}" class="cta-button">✅ Verify My Email Address</a>
+              <p class="cta-subtext">Just click the button — no code needed!</p>
+            </div>
+
+            <!-- Divider -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="height: 1px; background-color: #1f2937; width: 40%;"></td>
+                <td style="text-align: center; padding: 0 16px;">
+                  <span style="color: #4b5563; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">or enter code manually</span>
+                </td>
+                <td style="height: 1px; background-color: #1f2937; width: 40%;"></td>
+              </tr>
+            </table>
+
+            <!-- Verification Code (secondary) -->
+            <div class="code-container" style="margin-top: 28px;">
               <p class="code-label">Verification Code</p>
               <p class="code-value">${token}</p>
             </div>
 
-            <!-- CTA Button -->
-            <div style="text-align: center; margin-bottom: 32px;">
-              <a href="${verifyEmailLink}" class="cta-button">Verify Email Address</a>
-            </div>
-
             <div class="security-notice">
               <p class="security-text">
-                🔒 <strong>Security Warning:</strong> This verification code and link will expire in 24 hours. If you did not register for a TaskForge AI account, please ignore this email.
+                🔒 <strong>Security Notice:</strong> This verification link and code will expire in 24 hours. If you did not register for a TaskForge AI account, please ignore this email.
               </p>
             </div>
 
-            <div class="divider"></div>
+            <!-- Link fallback -->
+            <p class="link-fallback">
+              If the button doesn't work, copy and paste this link into your browser:<br />
+              <a href="${verifyEmailLink}">${verifyEmailLink}</a>
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px;">
+              <tr><td style="height: 1px; background-color: #1f2937;"></td></tr>
+            </table>
 
             <!-- Signature -->
-            <div>
+            <div style="margin-top: 28px;">
               <p style="color: #9ca3af; font-size: 14px; margin: 0 0 4px;">Best regards,</p>
               <p style="color: #f3f4f6; font-size: 15px; font-weight: 700; margin: 0;">TaskForge AI Assistant</p>
             </div>

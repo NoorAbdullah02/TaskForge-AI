@@ -142,6 +142,39 @@ def test_resource_recommendation():
     print(json.dumps(response_copy, indent=2))
     return response
 
+def test_project_success_prediction():
+    print("\n--- Testing Project Success Prediction Endpoint ---")
+    payload = {
+        "task_count": 55,
+        "milestone_count": 6,
+        "team_size": 5,
+        "days_total": 75.0,
+        "priority_high_ratio": 0.3,
+        "avg_task_duration_est": 6.0,
+        "days_remaining": 12.0,
+        "current_progress": 0.5
+    }
+    print("Payload:", json.dumps(payload, indent=2))
+    response = make_post_request("/api/predict/project-success", payload)
+    print("Response:", json.dumps(response, indent=2))
+    return response
+
+def test_deadline_prediction():
+    print("\n--- Testing Deadline Prediction Endpoint ---")
+    payload = {
+        "type": "project",
+        "task_count": 50,
+        "completed_count": 10,
+        "team_size": 4,
+        "days_remaining": 30.0,
+        "avg_productivity": 85.0,
+        "high_priority_ratio": 0.2
+    }
+    print("Payload:", json.dumps(payload, indent=2))
+    response = make_post_request("/api/predict/deadline", payload)
+    print("Response:", json.dumps(response, indent=2))
+    return response
+
 if __name__ == "__main__":
     print("Testing ML Service APIs...")
     success = test_root()
@@ -153,4 +186,7 @@ if __name__ == "__main__":
     test_attendance_prediction()
     test_productivity_prediction()
     test_resource_recommendation()
+    test_project_success_prediction()
+    test_deadline_prediction()
     print("\nAll endpoints verified successfully!")
+

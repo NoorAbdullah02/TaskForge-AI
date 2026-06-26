@@ -4,6 +4,7 @@ import LoginPage from './Pages/LoginPage.jsx'
 import Dashboard from './Pages/Dashboard.jsx'
 import ProfilePage from './Pages/ProfilePage.jsx'
 import VerifyEmailToken from './Pages/VerifyEmailToken.jsx'
+import VerifyEmailResult from './Pages/VerifyEmailResult.jsx'
 import ResetPassword from './Pages/ResetPassword.jsx'
 import ForgotPassword from './Pages/ForgotPassword.jsx'
 import ProjectsPage from './Pages/ProjectsPage.jsx'
@@ -13,10 +14,20 @@ import TaskDetailsPage from './Pages/TaskDetailsPage.jsx'
 import AttendancePage from './Pages/AttendancePage.jsx'
 import LeavePage from './Pages/LeavePage.jsx'
 import AIWorkspace from './Pages/AIWorkspace.jsx'
+import EnterpriseAIPage from './Pages/EnterpriseAIPage.jsx'
 import AdminSettingsPage from './Pages/AdminSettingsPage.jsx'
 import AICopilot from './Components/AICopilot.jsx'
 import LandingPage from './Pages/LandingPage.jsx'
+import SuperAdminConsole from './Pages/SuperAdminConsole.jsx'
+import ReportsPage from './Pages/ReportsPage.jsx'
+import ProjectIntelligenceDashboard from './Pages/ProjectIntelligenceDashboard.jsx'
+import ExecutiveDashboard from './Pages/ExecutiveDashboard.jsx'
+import ChatHub from './Pages/ChatHub.jsx'
+import KnowledgeBase from './Pages/KnowledgeBase.jsx'
+import TimeTracker from './Pages/TimeTracker.jsx'
+import WorkspaceCalendar from './Pages/WorkspaceCalendar.jsx'
 import { Routes, Route, useLocation } from 'react-router-dom';
+
 
 
 import { useAuth } from './context/AuthContext.jsx'
@@ -43,7 +54,7 @@ const App = () => {
   const location = useLocation();
 
   // Hide header & copilot on auth and landing pages for immersive dark experience
-  const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+  const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/after-register', '/verify-email-token', '/verify-email-result'];
   const isFullscreenPage = (!isLoggedIn && location.pathname === '/') || authPaths.slice(1).includes(location.pathname);
 
   if (loading) {
@@ -69,16 +80,27 @@ const App = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
             <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+            <Route path="/projects/:id/intelligence" element={<ProtectedRoute><ProjectIntelligenceDashboard /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
             <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
             <Route path="/leaves" element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><ChatHub /></ProtectedRoute>} />
+            <Route path="/kb" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+            <Route path="/time-tracker" element={<ProtectedRoute><TimeTracker /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><WorkspaceCalendar /></ProtectedRoute>} />
             <Route path="/ai-workspace" element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />
+            <Route path="/enterprise-ai" element={<ProtectedRoute><EnterpriseAIPage /></ProtectedRoute>} />
             <Route path="/admin-settings" element={<ProtectedRoute><AdminSettingsPage /></ProtectedRoute>} />
+            <Route path="/super-admin" element={<ProtectedRoute><SuperAdminConsole /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/executive-dashboard" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
             <Route path="/" element={isLoggedIn ? <Dashboard /> : <LandingPage />} />
 
             <Route path="/after-register" element={<AfterRegister />} />
+            <Route path="/verify-email-result" element={<VerifyEmailResult />} />
+
             <Route path="*" element={<Navigate to="/" />} />
 
           </Routes>

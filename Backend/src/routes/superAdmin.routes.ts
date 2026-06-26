@@ -26,10 +26,13 @@ router.use(verifySuperAdmin);
 // Super Admin Management Endpoints
 router.get('/workspaces', SuperAdminController.getWorkspaces);
 router.post('/workspaces/:id/suspend', SuperAdminController.toggleSuspendWorkspace);
+router.post('/workspaces/:id/reset', SuperAdminController.resetWorkspace);
 router.delete('/workspaces/:id', SuperAdminController.deleteWorkspace);
 router.get('/users', SuperAdminController.getUsers);
+router.post('/users/:id/ban', SuperAdminController.toggleBanUser);
 router.get('/projects', SuperAdminController.getProjects);
 router.get('/analytics', SuperAdminController.getAnalytics);
 router.get('/audit-logs', SuperAdminController.getAuditLogs);
+
 
 export default router;

@@ -31,7 +31,7 @@ export const createUser = async (data: NewUser) => {
 
     const insertData = { ...data };
     if (isFirstUser) {
-        insertData.role = 'admin';
+        insertData.role = 'super_admin';
         insertData.isEmailVerified = true;
     }
 
@@ -175,7 +175,8 @@ export const getVerifyByEmailLink = async (
     { email, token }: { email: string; token: string }
 ) => {
 
-    const url = new URL(`${env.FRONTEND_URL}/verify-email-token`);
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const url = new URL(`${backendUrl}/api/users/verify-email-link`);
     url.searchParams.append('token', token);
     url.searchParams.append('email', email);
 
@@ -377,7 +378,18 @@ export const save2FaOtp = async (userId: number, otpCode: string | null, expires
     return updated;
 };
 
+export const saveEmailVerificationToken = async (userId: number, token: string, expiresAt: Date) => {
+    await db.delete(verifyEmailTable).where(eq(verifyEmailTable.userId, userId));
+    const [inserted] = await db.insert(verifyEmailTable).values({
+        userId,
+        token,
+        expiresAt
+    }).returning();
+    return inserted;
+};
+
 export const getDepartmentsList = async () => {
     return db.select().from(departments);
 };
+
 

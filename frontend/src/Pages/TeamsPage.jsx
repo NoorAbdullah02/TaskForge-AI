@@ -10,7 +10,7 @@ import { getAdminDepartments, getAdminUsers } from '../Services/adminApi';
 
 export default function TeamsPage() {
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
     const isManager = user?.role === 'manager';
 
     const [loading, setLoading] = useState(true);

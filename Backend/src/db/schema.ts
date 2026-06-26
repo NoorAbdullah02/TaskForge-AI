@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, serial, varchar, timestamp, integer, text, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, text, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -82,7 +82,8 @@ export const usersRelation = relations(users, ({ one, many }) => ({
     team: one(teams, {
         fields: [users.teamId],
         references: [teams.id]
-    })
+    }),
+    skills: many(userSkills)
 }))
 
 export const sessionsRelation = relations(sessionTable, ({ one }) => ({
@@ -166,6 +167,11 @@ export const projects = pgTable("projects", {
     workTypes: text("work_types").notNull().default("task"),
     startDate: timestamp("start_date", { mode: "date" }),
     endDate: timestamp("end_date", { mode: "date" }),
+    password: varchar("password", { length: 255 }),
+    inviteCode: varchar("invite_code", { length: 50 }),
+    inviteLink: varchar("invite_link", { length: 255 }),
+    isArchived: boolean("is_archived").notNull().default(false),
+    clonedFromId: integer("cloned_from_id").references((): any => projects.id, { onDelete: 'set null' }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -192,6 +198,24 @@ export const tasks = pgTable("tasks", {
     dueDate: timestamp("due_date", { mode: "date" }),
     storyId: integer("story_id").references(() => stories.id, { onDelete: 'set null' }),
     sprintId: integer("sprint_id").references(() => sprints.id, { onDelete: 'set null' }),
+    escalationLevel: integer("escalation_level").notNull().default(0),
+    lastEscalatedAt: timestamp("last_escalated_at", { mode: "date" }),
+    isRecurring: boolean("is_recurring").notNull().default(false),
+    recurrenceCron: varchar("recurrence_cron", { length: 100 }),
+    lastRecurredAt: timestamp("last_recurred_at", { mode: "date" }),
+    nextRecurrenceAt: timestamp("next_recurrence_at", { mode: "date" }),
+    labels: text("labels"),
+    category: varchar("category", { length: 100 }),
+    estimatedHours: doublePrecision("estimated_hours"),
+    actualHours: doublePrecision("actual_hours").notNull().default(0),
+    isTimerActive: boolean("is_timer_active").notNull().default(false),
+    timerStartedAt: timestamp("timer_started_at", { mode: "date" }),
+    isLocked: boolean("is_locked").notNull().default(false),
+    lockedById: integer("locked_by_id").references((): any => users.id, { onDelete: 'set null' }),
+    isArchived: boolean("is_archived").notNull().default(false),
+    pomodoroCount: integer("pomodoro_count").notNull().default(0),
+    activePomodoroSession: boolean("active_pomodoro_session").notNull().default(false),
+    pomodoroTimerStartedAt: timestamp("pomodoro_timer_started_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
 });
@@ -406,7 +430,9 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     }),
     subtasks: many(subtasks),
     comments: many(comments),
-    attachments: many(attachments)
+    attachments: many(attachments),
+    dependencies: many(taskDependencies, { relationName: "task_dependencies_taskId" }),
+    dependents: many(taskDependencies, { relationName: "task_dependencies_dependsOnTaskId" })
 }));
 
 export const subtasksRelations = relations(subtasks, ({ one }) => ({
@@ -619,3 +645,197 @@ export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
         references: [workspaces.id]
     })
 }));
+
+export const taskDependencies = pgTable("task_dependencies", {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+    dependsOnTaskId: integer("depends_on_task_id").notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+    dependencyType: varchar("dependency_type", { length: 50 }).notNull().default("FS"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const userSkills = pgTable("user_skills", {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    skillName: varchar("skill_name", { length: 255 }).notNull(),
+    proficiency: integer("proficiency").notNull().default(3), // 1 to 5
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const taskDependenciesRelations = relations(taskDependencies, ({ one }) => ({
+    task: one(tasks, {
+        fields: [taskDependencies.taskId],
+        references: [tasks.id],
+        relationName: "task_dependencies_taskId"
+    }),
+    dependsOnTask: one(tasks, {
+        fields: [taskDependencies.dependsOnTaskId],
+        references: [tasks.id],
+        relationName: "task_dependencies_dependsOnTaskId"
+    })
+}));
+
+export const userSkillsRelations = relations(userSkills, ({ one }) => ({
+    user: one(users, {
+        fields: [userSkills.userId],
+        references: [users.id]
+    })
+}));
+
+export type TaskDependency = typeof taskDependencies.$inferSelect;
+export type NewTaskDependency = typeof taskDependencies.$inferInsert;
+
+export type UserSkill = typeof userSkills.$inferSelect;
+export type NewUserSkill = typeof userSkills.$inferInsert;
+
+// ----------------- SaaS Enterprise Schema Extensions -----------------
+
+export const chats = pgTable("chats", {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 255 }), // Room name for groups/teams/projects
+    type: varchar("type", { length: 50 }).notNull().default("direct"), // direct, group, project, team
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: integer("project_id").references(() => projects.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const chatMembers = pgTable("chat_members", {
+    id: serial("id").primaryKey(),
+    chatId: integer("chat_id").notNull().references(() => chats.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: timestamp("joined_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const messages = pgTable("messages", {
+    id: serial("id").primaryKey(),
+    chatId: integer("chat_id").notNull().references(() => chats.id, { onDelete: 'cascade' }),
+    senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const wikiPages = pgTable("wiki_pages", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    title: varchar("title", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    type: varchar("type", { length: 50 }).notNull().default("wiki"), // wiki, doc, note, sop
+    createdById: integer("created_by_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const timeLogs = pgTable("time_logs", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    taskId: integer("task_id").references(() => tasks.id, { onDelete: 'set null' }),
+    description: text("description"),
+    startTime: timestamp("start_time", { mode: "date" }).notNull(),
+    endTime: timestamp("end_time", { mode: "date" }),
+    duration: integer("duration"), // in seconds
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const meetings = pgTable("meetings", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    startTime: timestamp("start_time", { mode: "date" }).notNull(),
+    endTime: timestamp("end_time", { mode: "date" }).notNull(),
+    meetingLink: varchar("meeting_link", { length: 500 }),
+    createdById: integer("created_by_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const fileVersions = pgTable("file_versions", {
+    id: serial("id").primaryKey(),
+    documentId: integer("document_id").notNull().references(() => projectDocuments.id, { onDelete: 'cascade' }),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    fileUrl: text("file_url").notNull(),
+    fileSize: integer("file_size"),
+    fileType: varchar("file_type", { length: 100 }),
+    version: integer("version").notNull().default(1),
+    createdById: integer("created_by_id").references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const fileDownloads = pgTable("file_downloads", {
+    id: serial("id").primaryKey(),
+    documentId: integer("document_id").notNull().references(() => projectDocuments.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    ipAddress: varchar("ip_address", { length: 50 }),
+    userAgent: text("user_agent"),
+    downloadedAt: timestamp("downloaded_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const apiKeys = pgTable("api_keys", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar("name", { length: 255 }).notNull(),
+    key: varchar("key", { length: 255 }).notNull().unique(),
+    status: varchar("status", { length: 50 }).notNull().default("active"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at", { mode: "date" })
+});
+
+export type Chat = typeof chats.$inferSelect;
+export type NewChat = typeof chats.$inferInsert;
+export type ChatMember = typeof chatMembers.$inferSelect;
+export type NewChatMember = typeof chatMembers.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+export type WikiPage = typeof wikiPages.$inferSelect;
+export type NewWikiPage = typeof wikiPages.$inferInsert;
+export type TimeLog = typeof timeLogs.$inferSelect;
+export type NewTimeLog = typeof timeLogs.$inferInsert;
+export type Meeting = typeof meetings.$inferSelect;
+export type NewMeeting = typeof meetings.$inferInsert;
+export type FileVersion = typeof fileVersions.$inferSelect;
+export type NewFileVersion = typeof fileVersions.$inferInsert;
+export type FileDownload = typeof fileDownloads.$inferSelect;
+export type NewFileDownload = typeof fileDownloads.$inferInsert;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
+
+export const taskWatchers = pgTable("task_watchers", {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    role: varchar("role", { length: 50 }).notNull().default("watcher"), // "watcher" or "follower"
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const taskTemplates = pgTable("task_templates", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    priority: varchar("priority", { length: 50 }).default("medium"),
+    workType: varchar("work_type", { length: 50 }).default("task"),
+    estimatedHours: doublePrecision("estimated_hours"),
+    labels: text("labels"),
+    category: varchar("category", { length: 100 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const taskHistory = pgTable("task_history", {
+    id: serial("id").primaryKey(),
+    taskId: integer("task_id").notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").references(() => users.id, { onDelete: 'set null' }),
+    fieldName: varchar("field_name", { length: 100 }).notNull(),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    changeType: varchar("change_type", { length: 50 }).notNull(), // "create", "update", "delete", "status_change", "timer", "pomodoro"
+    isUndone: boolean("is_undone").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export type TaskWatcher = typeof taskWatchers.$inferSelect;
+export type NewTaskWatcher = typeof taskWatchers.$inferInsert;
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+export type NewTaskTemplate = typeof taskTemplates.$inferInsert;
+export type TaskHistory = typeof taskHistory.$inferSelect;
+export type NewTaskHistory = typeof taskHistory.$inferInsert;

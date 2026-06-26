@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import settings
-from routers import delay, attendance, productivity, resource
+from routers import delay, attendance, productivity, resource, burnout
 from services.predictor import PredictorService
 
 @asynccontextmanager
@@ -44,6 +44,8 @@ app.include_router(delay.router, prefix=settings.API_V1_STR)
 app.include_router(attendance.router, prefix=settings.API_V1_STR)
 app.include_router(productivity.router, prefix=settings.API_V1_STR)
 app.include_router(resource.router, prefix=settings.API_V1_STR)
+app.include_router(burnout.router, prefix=settings.API_V1_STR)
+
 
 @app.get("/")
 def read_root():

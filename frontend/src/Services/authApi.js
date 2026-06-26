@@ -105,3 +105,38 @@ export const getDepartments = async () => {
     const response = await api.get('/users/departments');
     return response.data;
 }
+
+export const getSetupStatus = async () => {
+    const response = await api.get('/users/setup-status');
+    return response.data;
+}
+
+export const getUserSessions = async () => {
+    const response = await api.get('/users/sessions');
+    return response.data;
+}
+
+export const revokeSession = async (id) => {
+    const response = await api.delete(`/users/sessions/${id}`);
+    return response.data;
+}
+
+export const getUserActivityLogs = async () => {
+    const response = await api.get('/users/activity-logs');
+    return response.data;
+}
+
+export const getApiKeys = async () => {
+    const response = await api.get('/users/api-keys');
+    return response.data;
+}
+
+export const createApiKey = async (name) => {
+    const response = await api.post('/users/api-keys', { name });
+    return response.data;
+}
+
+export const revokeApiKey = async (id) => {
+    const response = await api.delete(`/users/api-keys/${id}`);
+    return response.data;
+}

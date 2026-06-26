@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     Building2, Calendar, ClipboardList, Settings, Plus, Edit2, Trash2, 
     Search, ShieldAlert, Check, X, Clock, HelpCircle, Save, Loader2, 
-    ArrowRight, UserCheck, Shield, Users, Globe, FileText, CheckSquare, ListFilter
+    ArrowRight, UserCheck, Shield, Users, Globe, FileText, CheckSquare, ListFilter,
+    Share2, Copy, RefreshCw, Link
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,9 @@ import {
     updateUserRoleDept, 
     getAuditLogs 
 } from '../Services/adminApi';
+import { getWorkspaceInfo, regenerateInviteCode, getPendingRequests, approveMember, bulkApproveMembers, getWorkspaceMembers } from '../Services/workspaceApi';
+import { getProjects, assignProjectManager } from '../Services/projectApi';
+
 
 const TIMEZONES = [
     { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
@@ -46,7 +50,7 @@ export default function AdminSettingsPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
     const isManager = user?.role === 'manager';
 
     // Tabs
@@ -56,6 +60,16 @@ export default function AdminSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [savingSettings, setSavingSettings] = useState(false);
     const [submittingDept, setSubmittingDept] = useState(false);
+
+    // Workspace Info / Invite states
+    const [workspaceInfo, setWorkspaceInfo] = useState(null);
+    const [regenerating, setRegenerating] = useState(false);
+    const [copied, setCopied] = useState('');
+
+    // Pending requests states
+    const [pendingRequests, setPendingRequests] = useState([]);
+    const [selectedRequests, setSelectedRequests] = useState([]);
+    const [loadingRequests, setLoadingRequests] = useState(false);
 
     // Data States
     const [settings, setSettings] = useState({
@@ -71,6 +85,16 @@ export default function AdminSettingsPage() {
     const [departments, setDepartments] = useState([]);
     const [users, setUsers] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
+
+    // SaaS Project Manager Assignment States
+    const [workspaceMembersList, setWorkspaceMembersList] = useState([]);
+    const [projectsList, setProjectsList] = useState([]);
+    const [loadingMembers, setLoadingMembers] = useState(false);
+    const [isAssignPmModalOpen, setIsAssignPmModalOpen] = useState(false);
+    const [selectedUserForPm, setSelectedUserForPm] = useState(null);
+    const [selectedProjectIdForPm, setSelectedProjectIdForPm] = useState('');
+    const [assigningPm, setAssigningPm] = useState(false);
+
 
     // Department Modals & Editing
     const [deptModalOpen, setDeptModalOpen] = useState(false);
@@ -117,6 +141,14 @@ export default function AdminSettingsPage() {
                 
                 const logsData = await getAuditLogs();
                 setAuditLogs(logsData);
+
+                // Fetch Workspace Info (invite link & code)
+                try {
+                    const info = await getWorkspaceInfo();
+                    setWorkspaceInfo(info);
+                } catch (err) {
+                    console.error('Failed to load workspace info:', err);
+                }
             }
         } catch (error) {
             console.error('Error loading admin settings data:', error);
@@ -131,13 +163,136 @@ export default function AdminSettingsPage() {
             navigate('/login');
             return;
         }
-        if (user.role !== 'admin' && user.role !== 'manager') {
-            toast.error('Access denied. Admin or Manager role required.');
+        if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'owner' && user.role !== 'super_admin') {
+            toast.error('Access denied. Admin, Manager or Owner role required.');
             navigate('/');
             return;
         }
         loadAllData();
     }, [user, navigate]);
+
+    // Handle regenerating workspace invite code
+    const handleRegenerateInvite = async () => {
+        if (!workspaceInfo?.id) {
+            toast.error('No workspace loaded');
+            return;
+        }
+        setRegenerating(true);
+        try {
+            const data = await regenerateInviteCode(workspaceInfo.id);
+            setWorkspaceInfo(prev => ({
+                ...prev,
+                inviteCode: data.inviteCode,
+                inviteLink: data.inviteLink
+            }));
+            toast.success('Invite link/code regenerated successfully!');
+        } catch (error) {
+            console.error('Failed to regenerate invite link:', error);
+            toast.error(error.response?.data?.message || 'Failed to regenerate invite link');
+        } finally {
+            setRegenerating(false);
+        }
+    };
+
+    // Copy to clipboard helper
+    const handleCopy = (text, type) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopied(type);
+        toast.success(`${type === 'code' ? 'Invite code' : 'Invite link'} copied to clipboard`);
+        setTimeout(() => setCopied(''), 2000);
+    };
+
+    // Load Pending Join Requests
+    const loadPendingRequests = async () => {
+        if (!workspaceInfo?.id) return;
+        setLoadingRequests(true);
+        try {
+            const data = await getPendingRequests(workspaceInfo.id);
+            setPendingRequests(data);
+            setSelectedRequests([]);
+        } catch (err) {
+            console.error('Failed to load pending requests:', err);
+        } finally {
+            setLoadingRequests(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'invite' && workspaceInfo?.id) {
+            loadPendingRequests();
+        }
+    }, [activeTab, workspaceInfo]);
+
+    const loadWorkspaceMembersAndProjects = async () => {
+        setLoadingMembers(true);
+        try {
+            const members = await getWorkspaceMembers();
+            setWorkspaceMembersList(members);
+            const projs = await getProjects();
+            // Filter out archived projects
+            setProjectsList(Array.isArray(projs) ? projs.filter(p => !p.isArchived) : []);
+        } catch (err) {
+            console.error('Failed to load workspace members/projects:', err);
+            toast.error('Failed to load workspace members or projects');
+        } finally {
+            setLoadingMembers(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'members') {
+            loadWorkspaceMembersAndProjects();
+        }
+    }, [activeTab]);
+
+    const handleAssignPmSave = async () => {
+        if (!selectedUserForPm || !selectedProjectIdForPm) return;
+        setAssigningPm(true);
+        try {
+            await assignProjectManager(selectedUserForPm.id, parseInt(selectedProjectIdForPm, 10));
+            toast.success(`Successfully appointed ${selectedUserForPm.name} as Project Manager`);
+            setIsAssignPmModalOpen(false);
+            setSelectedUserForPm(null);
+            setSelectedProjectIdForPm('');
+            loadWorkspaceMembersAndProjects();
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to assign project manager');
+        } finally {
+            setAssigningPm(false);
+        }
+    };
+
+
+    // Handle Individual Action
+    const handleApproveReject = async (membershipId, action) => {
+        if (!workspaceInfo?.id) return;
+        const toastId = toast.loading(`Processing join request...`);
+        try {
+            await approveMember(workspaceInfo.id, membershipId, action);
+            toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully`, { id: toastId });
+            loadPendingRequests();
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Action failed', { id: toastId });
+        }
+    };
+
+    // Handle Bulk Action
+    const handleBulkApproveReject = async (action) => {
+        if (!workspaceInfo?.id || selectedRequests.length === 0) return;
+        const toastId = toast.loading(`Performing bulk ${action}...`);
+        try {
+            await bulkApproveMembers(workspaceInfo.id, selectedRequests, action);
+            toast.success(`Selected requests ${action === 'approve' ? 'approved' : 'rejected'} successfully`, { id: toastId });
+            loadPendingRequests();
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Bulk action failed', { id: toastId });
+        }
+    };
+
 
     // Handle settings updates (Time, days, name, leave policy)
     const handleSaveSettings = async (e) => {
@@ -434,6 +589,28 @@ export default function AdminSettingsPage() {
                             >
                                 <FileText className="w-5 h-5" />
                                 Audit Logs
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('invite')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+                                    activeTab === 'invite' 
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                                    : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                                }`}
+                            >
+                                <Share2 className="w-5 h-5" />
+                                Invite Members
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('members')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+                                    activeTab === 'members' 
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                                    : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                                }`}
+                            >
+                                <Users className="w-5 h-5" />
+                                Workspace Members
                             </button>
                         </div>
                     </div>
@@ -1072,6 +1249,362 @@ export default function AdminSettingsPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* INVITE MEMBERS TAB */}
+                        {activeTab === 'invite' && (
+                            <div className="bg-white/80 backdrop-blur-xl border border-blue-100 rounded-3xl p-6 shadow-xl shadow-blue-100/30 space-y-6">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                        <Share2 className="text-blue-600 w-5.5 h-5.5" />
+                                        Workspace Invitations & Share Link
+                                    </h2>
+                                    <p className="text-xs text-gray-500 font-medium mt-1">
+                                        Invite new users to collaborate in your active workspace. Share the link or the code to let them join.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                                    {/* Invite Link Card */}
+                                    <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-100/60 shadow-sm flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Link className="w-5 h-5 text-blue-600" />
+                                                <span className="text-sm font-bold text-gray-800">Invitation URL</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 font-medium leading-relaxed mb-4">
+                                                Users who click this link will be redirected to registration with the invite code automatically pre-filled.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-white border border-blue-100 rounded-xl p-2 pl-3">
+                                            <span className="text-xs font-mono font-bold text-gray-600 truncate flex-1 select-all">
+                                                {workspaceInfo?.inviteLink || 'Generating link...'}
+                                            </span>
+                                            <button
+                                                onClick={() => handleCopy(workspaceInfo?.inviteLink, 'link')}
+                                                disabled={!workspaceInfo?.inviteLink}
+                                                className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex items-center justify-center shrink-0"
+                                                title="Copy Link"
+                                            >
+                                                {copied === 'link' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Invite Code Card */}
+                                    <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/30 border border-indigo-100/60 shadow-sm flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Users className="w-5 h-5 text-indigo-600" />
+                                                <span className="text-sm font-bold text-gray-800">Workspace Code</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 font-medium leading-relaxed mb-4">
+                                                Users can enter this code manually during registration to join this specific workspace.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-white border border-indigo-100 rounded-xl p-2 pl-3">
+                                            <span className="text-sm font-mono font-extrabold text-indigo-700 tracking-wider flex-1 select-all">
+                                                {workspaceInfo?.inviteCode || 'Generating code...'}
+                                            </span>
+                                            <button
+                                                onClick={() => handleCopy(workspaceInfo?.inviteCode, 'code')}
+                                                disabled={!workspaceInfo?.inviteCode}
+                                                className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors flex items-center justify-center shrink-0"
+                                                title="Copy Code"
+                                            >
+                                                {copied === 'code' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-gray-100 pt-6 mt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                    <div className="max-w-md">
+                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                            <ShieldAlert className="w-4 h-4 text-amber-500" />
+                                            Regenerate Invitation Credentials
+                                        </h3>
+                                        <p className="text-xs text-gray-400 font-medium mt-1 leading-relaxed">
+                                            Warning: Regenerating will instantly invalidate the current invite code and link. Any users attempting to join using the old credentials will fail to register.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={handleRegenerateInvite}
+                                        disabled={regenerating || !workspaceInfo?.id}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-400 text-xs font-bold rounded-2xl shadow-md transition-all shrink-0 hover:scale-[1.02]"
+                                    >
+                                        {regenerating ? (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                Regenerating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                Regenerate Invite Code
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Pending join requests list */}
+                                <div className="border-t border-gray-100 pt-6 mt-8">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                                <UserCheck className="w-4 h-4 text-blue-600" />
+                                                Pending Join Requests
+                                            </h3>
+                                            <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                                                Select pending members to approve or reject their access requests to join this workspace.
+                                            </p>
+                                        </div>
+                                        {selectedRequests.length > 0 && (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleBulkApproveReject('approve')}
+                                                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
+                                                >
+                                                    Approve Selected ({selectedRequests.length})
+                                                </button>
+                                                <button
+                                                    onClick={() => handleBulkApproveReject('reject')}
+                                                    className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
+                                                >
+                                                    Reject Selected ({selectedRequests.length})
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {loadingRequests ? (
+                                        <div className="py-12 flex items-center justify-center">
+                                            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+                                            <table className="min-w-full divide-y divide-gray-100 text-xs">
+                                                <thead className="bg-gray-50/50">
+                                                    <tr>
+                                                        <th className="w-12 px-6 py-3.5 text-left">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={pendingRequests.length > 0 && selectedRequests.length === pendingRequests.length}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedRequests(pendingRequests.map(r => r.membershipId));
+                                                                    } else {
+                                                                        setSelectedRequests([]);
+                                                                    }
+                                                                }}
+                                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                            />
+                                                        </th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Email Address</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Requested Date</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-100 font-medium text-gray-700">
+                                                    {pendingRequests.map((req) => (
+                                                        <tr key={req.membershipId} className="hover:bg-blue-50/30 transition-colors">
+                                                            <td className="px-6 py-4">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedRequests.includes(req.membershipId)}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) {
+                                                                            setSelectedRequests([...selectedRequests, req.membershipId]);
+                                                                        } else {
+                                                                            setSelectedRequests(selectedRequests.filter(id => id !== req.membershipId));
+                                                                        }
+                                                                    }}
+                                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                />
+                                                            </td>
+                                                            <td className="px-6 py-4 font-bold text-gray-800">{req.name}</td>
+                                                            <td className="px-6 py-4 text-gray-500">{req.email}</td>
+                                                            <td className="px-6 py-4 text-gray-400">{new Date(req.joinedAt).toLocaleString()}</td>
+                                                            <td className="px-6 py-4 text-right flex justify-end gap-1.5">
+                                                                <button
+                                                                    onClick={() => handleApproveReject(req.membershipId, 'approve')}
+                                                                    className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-xl transition cursor-pointer"
+                                                                    title="Approve request"
+                                                                >
+                                                                    <Check className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleApproveReject(req.membershipId, 'reject')}
+                                                                    className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition cursor-pointer"
+                                                                    title="Reject request"
+                                                                >
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+
+                                                    {pendingRequests.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic font-medium">
+                                                                No pending join requests active currently.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'members' && (
+                            <div className="bg-white/80 backdrop-blur-xl border border-blue-100 rounded-3xl p-6 shadow-xl shadow-blue-100/30">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                            <Users className="text-blue-600 w-5 h-5" />
+                                            Workspace Members
+                                        </h2>
+                                        <p className="text-xs text-gray-500 font-medium">Manage members, appoint project managers, and oversee roles.</p>
+                                    </div>
+                                </div>
+
+                                {loadingMembers ? (
+                                    <div className="py-12 text-center">
+                                        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-2" />
+                                        <p className="text-gray-500 font-semibold">Loading members...</p>
+                                    </div>
+                                ) : workspaceMembersList.length === 0 ? (
+                                    <div className="py-12 text-center text-gray-550 font-medium animate-fade-in">
+                                        No active workspace members found.
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto rounded-2xl border border-gray-100">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-blue-50/40 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                    <th className="py-3 px-4">Name</th>
+                                                    <th className="py-3 px-4">Email</th>
+                                                    <th className="py-3 px-4">Workspace Role</th>
+                                                    <th className="py-3 px-4 text-right pr-6">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 text-sm font-semibold text-gray-700">
+                                                {workspaceMembersList.map(member => (
+                                                    <tr key={member.id} className="hover:bg-blue-50/20 transition-colors">
+                                                        <td className="py-4 px-4 flex items-center gap-3">
+                                                            {member.avatarUrl ? (
+                                                                <img src={member.avatarUrl} alt={member.name} className="w-9 h-9 rounded-full object-cover border border-gray-100" />
+                                                            ) : (
+                                                                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-xs">
+                                                                    {member.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="font-extrabold text-gray-800">{member.name}</p>
+                                                                {member.position && <p className="text-xs text-gray-500 font-medium">{member.position}</p>}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 px-4 text-gray-550">{member.email}</td>
+                                                        <td className="py-4 px-4">
+                                                            <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold border uppercase ${
+                                                                member.role === 'owner' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                                                member.role === 'admin' ? 'bg-red-50 border-red-200 text-red-700' :
+                                                                member.role === 'manager' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                                                'bg-gray-50 border-gray-200 text-gray-700'
+                                                            }`}>
+                                                                {member.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 px-4 text-right pr-6">
+                                                            {member.id !== user?.id && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedUserForPm(member);
+                                                                        setIsAssignPmModalOpen(true);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow text-xs flex items-center gap-1.5 ml-auto cursor-pointer"
+                                                                >
+                                                                    <UserCheck className="w-4 h-4" />
+                                                                    Assign PM
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ASSIGN PROJECT MANAGER MODAL */}
+                        {isAssignPmModalOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-sm animate-fade-in">
+                                <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                            <UserCheck className="text-blue-600 w-6 h-6" />
+                                            Assign Project Manager
+                                        </h3>
+                                        <button 
+                                            onClick={() => setIsAssignPmModalOpen(false)}
+                                            className="p-2 hover:bg-gray-100 rounded-full transition cursor-pointer"
+                                        >
+                                            <X className="w-5 h-5 text-gray-500" />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4 mb-6">
+                                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                                            <p className="text-sm font-semibold text-gray-700">Appointee:</p>
+                                            <p className="text-base font-extrabold text-blue-800">{selectedUserForPm?.name}</p>
+                                            <p className="text-xs text-gray-500 font-medium">{selectedUserForPm?.email}</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Select Project</label>
+                                            <select
+                                                value={selectedProjectIdForPm}
+                                                onChange={(e) => setSelectedProjectIdForPm(e.target.value)}
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 cursor-pointer"
+                                            >
+                                                <option value="">-- Choose a project --</option>
+                                                {projectsList.map(proj => (
+                                                    <option key={proj.id} value={proj.id}>{proj.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            onClick={() => setIsAssignPmModalOpen(false)}
+                                            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
+                                            disabled={assigningPm}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleAssignPmSave}
+                                            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition shadow flex items-center gap-2 cursor-pointer"
+                                            disabled={assigningPm || !selectedProjectIdForPm}
+                                        >
+                                            {assigningPm ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Saving...
+                                                </>
+                                            ) : 'Save'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
 
                     </div>
                 </div>

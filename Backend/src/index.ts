@@ -18,6 +18,13 @@ import dashboardRoute from './routes/dashboard.routes';
 import workspaceRoute from './routes/workspace.routes';
 import superAdminRoute from './routes/superAdmin.routes';
 import reportsRoute from './routes/reports.routes';
+import intelligenceRoute from './routes/projectIntelligence.routes';
+import chatRoute from './routes/chat.routes';
+import kbRoute from './routes/kb.routes';
+import timeRoute from './routes/time.routes';
+import calendarRoute from './routes/calendar.routes';
+import fileRoute from './routes/file.routes';
+import { startEscalationScheduler } from './services/escalation.scheduler';
 
 
 
@@ -70,6 +77,13 @@ app.use("/api/ai", aiRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/workspaces", workspaceRoute);
 app.use("/api/super-admin", superAdminRoute);
+app.use("/api/reports", reportsRoute);
+app.use("/api/intelligence", intelligenceRoute);
+app.use("/api/chat", chatRoute);
+app.use("/api/kb", kbRoute);
+app.use("/api/time", timeRoute);
+app.use("/api/calendar", calendarRoute);
+app.use("/api/files", fileRoute);
 
 
 
@@ -95,6 +109,7 @@ if (env.NODE_ENV === 'production') {
 
 const server = http.createServer(app);
 socketService.init(server);
+startEscalationScheduler();
 
 server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);

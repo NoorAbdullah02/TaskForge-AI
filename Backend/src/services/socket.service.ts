@@ -27,9 +27,23 @@ class SocketService {
             });
 
             socket.on('join_workspace', (workspaceId: number) => {
-                if (workspaceId) {
+                 if (workspaceId) {
                     socket.join(`workspace_${workspaceId}`);
                     console.log(`💼 Socket ${socket.id} joined Workspace Room workspace_${workspaceId}`);
+                }
+            });
+
+            socket.on('join_chat', (chatId: number) => {
+                if (chatId) {
+                    socket.join(`chat_${chatId}`);
+                    console.log(`💬 Socket ${socket.id} joined Chat Room chat_${chatId}`);
+                }
+            });
+
+            socket.on('leave_chat', (chatId: number) => {
+                if (chatId) {
+                    socket.leave(`chat_${chatId}`);
+                    console.log(`💬 Socket ${socket.id} left Chat Room chat_${chatId}`);
                 }
             });
 
@@ -75,6 +89,14 @@ class SocketService {
         if (this.io) {
             this.io.to(`workspace_${workspaceId}`).emit(event, data);
             console.log(`📢 Broadcasted "${event}" to workspace_${workspaceId}`);
+        }
+    }
+
+    // Broadcast message to a chat room
+    broadcastToChat(chatId: number, event: string, data: any) {
+        if (this.io) {
+            this.io.to(`chat_${chatId}`).emit(event, data);
+            console.log(`💬 Broadcasted "${event}" to chat_${chatId}`);
         }
     }
 }

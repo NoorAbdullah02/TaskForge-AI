@@ -1,680 +1,1080 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, CheckCircle, X, Camera, Edit2, Save } from 'lucide-react';
+import { 
+    Mail, Lock, CheckCircle, X, Camera, Edit2, Save, User, Shield, 
+    Bell, Paintbrush, Globe, Cpu, Key, Activity, Trash2, Plus, 
+    AlertTriangle, RefreshCw, ShieldCheck, Laptop, Chrome, 
+    LogOut, Check, ChevronRight, Settings, Eye, EyeOff, ShieldAlert
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { getUserProfile, sendVerificationEmail, verifyEmailToken, updateUserName, updateUserPassword, updateUserAvatar, updateUserProfile, getDepartments, toggle2Fa } from '../Services/authApi';
+import { 
+    getUserProfile, sendVerificationEmail, verifyEmailToken, 
+    updateUserName, updateUserPassword, updateUserAvatar, 
+    updateUserProfile, getDepartments, toggle2Fa,
+    getUserSessions, revokeSession, getUserActivityLogs,
+    getApiKeys, createApiKey, revokeApiKey
+} from '../Services/authApi';
 import { uploadFile } from '../Services/uploadApi';
+import { getWorkspaceInfo, regenerateInviteCode } from '../Services/workspaceApi';
 
-
-const ProfilePage = () => {
-    const { user, logout, login } = useAuth();
+export default function ProfilePage() {
+    const { user, login } = useAuth();
     const [profileData, setProfileData] = useState(null);
     const [profileImage, setProfileImage] = useState(null);
     const [editingProfile, setEditingProfile] = useState(false);
     const [editData, setEditData] = useState({});
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [showVerifyModal, setShowVerifyModal] = useState(false);
+    
+    // Tab States
+    const [activeTab, setActiveTab] = useState('profile');
+    const [loading, setLoading] = useState(true);
+    const [departments, setDepartments] = useState([]);
+    
+    // Data List States
+    const [sessions, setSessions] = useState([]);
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [apiKeysList, setApiKeysList] = useState([]);
+    const [workspaceInfo, setWorkspaceInfo] = useState(null);
+
+    // Form Loading States
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [isCreatingKey, setIsCreatingKey] = useState(false);
+    const [copiedKey, setCopiedKey] = useState('');
+    const [newKeyName, setNewKeyName] = useState('');
+    const [justCreatedKey, setJustCreatedKey] = useState(null);
+
+    // Passwords Form
     const [passwordData, setPasswordData] = useState({
         oldPassword: '',
         newPassword: '',
         confirmPassword: '',
     });
-    const [verifyEmail, setVerifyEmail] = useState('');
+    const [showPasswords, setShowPasswords] = useState({
+        old: false,
+        new: false,
+        confirm: false
+    });
+
+    // Verify Email states
+    const [isSendingVerify, setIsSendingVerify] = useState(false);
     const [verifyTokenInput, setVerifyTokenInput] = useState('');
-    const [isSending, setIsSending] = useState(false);
-    const [isVerifyingToken, setIsVerifyingToken] = useState(false);
-    const [isChanging, setIsChanging] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [departments, setDepartments] = useState([]);
+    const [showVerifyInput, setShowVerifyInput] = useState(false);
 
-    // track if a verification link was sent and any preview url returned by backend
-    const [linkSent, setLinkSent] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState(null);
+    // Settings Defaults
+    const [settings, setSettings] = useState({
+        notifications: {
+            emailAlerts: true,
+            pushAlerts: false,
+            slackAlerts: false,
+            sprintUpdates: true
+        },
+        theme: localStorage.getItem('tf_theme') || 'light',
+        language: 'en',
+        privacy: {
+            profilePublic: true,
+            shareAnalytics: false
+        }
+    });
 
-    // Fetch user profile and departments
-    useEffect(() => {
-        const fetchProfileAndDepartments = async () => {
-            try {
-                setLoading(true);
-                const [profile, depts] = await Promise.all([
-                    getUserProfile(),
-                    getDepartments()
-                ]);
-                setProfileData(profile);
-                setEditData(profile);
-                setDepartments(depts);
-                if (profile.avatarUrl) {
-                    setProfileImage(profile.avatarUrl.split('#')[0]);
-                }
-            } catch (err) {
-                console.error('Error fetching profile or departments:', err);
-                toast.error('Failed to load profile settings');
-            } finally {
-                setLoading(false);
+    // Fetch initial profile
+    const loadProfile = async () => {
+        try {
+            setLoading(true);
+            const [profile, depts] = await Promise.all([
+                getUserProfile(),
+                getDepartments()
+            ]);
+            setProfileData(profile);
+            setEditData(profile);
+            setDepartments(depts);
+            if (profile.avatarUrl) {
+                setProfileImage(profile.avatarUrl.split('#')[0]);
             }
-        };
-        fetchProfileAndDepartments();
+
+            // If workspace owner, load workspace info too
+            if (profile.role === 'owner' || user?.role === 'owner') {
+                try {
+                    const wsInfo = await getWorkspaceInfo();
+                    setWorkspaceInfo(wsInfo);
+                } catch (wsErr) {
+                    console.error('Failed to load workspace info:', wsErr);
+                }
+            }
+        } catch (err) {
+            console.error('Error loading profile:', err);
+            toast.error('Failed to load settings');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadProfile();
     }, []);
 
-    const getRoleBadge = (role) => {
-        switch (role?.toLowerCase()) {
-            case 'admin':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-sm uppercase tracking-wider">
-                        🛡️ Admin
-                    </span>
-                );
-            case 'manager':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm uppercase tracking-wider">
-                        💼 Manager
-                    </span>
-                );
-            default:
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm uppercase tracking-wider">
-                        👤 Employee
-                    </span>
-                );
+    // Load tab-specific lists on demand
+    useEffect(() => {
+        if (activeTab === 'sessions') {
+            fetchSessions();
+        } else if (activeTab === 'logs') {
+            fetchLogs();
+        } else if (activeTab === 'api') {
+            fetchApiKeys();
         }
-    };
+    }, [activeTab]);
 
-    const getDepartmentName = (deptId) => {
-        const dept = departments.find(d => d.id === deptId);
-        return dept ? dept.name : 'Not Assigned';
-    };
-
-    const handleToggle2Fa = async (e) => {
-        const checked = e.target.checked;
-        const toastId = toast.loading(`${checked ? 'Enabling' : 'Disabling'} 2FA...`);
+    const fetchSessions = async () => {
         try {
-            const res = await toggle2Fa(checked);
-            setProfileData((prev) => ({ ...prev, is2faEnabled: res.is2faEnabled }));
-            setEditData((prev) => ({ ...prev, is2faEnabled: res.is2faEnabled }));
-            if (login) {
-                login({ ...user, is2faEnabled: res.is2faEnabled });
-            }
-            toast.success(res.message || `2FA ${checked ? 'enabled' : 'disabled'} successfully`, { id: toastId });
+            const data = await getUserSessions();
+            setSessions(data);
         } catch (err) {
-            console.error('Toggle 2FA error:', err);
-            toast.error(err?.response?.data?.message || 'Failed to toggle 2FA', { id: toastId });
+            console.error('Failed to load sessions:', err);
         }
     };
 
-    const handleProfileImageChange = async (e) => {
+    const fetchLogs = async () => {
+        try {
+            const data = await getUserActivityLogs();
+            setActivityLogs(data);
+        } catch (err) {
+            console.error('Failed to load activity logs:', err);
+        }
+    };
+
+    const fetchApiKeys = async () => {
+        try {
+            const data = await getApiKeys();
+            setApiKeysList(data);
+        } catch (err) {
+            console.error('Failed to load API keys:', err);
+        }
+    };
+
+    // Actions
+    const handleAvatarChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         if (!file.type.startsWith('image/')) {
             toast.error('Please select an image file');
             return;
         }
-
         if (file.size > 5 * 1024 * 1024) {
             toast.error('Image size must be less than 5MB');
             return;
         }
 
+        const toastId = toast.loading('Uploading avatar...');
         try {
-            const toastId = toast.loading('Uploading photo...');
             const res = await uploadFile(file, 'avatars');
             const fileUrlWithId = `${res.url}#${res.fileId}`;
-            
             const updated = await updateUserAvatar({ avatarUrl: fileUrlWithId });
             setProfileImage(res.url);
-            
             if (login) login(updated);
-            toast.success('Profile photo updated successfully!', { id: toastId });
+            toast.success('Profile image updated!', { id: toastId });
         } catch (err) {
-            console.error('Profile photo upload error:', err);
-            toast.error('Failed to upload image');
+            console.error(err);
+            toast.error('Failed to upload image', { id: toastId });
         }
     };
 
-    const handleEditProfile = async () => {
-        if (!editData?.name || editData.name.trim().length === 0) {
-            return toast.error('Name cannot be empty');
+    const handleSaveProfile = async (e) => {
+        e.preventDefault();
+        if (!editData.name?.trim()) {
+            toast.error('Name is required');
+            return;
         }
-
+        setIsSavingProfile(true);
         try {
-            setIsSaving(true);
             const res = await updateUserProfile({
                 name: editData.name.trim(),
                 position: editData.position || null,
                 phone: editData.phone || null,
                 departmentId: editData.departmentId || null
             });
-
-            const updatedUser = res.user;
-
-            setProfileData(updatedUser);
-            setEditData(updatedUser);
+            setProfileData(res.user);
+            if (login) login(res.user);
             setEditingProfile(false);
-
-            if (login) login(updatedUser);
             toast.success('Profile updated successfully');
         } catch (err) {
-            console.error('Update profile error:', err);
-            toast.error(err?.response?.data?.message || 'Failed to update profile');
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to update profile');
         } finally {
-            setIsSaving(false);
+            setIsSavingProfile(false);
         }
     };
 
-    const handleChangePassword = async () => {
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
         if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-            toast.error('Please fill all fields');
+            toast.error('All password fields are required');
             return;
         }
-
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            toast.error('Passwords do not match');
+            toast.error('New passwords do not match');
             return;
         }
-
         if (passwordData.newPassword.length < 8) {
             toast.error('New password must be at least 8 characters');
             return;
         }
 
+        setIsChangingPassword(true);
         try {
-            setIsChanging(true);
-            const res = await updateUserPassword({ currentPassword: passwordData.oldPassword, newPassword: passwordData.newPassword });
-            toast.success(res?.message || 'Password changed successfully');
-            setShowPasswordModal(false);
+            await updateUserPassword({
+                currentPassword: passwordData.oldPassword,
+                newPassword: passwordData.newPassword
+            });
+            toast.success('Password changed successfully');
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (err) {
-            console.error('Change password error:', err);
-            toast.error(err?.response?.data?.message || 'Failed to change password');
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to change password');
         } finally {
-            setIsChanging(false);
+            setIsChangingPassword(false);
         }
     };
 
-    const handleVerifyEmail = async () => {
+    const handleSendVerification = async () => {
+        setIsSendingVerify(true);
         try {
-            setIsSending(true);
-            const res = await sendVerificationEmail();
-            // keep the modal open so user can paste token without reopening
-            toast.success(res?.message || 'Verification email sent');
-            setLinkSent(true);
-            setPreviewUrl(res?.previewUrl || null);
-            // refresh profile (still useful), but do not close the modal
-            const updated = await getUserProfile();
-            setProfileData(updated);
+            await sendVerificationEmail();
+            setShowVerifyInput(true);
+            toast.success('Verification code sent to your email');
         } catch (err) {
-            console.error('Send verification error:', err);
-            toast.error(err?.response?.data?.message || 'Failed to send verification email');
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to send verification email');
         } finally {
-            setIsSending(false);
+            setIsSendingVerify(false);
         }
     };
 
     const handleVerifyToken = async () => {
-        if (!verifyTokenInput) return toast.error('Please enter the verification token');
+        if (!verifyTokenInput.trim()) {
+            toast.error('Please enter the verification code');
+            return;
+        }
         try {
-            setIsVerifyingToken(true);
-            const res = await verifyEmailToken({ email: profileData.email, token: verifyTokenInput });
-            toast.success(res?.message || 'Email verified');
-            setShowVerifyModal(false);
+            await verifyEmailToken({ email: profileData.email, token: verifyTokenInput.trim() });
+            toast.success('Email verified successfully! 🎉');
+            setShowVerifyInput(false);
             setVerifyTokenInput('');
-            const updated = await getUserProfile();
-            setProfileData(updated);
+            loadProfile();
         } catch (err) {
-            console.error('Token verification error:', err);
-            toast.error(err?.response?.data?.message || 'Verification failed');
-        } finally {
-            setIsVerifyingToken(false);
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Failed to verify email code');
         }
     };
 
-    if (loading) {
+    const handleToggle2FA = async (checked) => {
+        const toastId = toast.loading(`${checked ? 'Enabling' : 'Disabling'} 2FA...`);
+        try {
+            const res = await toggle2Fa(checked);
+            setProfileData(prev => ({ ...prev, is2faEnabled: res.is2faEnabled }));
+            if (login) login({ ...user, is2faEnabled: res.is2faEnabled });
+            toast.success(res.message || `2FA ${checked ? 'enabled' : 'disabled'}`, { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to change 2FA setting', { id: toastId });
+        }
+    };
+
+    const handleRevokeSession = async (id) => {
+        if (!confirm('Are you sure you want to log out of this device?')) return;
+        try {
+            await revokeSession(id);
+            toast.success('Device session revoked successfully');
+            fetchSessions();
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to revoke session');
+        }
+    };
+
+    const handleCreateApiKey = async (e) => {
+        e.preventDefault();
+        if (!newKeyName.trim()) return;
+        setIsCreatingKey(true);
+        try {
+            const res = await createApiKey(newKeyName.trim());
+            setJustCreatedKey(res.key);
+            setNewKeyName('');
+            fetchApiKeys();
+            toast.success('API Key generated successfully!');
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to create API key');
+        } finally {
+            setIsCreatingKey(false);
+        }
+    };
+
+    const handleRevokeApiKey = async (id) => {
+        if (!confirm('Are you sure you want to revoke this API key? Applications using it will break.')) return;
+        try {
+            await revokeApiKey(id);
+            toast.success('API key revoked successfully');
+            fetchApiKeys();
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to revoke API key');
+        }
+    };
+
+    const handleToggleTheme = (themeName) => {
+        setSettings(prev => ({ ...prev, theme: themeName }));
+        localStorage.setItem('tf_theme', themeName);
+        toast.success(`Theme updated to ${themeName}`);
+    };
+
+    const getRoleBadge = (role) => {
+        switch (role?.toLowerCase()) {
+            case 'super_admin':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-extrabold bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-md uppercase tracking-wider">
+                        🛡️ Super Admin
+                    </span>
+                );
+            case 'owner':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md uppercase tracking-wider">
+                        👑 Workspace Owner
+                    </span>
+                );
+            case 'manager':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-extrabold bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md uppercase tracking-wider">
+                        💼 Project Manager
+                    </span>
+                );
+            case 'leader':
+            case 'team_leader':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-extrabold bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md uppercase tracking-wider">
+                        ⚡ Team Leader
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-extrabold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md uppercase tracking-wider">
+                        👤 Employee
+                    </span>
+                );
+        }
+    };
+
+    if (loading || !profileData) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6 flex items-center justify-center">
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading profile...</p>
+                    <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
+                    <p className="text-slate-400 text-xs font-semibold">Decrypting settings instance...</p>
                 </div>
             </div>
         );
     }
 
-    if (!user || !profileData) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6 flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-800 mb-2">You are not logged in</p>
-                    <p className="text-gray-600">Please login to view your profile</p>
-                </div>
-            </div>
-        );
-    }
+    const isOwner = profileData.role === 'owner';
+    const isSuperAdmin = profileData.role === 'super_admin';
+    const isManager = profileData.role === 'manager';
+    const isLeader = profileData.role === 'leader' || profileData.role === 'team_leader';
+
+    const getSettingsTitle = () => {
+        if (isSuperAdmin) return "Super Admin System Configuration";
+        if (isOwner) return "Workspace Owner Settings Center";
+        if (isManager) return "Project Management Settings Control";
+        if (isLeader) return "Team Leader Command Dashboard";
+        return "Employee Personal Preferences";
+    };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6">
-            <div className="max-w-4xl mx-auto">
-                {/* Page Header */}
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">My Profile</h1>
-                    <p className="text-gray-600">Manage your account information and settings</p>
+        <div className={`min-h-screen py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${
+            settings.theme === 'dark' ? 'bg-[#07070d] text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/20 to-white text-slate-800'
+        }`}>
+            <div className="max-w-6xl mx-auto">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/60 pb-6 mb-8">
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+                            <Settings className="w-7 h-7 text-blue-500" />
+                            {getSettingsTitle()}
+                        </h1>
+                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>
+                            Adjust role settings, manage active login tokens, generate API access codes, and customize workspace viewports.
+                        </p>
+                    </div>
+                    <div>
+                        {getRoleBadge(profileData.role)}
+                    </div>
                 </div>
 
-                {/* Profile Card */}
-                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 mb-8">
-                    {/* Profile Content */}
-                    <div className="p-8">
-                        {/* Avatar Section */}
-                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 mb-8">
-                            {/* Profile Photo */}
-                            <div className="relative group">
-                                <div className="w-40 h-40 bg-gradient-to-br from-blue-500 to-blue-700 rounded-3xl flex items-center justify-center text-white text-6xl font-bold shadow-2xl border-4 border-white overflow-hidden">
-                                    {profileImage ? (
-                                        <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        profileData?.name?.charAt(0).toUpperCase() || 'U'
-                                    )}
-                                </div>
-                                <label className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleProfileImageChange}
-                                        className="hidden"
-                                    />
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Camera className="w-8 h-8 text-white" />
-                                        <span className="text-sm text-white font-semibold">Change Photo</span>
-                                    </div>
-                                </label>
-                            </div>
+                {/* Left navigation + Content block grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* Left tabs selector */}
+                    <div className="lg:col-span-1 space-y-2">
+                        <div className={`backdrop-blur-xl border p-4 rounded-3xl shadow-xl space-y-1 ${
+                            settings.theme === 'dark' ? 'bg-white/[0.02] border-white/10' : 'bg-white/90 border-blue-100/50 shadow-blue-100/10'
+                        }`}>
+                            {[
+                                { id: 'profile', label: 'My Profile', icon: User },
+                                { id: 'password', label: 'Password & Auth', icon: Lock },
+                                { id: 'email', label: 'Email Control', icon: Mail },
+                                { id: 'security', label: 'Security Center', icon: Shield },
+                                { id: 'notifications', label: 'Notifications', icon: Bell },
+                                { id: 'theme', label: 'Theme & Style', icon: Paintbrush },
+                                { id: 'language', label: 'Language Options', icon: Globe },
+                                { id: 'sessions', label: 'Active Sessions', icon: Laptop },
+                                { id: 'api', label: 'Developer API Keys', icon: Key },
+                                { id: 'logs', label: 'Activity Logs', icon: Activity }
+                            ].map((tab) => {
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs transition-all cursor-pointer ${
+                                            activeTab === tab.id
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                                                : settings.theme === 'dark'
+                                                    ? 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-100'
+                                                    : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                                        }`}
+                                    >
+                                        <Icon className="w-4 h-4 shrink-0" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-                            {/* Profile Info */}
-                            <div className="flex-1 text-center sm:text-left">
-                                {editingProfile ? (
-                                    <div className="space-y-4 w-full sm:max-w-md">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
-                                            <input
-                                                type="text"
-                                                value={editData.name || ''}
-                                                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
-                                                placeholder="Full Name"
-                                            />
+                    {/* Right tab panel contents */}
+                    <div className="lg:col-span-3">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className={`border p-6 sm:p-8 rounded-3xl shadow-xl backdrop-blur-xl ${
+                                    settings.theme === 'dark' ? 'bg-white/[0.02] border-white/10' : 'bg-white/90 border-blue-100/50 shadow-blue-100/10'
+                                }`}
+                            >
+                                {/* TAB 1: PROFILE */}
+                                {activeTab === 'profile' && (
+                                    <div className="space-y-6">
+                                        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/5">
+                                            {/* Avatar Box */}
+                                            <div className="relative group">
+                                                <div className="w-24 h-24 rounded-3xl bg-blue-600 text-white text-3xl font-extrabold flex items-center justify-center shadow-md border-2 border-blue-400 overflow-hidden shrink-0">
+                                                    {profileImage ? (
+                                                        <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        profileData.name.charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
+                                                <label className="absolute inset-0 bg-slate-900/60 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                                                    <Camera className="w-5 h-5 text-white" />
+                                                </label>
+                                            </div>
+                                            <div className="text-center sm:text-left">
+                                                <h3 className="text-lg font-bold">{profileData.name}</h3>
+                                                <p className="text-xs text-gray-500 mt-1">{profileData.position || 'Professional Specialist'}</p>
+                                                <div className="mt-2">{getRoleBadge(profileData.role)}</div>
+                                            </div>
                                         </div>
+
+                                        <form onSubmit={handleSaveProfile} className="space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Display Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editData.name || ''}
+                                                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                                                        className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Professional Position</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editData.position || ''}
+                                                        onChange={(e) => setEditData({ ...editData, position: e.target.value })}
+                                                        placeholder="e.g. Lead Devops Architect"
+                                                        className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Mobile Phone</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editData.phone || ''}
+                                                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                                                        placeholder="+1 (555) 019-2834"
+                                                        className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Department Division</label>
+                                                    <select
+                                                        value={editData.departmentId || ''}
+                                                        onChange={(e) => setEditData({ ...editData, departmentId: parseInt(e.target.value, 10) || null })}
+                                                        className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                    >
+                                                        <option value="">Not Assigned / Operations</option>
+                                                        {departments.map((dept) => (
+                                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-4 flex justify-end">
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSavingProfile}
+                                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-2xl shadow-md transition hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+                                                >
+                                                    {isSavingProfile ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {/* TAB 2: PASSWORD */}
+                                {activeTab === 'password' && (
+                                    <div className="space-y-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Job Title</label>
-                                            <input
-                                                type="text"
-                                                value={editData.position || ''}
-                                                onChange={(e) => setEditData({ ...editData, position: e.target.value })}
-                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
-                                                placeholder="e.g. Lead Developer"
-                                            />
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Credentials</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Change your login passcode to keep your active workspace secure.</p>
                                         </div>
+
+                                        <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                                            {/* Old Pass */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Current Password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPasswords.old ? 'text' : 'password'}
+                                                        value={passwordData.oldPassword}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                                                        className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                    >
+                                                        {showPasswords.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* New Pass */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">New Password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPasswords.new ? 'text' : 'password'}
+                                                        value={passwordData.newPassword}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                                        className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                    >
+                                                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Confirm Pass */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Confirm New Password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPasswords.confirm ? 'text' : 'password'}
+                                                        value={passwordData.confirmPassword}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                                        className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                        }`}
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                    >
+                                                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 flex justify-end">
+                                                <button
+                                                    type="submit"
+                                                    disabled={isChangingPassword}
+                                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-2xl shadow-md transition hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+                                                >
+                                                    {isChangingPassword ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                                                    Update Passcode
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {/* TAB 3: EMAIL CONTROL */}
+                                {activeTab === 'email' && (
+                                    <div className="space-y-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
-                                            <input
-                                                type="text"
-                                                value={editData.phone || ''}
-                                                onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
-                                                placeholder="e.g. +1 (555) 123-4567"
-                                            />
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Email Address & Verification</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Check email delivery configurations or verify your communication channel.</p>
                                         </div>
+
+                                        <div className={`p-5 rounded-2xl border ${
+                                            settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-blue-50/30 border-blue-100/60'
+                                        }`}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div>
+                                                    <span className="text-[10px] font-extrabold text-slate-400 uppercase">Primary Workspace Email</span>
+                                                    <p className="text-sm font-extrabold mt-1">{profileData.email}</p>
+                                                </div>
+                                                <div>
+                                                    {profileData.isEmailVerified ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-500 text-xs font-bold rounded-full border border-emerald-500/25">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            Verified Channel
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-500 text-xs font-bold rounded-full border border-amber-500/25">
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                            Unverified Email
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {!profileData.isEmailVerified && (
+                                                <div className="mt-4 pt-4 border-t border-dashed border-gray-200/40">
+                                                    <p className="text-xs text-slate-400 mb-3 font-medium">Click the button below to request an OTP code or link to complete verification.</p>
+                                                    {!showVerifyInput ? (
+                                                        <button
+                                                            onClick={handleSendVerification}
+                                                            disabled={isSendingVerify}
+                                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                                                        >
+                                                            {isSendingVerify ? 'Sending...' : 'Send Verification Token'}
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex gap-2 max-w-sm">
+                                                            <input
+                                                                type="text"
+                                                                value={verifyTokenInput}
+                                                                onChange={(e) => setVerifyTokenInput(e.target.value)}
+                                                                placeholder="Enter 8-char OTP"
+                                                                maxLength={8}
+                                                                className={`px-3 py-2 rounded-xl border text-xs font-bold font-mono focus:outline-none focus:border-blue-500 ${
+                                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                                }`}
+                                                            />
+                                                            <button
+                                                                onClick={handleVerifyToken}
+                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                                                            >
+                                                                Verify Code
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 4: SECURITY CENTER */}
+                                {activeTab === 'security' && (
+                                    <div className="space-y-6">
                                         <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Department</label>
-                                            <select
-                                                value={editData.departmentId || ''}
-                                                onChange={(e) => setEditData({ ...editData, departmentId: e.target.value ? parseInt(e.target.value, 10) : null })}
-                                                className="w-full px-4 py-2 border-2 border-gray-300 bg-white rounded-xl focus:outline-none focus:border-blue-500 text-lg font-semibold"
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Center</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Configure advanced identity verification features to protect against spoofing.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Security Strength */}
+                                            <div className={`p-5 rounded-2xl border ${
+                                                settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-slate-100'
+                                            }`}>
+                                                <h4 className="text-xs font-extrabold flex items-center gap-1.5">
+                                                    <ShieldCheck className="text-emerald-500 w-4 h-4" />
+                                                    Identity Health
+                                                </h4>
+                                                <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
+                                                    Your account security level is currently: <span className="text-emerald-500 font-extrabold">Good</span>. 
+                                                    Password was initialized securely.
+                                                </p>
+                                            </div>
+
+                                            {/* 2FA Card */}
+                                            <div className={`p-5 rounded-2xl border ${
+                                                settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-slate-100'
+                                            }`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="text-xs font-extrabold">Two-Factor Authentication (2FA)</h4>
+                                                        <p className="text-[10px] text-gray-400 font-medium mt-1">Requires an OTP sent to your verified email address on login.</p>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={!!profileData.is2faEnabled} 
+                                                            onChange={(e) => handleToggle2FA(e.target.checked)}
+                                                            className="sr-only peer" 
+                                                        />
+                                                        <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 5: NOTIFICATIONS */}
+                                {activeTab === 'notifications' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Notification Channels</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {[
+                                                { key: 'emailAlerts', title: 'Email Dispatcher', desc: 'Receive critical task allocation and comments directly in inbox.' },
+                                                { key: 'pushAlerts', title: 'Browser Push Notifications', desc: 'Display sliding notifications inside browser viewport on updates.' },
+                                                { key: 'slackAlerts', title: 'Slack Neural Hook', desc: 'Forward task status changes to linked team Slack webhooks.' },
+                                                { key: 'sprintUpdates', title: 'Sprint Report Summary', desc: 'Get automated weekly productivity and sprint risk assessments.' }
+                                            ].map((item) => (
+                                                <div key={item.key} className="flex items-center justify-between p-4 rounded-xl hover:bg-blue-50/20 transition-colors">
+                                                    <div>
+                                                        <h4 className="text-xs font-bold">{item.title}</h4>
+                                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{item.desc}</p>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={settings.notifications[item.key]} 
+                                                            onChange={() => setSettings({
+                                                                ...settings,
+                                                                notifications: {
+                                                                    ...settings.notifications,
+                                                                    [item.key]: !settings.notifications[item.key]
+                                                                }
+                                                            })}
+                                                            className="sr-only peer" 
+                                                        />
+                                                        <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 6: THEME & STYLE */}
+                                {activeTab === 'theme' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Theme Preference</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Adjust workspace theme styling to protect eye health during extended operations.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 max-w-sm">
+                                            <button
+                                                onClick={() => handleToggleTheme('light')}
+                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
+                                                    settings.theme === 'light' 
+                                                        ? 'border-blue-500 bg-blue-500/10 text-blue-500 font-extrabold shadow-md' 
+                                                        : 'border-gray-300/40 text-gray-400'
+                                                }`}
                                             >
-                                                <option value="">Select Department</option>
-                                                {departments.map((dept) => (
-                                                    <option key={dept.id} value={dept.id}>
-                                                        {dept.name}
-                                                    </option>
-                                                ))}
+                                                <Paintbrush className="w-6 h-6" />
+                                                <span className="text-xs font-bold">Light Aesthetic</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleTheme('dark')}
+                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
+                                                    settings.theme === 'dark' 
+                                                        ? 'border-blue-400 bg-blue-400/10 text-blue-400 font-extrabold shadow-md' 
+                                                        : 'border-white/10 text-slate-400'
+                                                }`}
+                                            >
+                                                <Paintbrush className="w-6 h-6" />
+                                                <span className="text-xs font-bold">Dark Aesthetic</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 7: LANGUAGE */}
+                                {activeTab === 'language' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Language Preferences</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Choose your preferred localized interface dialect.</p>
+                                        </div>
+
+                                        <div className="max-w-xs">
+                                            <select
+                                                value={settings.language}
+                                                onChange={(e) => {
+                                                    setSettings({ ...settings, language: e.target.value });
+                                                    toast.success(`Language changed to ${e.target.value.toUpperCase()}`);
+                                                }}
+                                                className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                }`}
+                                            >
+                                                <option value="en">English (US)</option>
+                                                <option value="es">Español (ES)</option>
+                                                <option value="fr">Français (FR)</option>
+                                                <option value="de">Deutsch (DE)</option>
+                                                <option value="hi">हिन्दी (IN)</option>
+                                                <option value="ar">العربية (AE)</option>
                                             </select>
                                         </div>
                                     </div>
-                                ) : (
-                                    <>
-                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-                                            <h2 className="text-4xl font-bold text-gray-800">{profileData?.name}</h2>
-                                            {getRoleBadge(profileData?.role)}
-                                        </div>
-                                        {profileData?.position && (
-                                            <p className="text-lg font-semibold text-gray-500 mb-3 text-center sm:text-left">
-                                                {profileData.position}
-                                            </p>
-                                        )}
-                                        <p className="text-gray-600 flex items-center justify-center sm:justify-start gap-2 text-lg">
-                                            <Mail className="w-5 h-5" />
-                                            {profileData?.email}
-                                            {profileData?.isEmailVerified ? (
-                                                <span className="ml-3 inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-                                                    <CheckCircle className="w-4 h-4" /> Verified
-                                                </span>
-                                            ) : (
-                                                <span className="ml-3 inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">
-                                                    <span className="font-semibold">Not Verified</span>
-                                                </span>
-                                            )}
-                                        </p>
-                                    </>
                                 )}
 
-                                {/* Info Grid */}
-                                {!editingProfile && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
-                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Department</p>
-                                            <p className="font-bold text-gray-800 mt-1 text-base">{getDepartmentName(profileData?.departmentId)}</p>
+                                {/* TAB 8: ACTIVE SESSIONS */}
+                                {activeTab === 'sessions' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Active Token Sessions</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Manage active device connections authorized to request workspace information.</p>
                                         </div>
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
-                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Phone Number</p>
-                                            <p className="font-bold text-gray-800 mt-1 text-base">{profileData?.phone || 'Not Provided'}</p>
-                                        </div>
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
-                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Account Role</p>
-                                            <p className="font-bold text-gray-800 mt-1 text-base capitalize">{profileData?.role}</p>
-                                        </div>
-                                        <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-100 shadow-sm">
-                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Member Since</p>
-                                            <p className="font-bold text-gray-800 mt-1 text-base">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</p>
+
+                                        <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
+                                            <table className="min-w-full divide-y divide-gray-100/10 text-xs">
+                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                    <tr>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Device / Agent</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">IP Location</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Established</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-gray-500">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100/10 font-medium">
+                                                    {sessions.map((sess) => (
+                                                        <tr key={sess.id} className="hover:bg-blue-50/10 transition-colors">
+                                                            <td className="px-6 py-4 truncate max-w-xs font-bold">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Chrome className="w-4 h-4 text-blue-400 shrink-0" />
+                                                                    <span className="truncate">{sess.userAgent || 'Web browser client'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-400">
+                                                                {sess.ip || 'Localhost (Loopback)'}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-gray-400">
+                                                                {new Date(sess.createdAt).toLocaleString()}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right">
+                                                                <button
+                                                                    onClick={() => handleRevokeSession(sess.id)}
+                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                                                                    title="Revoke Session"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+
+                                                    {sessions.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                                No active sessions retrieved.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-gray-200">
-                            {editingProfile ? (
-                                <>
-                                    <button
-                                        onClick={() => setEditingProfile(false)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-800 font-semibold rounded-xl hover:bg-gray-200 transition-all"
-                                    >
-                                        <X className="w-5 h-5" />
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleEditProfile}
-                                        disabled={isSaving}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
-                                    >
-                                        <Save className="w-5 h-5" />
-                                        {isSaving ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={() => setEditingProfile(true)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
-                                    >
-                                        <Edit2 className="w-5 h-5" />
-                                        Edit Profile
-                                    </button>
-                                    <button
-                                        onClick={() => setShowPasswordModal(true)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
-                                    >
-                                        <Lock className="w-5 h-5" />
-                                        Change Password
-                                    </button>
-                                    {!profileData?.isEmailVerified && (
-                                        <button
-                                            onClick={() => { setShowVerifyModal(true); setLinkSent(false); setPreviewUrl(null); setVerifyTokenInput(''); }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all shadow-lg hover:shadow-xl"
-                                        >
-                                            <CheckCircle className="w-5 h-5" />
-                                            Verify Email
-                                        </button>
-                                    )}
-                                    {profileData?.isEmailVerified && (
-                                        <button
-                                            disabled
-                                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-300 text-gray-600 font-semibold rounded-xl transition-all"
-                                        >
-                                            <CheckCircle className="w-5 h-5" />
-                                            Verified
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                                {/* TAB 9: DEVELOPER API KEYS */}
+                                {activeTab === 'api' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Developer API Integrations</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Provision neural tokens to make programatic calls directly into TaskForge pipelines.</p>
+                                        </div>
+
+                                        {/* Generation Form */}
+                                        <form onSubmit={handleCreateApiKey} className="flex gap-2 max-w-md bg-white/[0.01] border border-white/5 p-4 rounded-2xl">
+                                            <input
+                                                type="text"
+                                                value={newKeyName}
+                                                onChange={(e) => setNewKeyName(e.target.value)}
+                                                placeholder="e.g. CI/CD Deployment Token"
+                                                className={`flex-1 px-4 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
+                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                }`}
+                                                required
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={isCreatingKey || !newKeyName.trim()}
+                                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-500 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1 shrink-0"
+                                            >
+                                                {isCreatingKey ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                                Generate Key
+                                            </button>
+                                        </form>
+
+                                        {/* Display key immediately on creation */}
+                                        {justCreatedKey && (
+                                            <div className="p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-xs font-medium text-emerald-400 space-y-2">
+                                                <p className="font-bold flex items-center gap-1">
+                                                    <Check className="w-4 h-4" />
+                                                    Copy key immediately. For security, it will not be shown again.
+                                                </p>
+                                                <div className="flex items-center gap-2 bg-slate-900 border border-emerald-500/20 p-2 rounded-xl">
+                                                    <span className="font-mono flex-1 select-all select-none truncate text-[10px] tracking-wider font-extrabold">{justCreatedKey}</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(justCreatedKey);
+                                                            setCopiedKey('just');
+                                                            toast.success('API Key copied to clipboard');
+                                                            setTimeout(() => setCopiedKey(''), 2000);
+                                                        }}
+                                                        className="p-1.5 hover:bg-emerald-500/25 rounded-lg text-emerald-400 transition"
+                                                    >
+                                                        {copiedKey === 'just' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* API Keys List */}
+                                        <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
+                                            <table className="min-w-full divide-y divide-gray-100/10 text-xs">
+                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                    <tr>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Token Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Key Hash Preview</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Provisioned</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-gray-500">Revocation</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100/10 font-medium">
+                                                    {apiKeysList.map((key) => (
+                                                        <tr key={key.id} className="hover:bg-blue-50/10 transition-colors">
+                                                            <td className="px-6 py-4 font-bold">{key.name}</td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-400">
+                                                                {key.key ? `${key.key.substring(0, 12)}...` : 'tf_live_************************'}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-gray-400">
+                                                                {new Date(key.createdAt).toLocaleDateString()}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right">
+                                                                <button
+                                                                    onClick={() => handleRevokeApiKey(key.id)}
+                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                                                                    title="Revoke Key"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+
+                                                    {apiKeysList.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                                No authorized API keys retrieved.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 10: ACTIVITY LOGS */}
+                                {activeTab === 'logs' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">User Audit Tracker</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
+                                        </div>
+
+                                        <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
+                                            <table className="min-w-full divide-y divide-gray-100/10 text-xs">
+                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                    <tr>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Operation Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Execution Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Client IP</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Timestamp</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100/10 font-medium">
+                                                    {activityLogs.map((log) => (
+                                                        <tr key={log.id} className="hover:bg-blue-50/10 transition-colors">
+                                                            <td className="px-6 py-4">
+                                                                <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 font-bold uppercase tracking-wide text-[9px]">
+                                                                    {log.action}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-gray-400 font-semibold">{log.details}</td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-500">{log.ipAddress || 'Loopback'}</td>
+                                                            <td className="px-6 py-4 text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))}
+
+                                                    {activityLogs.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                                No audit logs recorded for this account.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </div>
-
-                {/* Additional Info Card */}
-                {!editingProfile && (
-                    <div className="space-y-8">
-                        <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6">Account Information</h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-gray-600 font-medium">Full Name</span>
-                                    <span className="font-semibold text-gray-800">{profileData?.name}</span>
-                                </div>
-                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-gray-600 font-medium">Email Address</span>
-                                    <span className="font-semibold text-gray-800">{profileData?.email}</span>
-                                </div>
-                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-gray-600 font-medium">Department</span>
-                                    <span className="font-semibold text-gray-800">{getDepartmentName(profileData?.departmentId)}</span>
-                                </div>
-                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-gray-600 font-medium">Job Title</span>
-                                    <span className="font-semibold text-gray-800">{profileData?.position || 'Not Set'}</span>
-                                </div>
-                                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-                                    <span className="text-gray-600 font-medium">Phone Number</span>
-                                    <span className="font-semibold text-gray-800">{profileData?.phone || 'Not Set'}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 font-medium">Joined Date</span>
-                                    <span className="font-semibold text-gray-800">{profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Security & 2FA Card */}
-                        <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-800 mb-4">Security & Two-Factor Auth (2FA)</h3>
-                            <p className="text-sm text-gray-500 mb-6">
-                                Two-factor authentication adds an extra layer of security to your account by requiring an OTP code sent to your email during login.
-                            </p>
-                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50">
-                                <div>
-                                    <span className="font-bold text-gray-800 block text-base">Two-Factor Authentication</span>
-                                    <span className="text-xs text-gray-500 font-medium">
-                                        {profileData?.is2faEnabled ? '2FA is currently active on your account' : 'Enable 2FA for extra login security'}
-                                    </span>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={!!profileData?.is2faEnabled}
-                                        onChange={handleToggle2Fa}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
-
-            {/* Change Password Modal */}
-            {showPasswordModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in fade-in">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                <Lock className="w-6 h-6 text-blue-600" />
-                                Change Password
-                            </h2>
-                            <button
-                                onClick={() => setShowPasswordModal(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordData.oldPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition"
-                                    placeholder="Enter current password"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition"
-                                    placeholder="Enter new password"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 transition"
-                                    placeholder="Confirm new password"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 mt-6">
-                                <button
-                                    onClick={() => setShowPasswordModal(false)}
-                                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition font-semibold"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleChangePassword}
-                                    disabled={isChanging}
-                                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold disabled:opacity-50"
-                                >
-                                    {isChanging ? 'Changing...' : 'Change'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Verify Email Modal */}
-            {showVerifyModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in fade-in">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                <CheckCircle className="w-6 h-6 text-green-600" />
-                                Verify Email
-                            </h2>
-                            <button
-                                onClick={() => setShowVerifyModal(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <p className="text-gray-600 mb-6">Enter your email address to receive a verification link</p>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                                {profileData?.email ? (
-                                    <div className="px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-800">{profileData.email}</div>
-                                ) : (
-                                    <input
-                                        type="email"
-                                        value={verifyEmail}
-                                        onChange={(e) => setVerifyEmail(e.target.value)}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-green-500 transition"
-                                        placeholder="you@example.com"
-                                    />
-                                )}
-                            </div>
-
-                            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                                {linkSent ? (
-                                    <>
-                                        <p className="text-sm text-blue-800 font-semibold">✅ Verification link sent. Check your inbox or spam folder.</p>
-                                        {previewUrl && (
-                                            <p className="text-sm mt-2">
-                                                Preview URL (dev): <a className="text-indigo-600 underline" href={previewUrl} target="_blank" rel="noreferrer">Open preview</a>
-                                            </p>
-                                        )}
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-blue-800">
-                                        ℹ️ We'll send you a verification link to confirm your email address. Check your inbox or spam folder.
-                                    </p>
-                                )}
-
-                                <div className="space-y-4">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Have a token? Enter it here</label>
-                                    <div className="flex gap-3">
-                                        <input
-                                            type="text"
-                                            value={verifyTokenInput}
-                                            onChange={(e) => setVerifyTokenInput(e.target.value)}
-                                            className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-green-500 transition"
-                                            placeholder="Enter token"
-                                        />
-                                        <button
-                                            onClick={handleVerifyToken}
-                                            disabled={isVerifyingToken}
-                                            className="px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-semibold disabled:opacity-50"
-                                        >
-                                            {isVerifyingToken ? 'Verifying...' : 'Verify Token'}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 mt-6">
-                                    <button
-                                        onClick={() => setShowVerifyModal(false)}
-                                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition font-semibold"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleVerifyEmail}
-                                        disabled={isSending}
-                                        className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-semibold disabled:opacity-50"
-                                    >
-                                        {isSending ? 'Sending...' : (linkSent ? 'Resend Link' : 'Send Link')}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
-};
-
-export default ProfilePage;
+}

@@ -15,6 +15,11 @@ import {
     deleteProjectDocument
 } from '../Services/projectApi';
 import ImageKitUpload from '../Components/ImageKitUpload';
+import { predictProjectSuccess, predictDeadline } from '../Services/aiApi';
+import { getVersions, addVersion, trackDownload, getDownloads } from '../Services/fileApi';
+import { socket } from '../Services/socket';
+
+
 
 import {
     Loader,
@@ -36,7 +41,8 @@ import {
     Paperclip,
     HelpCircle,
     Megaphone,
-    FileImage
+    FileImage,
+    Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -58,6 +64,13 @@ const ProjectDetailsPage = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [documents, setDocuments] = useState([]);
     const [docsLoading, setDocsLoading] = useState(false);
+
+    // Advanced File Versioning & Downloads tracking states
+    const [versionsOpen, setVersionsOpen] = useState({});
+    const [versionHistory, setVersionHistory] = useState({});
+    const [downloadsOpen, setDownloadsOpen] = useState({});
+    const [downloadHistory, setDownloadHistory] = useState({});
+    const [newVersionOpen, setNewVersionOpen] = useState({});
 
 
     // Forms states
@@ -90,6 +103,9 @@ const ProjectDetailsPage = () => {
         }
     }, [isLoggedIn, authLoading, navigate]);
 
+    const [successPrediction, setSuccessPrediction] = useState(null);
+    const [deadlinePrediction, setDeadlinePrediction] = useState(null);
+
     const fetchDetails = async () => {
         try {
             setIsLoading(true);
@@ -106,6 +122,21 @@ const ProjectDetailsPage = () => {
             setEditStatus(data.status);
             setEditStart(data.startDate ? data.startDate.split('T')[0] : '');
             setEditEnd(data.endDate ? data.endDate.split('T')[0] : '');
+
+            // Fetch AI Predictions
+            try {
+                const success = await predictProjectSuccess(id);
+                setSuccessPrediction(success);
+            } catch (err) {
+                console.error('Failed to predict project success:', err);
+            }
+
+            try {
+                const dl = await predictDeadline('project', id);
+                setDeadlinePrediction(dl);
+            } catch (err) {
+                console.error('Failed to predict project deadline:', err);
+            }
         } catch (error) {
             console.error('Error fetching details:', error);
             const msg = error?.response?.data?.message || 'Access denied / Project not found';
@@ -139,6 +170,59 @@ const ProjectDetailsPage = () => {
             fetchDocuments();
         }
     }, [isLoggedIn, id, activeTab]);
+
+    useEffect(() => {
+        if (!isLoggedIn || !id) return;
+
+        const handleProjectUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(id)) {
+                if (data.action === 'deleted') {
+                    toast.error('This project has been deleted');
+                    navigate('/projects');
+                } else {
+                    fetchDetails();
+                }
+            }
+        };
+
+        const handleTaskUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(id)) {
+                fetchDetails();
+            }
+        };
+
+        const handleSprintUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(id)) {
+                fetchDetails();
+            }
+        };
+
+        const handleEpicUpdated = (data) => {
+            if (parseInt(data.projectId) === parseInt(id)) {
+                fetchDetails();
+            }
+        };
+
+        const handleStoryUpdated = (data) => {
+            // story updates might affect backlog / epic views, so refresh details
+            fetchDetails();
+        };
+
+        socket.on('project_updated', handleProjectUpdated);
+        socket.on('task_updated', handleTaskUpdated);
+        socket.on('sprint_updated', handleSprintUpdated);
+        socket.on('epic_updated', handleEpicUpdated);
+        socket.on('story_updated', handleStoryUpdated);
+
+        return () => {
+            socket.off('project_updated', handleProjectUpdated);
+            socket.off('task_updated', handleTaskUpdated);
+            socket.off('sprint_updated', handleSprintUpdated);
+            socket.off('epic_updated', handleEpicUpdated);
+            socket.off('story_updated', handleStoryUpdated);
+        };
+    }, [isLoggedIn, id]);
+
 
 
     // Handle Project update
@@ -296,15 +380,30 @@ const ProjectDetailsPage = () => {
 
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex flex-wrap items-center gap-3 mb-2">
                                 <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-indigo-100 text-indigo-800`}>
                                     {project.status}
                                 </span>
                                 <span className="text-xs font-bold text-gray-500">
                                     Role: {currentMember?.role.toUpperCase() || 'MEMBER'}
                                 </span>
+                                {successPrediction && (
+                                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1 border ${
+                                        successPrediction.risk_level === 'low' ? 'bg-green-50 text-green-700 border-green-200' :
+                                        successPrediction.risk_level === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                        'bg-red-50 text-red-700 border-red-200 animate-pulse'
+                                    }`}>
+                                        AI Success Rate: {successPrediction.success_probability}%
+                                    </span>
+                                )}
+                                {deadlinePrediction && (
+                                    <span className="bg-indigo-50 text-indigo-750 border border-indigo-200 px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1">
+                                        AI Est. End: {new Date(deadlinePrediction.predicted_date).toLocaleDateString()}
+                                    </span>
+                                )}
                             </div>
                             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800">{project.name}</h1>
+
                             <p className="text-gray-500 font-semibold mt-1">{project.description || 'No description provided.'}</p>
                         </div>
 
@@ -341,13 +440,20 @@ const ProjectDetailsPage = () => {
                             { id: 'milestones', label: 'Milestones', icon: Trophy },
                             { id: 'documents', label: 'Documents', icon: FileText },
                             { id: 'members', label: 'Members', icon: Users },
+                            { id: 'intelligence', label: 'Project Intelligence', icon: Brain },
                             ...(isManager ? [{ id: 'settings', label: 'Settings', icon: Settings }] : []),
                         ].map((tab) => {
                             const Icon = tab.icon;
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
+                                    onClick={() => {
+                                        if (tab.id === 'intelligence') {
+                                            navigate(`/projects/${id}/intelligence`);
+                                        } else {
+                                            setActiveTab(tab.id);
+                                        }
+                                    }}
                                     className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition whitespace-nowrap ${
                                         activeTab === tab.id
                                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
@@ -915,41 +1021,171 @@ const ProjectDetailsPage = () => {
                                     <p className="text-xs text-gray-400">Drag and drop files in the zone above to attach them to the workspace.</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-6">
                                     {documents.map((doc) => (
-                                        <div key={doc.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-150 hover:shadow-sm transition-all">
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-                                                    <Paperclip className="w-5 h-5" />
+                                        <div key={doc.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-200 shadow-sm space-y-4">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                                                        <Paperclip className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="overflow-hidden">
+                                                        <a
+                                                            href={doc.fileUrl.split('#')[0]}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await trackDownload(doc.id);
+                                                                    if (downloadsOpen[doc.id]) {
+                                                                        const updatedDownloads = await getDownloads(doc.id);
+                                                                        setDownloadHistory(prev => ({ ...prev, [doc.id]: updatedDownloads }));
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Failed to track download:', err);
+                                                                }
+                                                            }}
+                                                            className="font-bold text-sm text-blue-650 hover:underline truncate block"
+                                                        >
+                                                            {doc.fileName}
+                                                        </a>
+                                                        <p className="text-xxs text-gray-400 font-semibold mt-0.5 uppercase">
+                                                            {doc.fileSize ? `${(doc.fileSize / (1024 * 1024)).toFixed(2)} MB` : ''} • {doc.fileType?.split('/')[1] || 'File'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="overflow-hidden">
-                                                    <a
-                                                        href={doc.fileUrl.split('#')[0]}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="font-bold text-sm text-blue-650 hover:underline truncate block"
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            const isOpen = !versionsOpen[doc.id];
+                                                            setVersionsOpen(prev => ({ ...prev, [doc.id]: isOpen }));
+                                                            if (isOpen) {
+                                                                try {
+                                                                    const updatedVersions = await getVersions(doc.id);
+                                                                    setVersionHistory(prev => ({ ...prev, [doc.id]: updatedVersions }));
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-white border border-gray-250 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
                                                     >
-                                                        {doc.fileName}
-                                                    </a>
-                                                    <p className="text-xxs text-gray-400 font-semibold mt-0.5 uppercase">
-                                                        {doc.fileSize ? `${(doc.fileSize / (1024 * 1024)).toFixed(2)} MB` : ''} • {doc.fileType?.split('/')[1] || 'File'}
-                                                    </p>
+                                                        Versions
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const isOpen = !downloadsOpen[doc.id];
+                                                            setDownloadsOpen(prev => ({ ...prev, [doc.id]: isOpen }));
+                                                            if (isOpen) {
+                                                                try {
+                                                                    const updatedDownloads = await getDownloads(doc.id);
+                                                                    setDownloadHistory(prev => ({ ...prev, [doc.id]: updatedDownloads }));
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-white border border-gray-250 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
+                                                    >
+                                                        Download Logs
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setNewVersionOpen(prev => ({ ...prev, [doc.id]: !newVersionOpen[doc.id] }))}
+                                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xxs font-extrabold transition"
+                                                    >
+                                                        Upload New Version
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!window.confirm('Delete this document?')) return;
+                                                            try {
+                                                                await deleteProjectDocument(id, doc.id);
+                                                                toast.success('Document deleted');
+                                                                fetchDocuments();
+                                                            } catch (err) {
+                                                                toast.error('Failed to delete document');
+                                                            }
+                                                        }}
+                                                        className="text-gray-400 hover:text-red-650 transition p-2 bg-white hover:bg-red-50 rounded-xl border border-gray-250 animate-in"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        await deleteProjectDocument(id, doc.id);
-                                                        toast.success('Document deleted');
-                                                        fetchDocuments();
-                                                    } catch (err) {
-                                                        toast.error('Failed to delete document');
-                                                    }
-                                                }}
-                                                className="text-gray-400 hover:text-red-600 transition p-2 bg-white hover:bg-red-50 rounded-xl border border-gray-250"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+
+                                            {/* In-line New Version Uploader */}
+                                            {newVersionOpen[doc.id] && (
+                                                <div className="bg-white p-4 rounded-2xl border border-gray-200/80 space-y-2">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Upload Version Update</span>
+                                                    <ImageKitUpload
+                                                        folder="document-versions"
+                                                        onUploadSuccess={async (fileDetails) => {
+                                                            try {
+                                                                await addVersion(doc.id, {
+                                                                    fileName: fileDetails.fileName,
+                                                                    fileUrl: fileDetails.fileUrl,
+                                                                    fileSize: fileDetails.fileSize,
+                                                                    fileType: fileDetails.fileType
+                                                                });
+                                                                toast.success('New version added!');
+                                                                fetchDocuments();
+                                                                // Refresh versions list if open
+                                                                if (versionsOpen[doc.id]) {
+                                                                    const updatedVersions = await getVersions(doc.id);
+                                                                    setVersionHistory(prev => ({ ...prev, [doc.id]: updatedVersions }));
+                                                                }
+                                                                setNewVersionOpen(prev => ({ ...prev, [doc.id]: false }));
+                                                            } catch (error) {
+                                                                toast.error('Failed to update version');
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Version History List */}
+                                            {versionsOpen[doc.id] && (
+                                                <div className="bg-white p-4 rounded-2xl border border-gray-200/80 space-y-2">
+                                                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">Version History</span>
+                                                    <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                                                        {versionHistory[doc.id]?.map((v, vIdx) => (
+                                                            <div key={vIdx} className="py-2 flex justify-between items-center text-xxs font-semibold">
+                                                                <div>
+                                                                    <a href={v.fileUrl.split('#')[0]} target="_blank" rel="noopener noreferrer" className="font-extrabold text-blue-650 hover:underline">
+                                                                        {v.fileName} (v{v.version})
+                                                                    </a>
+                                                                    <span className="text-gray-400 block text-[9px] mt-0.5">Uploaded on {new Date(v.createdAt).toLocaleString()}</span>
+                                                                </div>
+                                                                <span className="text-gray-500">by {v.creatorName || 'System'}</span>
+                                                            </div>
+                                                        ))}
+                                                        {(!versionHistory[doc.id] || versionHistory[doc.id].length === 0) && (
+                                                            <p className="text-xxs text-gray-400 py-2">No version history logged.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Download Logs */}
+                                            {downloadsOpen[doc.id] && (
+                                                <div className="bg-white p-4 rounded-2xl border border-gray-200/80 space-y-2">
+                                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block font-mono">Download Audit Logs</span>
+                                                    <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto font-mono text-[9px]">
+                                                        {downloadHistory[doc.id]?.map((dl, dlIdx) => (
+                                                            <div key={dlIdx} className="py-2 flex justify-between items-center text-slate-500">
+                                                                <div>
+                                                                    <span className="font-extrabold text-slate-700">{dl.userName}</span> ({dl.userEmail})
+                                                                    <span className="text-[8px] text-gray-400 block mt-0.5">IP: {dl.ipAddress} • {dl.userAgent?.substring(0, 40)}...</span>
+                                                                </div>
+                                                                <span className="text-gray-400 text-right">{new Date(dl.downloadedAt).toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                        {(!downloadHistory[doc.id] || downloadHistory[doc.id].length === 0) && (
+                                                            <p className="text-xxs text-gray-400 py-2">No download events tracked yet.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
