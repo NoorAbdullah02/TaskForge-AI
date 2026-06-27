@@ -305,8 +305,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       onClick={() => setFilter(f)}
                       className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition cursor-pointer ${
                         filter === f
-                          ? 'bg-blue-50 text-blue-650 border-blue-200'
-                          : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-slate-650'
+                          ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-slate-600'
                       }`}
                     >
                       {f}
@@ -318,7 +318,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   <button
                     onClick={handleMarkAllRead}
                     disabled={notifications.length === 0}
-                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-450 hover:text-blue-600 disabled:opacity-50 transition cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-400 hover:text-blue-600 disabled:opacity-50 transition cursor-pointer"
                     title="Mark all as read"
                   >
                     <CheckSquare className="w-3.5 h-3.5" />
@@ -327,7 +327,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   <button
                     onClick={handleClearAll}
                     disabled={notifications.length === 0}
-                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-450 hover:text-red-500 disabled:opacity-50 transition cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-400 hover:text-red-500 disabled:opacity-50 transition cursor-pointer"
                     title="Clear all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -344,7 +344,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-slate-350 gap-3">
+                <div className="flex flex-col items-center justify-center py-24 text-slate-300 gap-3">
                   <Inbox className="w-12 h-12 stroke-[1.2]" />
                   <div className="text-center">
                     <p className="text-xs font-bold uppercase tracking-wide">Inbox is empty</p>
@@ -370,7 +370,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                           ? 'bg-amber-50 text-amber-600'
                           : notif.type?.startsWith('attendance')
                           ? 'bg-rose-50 text-rose-600'
-                          : 'bg-blue-50 text-blue-650'
+                          : 'bg-blue-50 text-blue-600'
                       }`}>
                         {notif.type?.startsWith('task') 
                           ? '📋' 
@@ -403,7 +403,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       {notif.link && (
                         <a 
                           href={notif.link}
-                          className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-650 hover:underline uppercase tracking-wider"
+                          className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
                         >
                           Details <ArrowRight className="w-2.5 h-2.5" />
                         </a>
@@ -475,7 +475,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                         checked={preferences.emailEnabled}
                         onChange={(e) => handlePrefChange('emailEnabled', e.target.checked)}
                       />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
@@ -491,7 +491,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                         checked={preferences.pushEnabled}
                         onChange={(e) => handlePrefChange('pushEnabled', e.target.checked)}
                       />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
                 </div>
@@ -503,7 +503,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Task assign */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Task Assignment</span>
+                      <span className="text-xs font-bold text-slate-600 block">Task Assignment</span>
                       <span className="text-[9px] text-slate-400">Alert me when a task is assigned to me</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -520,7 +520,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Task deadline */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Task Deadlines</span>
+                      <span className="text-xs font-bold text-slate-600 block">Task Deadlines</span>
                       <span className="text-[9px] text-slate-400">Reminders when task deadlines approach</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -537,7 +537,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Comments */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Comments & Mentions</span>
+                      <span className="text-xs font-bold text-slate-600 block">Comments & Mentions</span>
                       <span className="text-[9px] text-slate-400">Alert me on comments to my tasks</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -554,7 +554,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Leave approval */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Leave Updates</span>
+                      <span className="text-xs font-bold text-slate-600 block">Leave Updates</span>
                       <span className="text-[9px] text-slate-400">Alerts on leave request submissions & reviews</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -571,7 +571,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Attendance alerts */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Attendance remiders</span>
+                      <span className="text-xs font-bold text-slate-600 block">Attendance remiders</span>
                       <span className="text-[9px] text-slate-400">Alert me about check-ins and late arrivals</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -588,7 +588,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Project updates */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Project & Workspace Updates</span>
+                      <span className="text-xs font-bold text-slate-600 block">Project & Workspace Updates</span>
                       <span className="text-[9px] text-slate-400">Project setups, assignments, milestones</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -605,7 +605,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   {/* Weekly Digest */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-slate-650 block">Weekly Digest Reports</span>
+                      <span className="text-xs font-bold text-slate-600 block">Weekly Digest Reports</span>
                       <span className="text-[9px] text-slate-400">Receive productivity analysis digests</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -624,7 +624,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                 <button
                   onClick={handleSavePreferences}
                   disabled={prefSaving}
-                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-650 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition cursor-pointer"
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg disabled:opacity-50 transition cursor-pointer"
                 >
                   {prefSaving ? 'Saving...' : 'Save Settings'}
                 </button>

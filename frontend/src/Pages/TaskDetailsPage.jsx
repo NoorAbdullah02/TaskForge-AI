@@ -722,7 +722,7 @@ const TaskDetailsPage = () => {
     // ─── Loading state ─────────────────────────────────────────────────────
     if (authLoading || isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading task details...</p>
@@ -744,7 +744,7 @@ const TaskDetailsPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-4 md:p-6">
+        <div className="min-h-screen p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
                 {/* ─── Breadcrumb ─── */}
                 <div className="flex items-center gap-2 mb-6">
@@ -1227,26 +1227,26 @@ const TaskDetailsPage = () => {
                 {/* ─── AI Recommender Modal ─── */}
                 {isRecommenderOpen && recommendations && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                        <div className="bg-[#0b0f19] border border-gray-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
-                            <div className="flex justify-between items-center border-b border-gray-800 pb-4">
-                                <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-                                    <Brain className="h-6 w-6 text-blue-500" /> Smart Assignee Recommendations
+                        <div className="glass-strong rounded-3xl p-6 md:p-8 max-w-2xl w-full space-y-6 max-h-[85vh] overflow-y-auto">
+                            <div className="flex justify-between items-center border-b border-line pb-4">
+                                <h3 className="text-xl font-extrabold text-ink flex items-center gap-2">
+                                    <Brain className="h-6 w-6 text-brand" /> Smart Assignee Recommendations
                                 </h3>
-                                <button onClick={() => setIsRecommenderOpen(false)} className="text-gray-400 hover:text-white font-bold text-sm cursor-pointer">
+                                <button onClick={() => setIsRecommenderOpen(false)} className="text-ink-faint hover:text-ink font-bold text-sm cursor-pointer">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
                             {recommendations.bestMatch && (
-                                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 p-6 rounded-2xl space-y-4">
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-brand/30 p-6 rounded-2xl space-y-4">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-400">Best Match</span>
-                                            <h4 className="text-lg font-black text-white mt-1">{recommendations.bestMatch.userName}</h4>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-brand">Best Match</span>
+                                            <h4 className="text-lg font-black text-ink mt-1">{recommendations.bestMatch.userName}</h4>
                                         </div>
-                                        <p className="text-3xl font-black text-white">{recommendations.bestMatch.matchPercentage}%</p>
+                                        <p className="text-3xl font-black text-brand">{recommendations.bestMatch.matchPercentage}%</p>
                                     </div>
-                                    <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed bg-[#111827]/60 p-4 rounded-xl border border-gray-800/80 font-medium">
+                                    <p className="text-xs text-ink-soft whitespace-pre-wrap leading-relaxed bg-surface-2 p-4 rounded-xl border border-line font-medium">
                                         {recommendations.bestMatch.explanation}
                                     </p>
                                     <div className="flex justify-end">
@@ -1260,18 +1260,18 @@ const TaskDetailsPage = () => {
 
                             {recommendations.alternatives?.length > 0 && (
                                 <div className="space-y-3">
-                                    <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Alternatives</h4>
+                                    <h4 className="text-sm font-bold text-ink-faint uppercase tracking-wider">Alternatives</h4>
                                     {recommendations.alternatives.map(alt => (
-                                        <div key={alt.userId} className="bg-gray-900/40 border border-gray-800 p-4 rounded-xl flex justify-between items-center gap-4">
+                                        <div key={alt.userId} className="bg-surface-2 border border-line p-4 rounded-xl flex justify-between items-center gap-4">
                                             <div className="space-y-1 flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <h5 className="font-bold text-white text-sm">{alt.userName}</h5>
-                                                    <span className="text-[10px] font-extrabold text-gray-400">{alt.matchPercentage}%</span>
+                                                    <h5 className="font-bold text-ink text-sm">{alt.userName}</h5>
+                                                    <span className="text-[10px] font-extrabold text-ink-faint">{alt.matchPercentage}%</span>
                                                 </div>
-                                                <p className="text-xs text-gray-400 leading-relaxed">{alt.explanation}</p>
+                                                <p className="text-xs text-ink-soft leading-relaxed">{alt.explanation}</p>
                                             </div>
                                             <button onClick={() => handleAssignMember(alt.userId)}
-                                                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-lg text-xs transition">
+                                                className="px-3 py-1.5 bg-white border border-line hover:bg-surface-2 text-ink font-bold rounded-lg text-xs transition">
                                                 Assign
                                             </button>
                                         </div>

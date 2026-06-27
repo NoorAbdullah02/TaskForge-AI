@@ -66,11 +66,11 @@ const ExecutiveDashboard = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
+            <div className="min-h-screen flex items-center justify-center  text-ink">
                 <div className="relative flex flex-col items-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-indigo-500 border-opacity-50"></div>
                     <Sparkles className="w-6 h-6 text-indigo-400 absolute top-5 animate-pulse" />
-                    <span className="mt-4 text-xs font-black tracking-widest text-gray-400 uppercase">Analyzing Platform Operations...</span>
+                    <span className="mt-4 text-xs font-black tracking-widest text-ink-soft uppercase">Analyzing Platform Operations...</span>
                 </div>
             </div>
         );
@@ -97,7 +97,7 @@ const ExecutiveDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#070a13] text-gray-150 p-6 lg:p-10">
+        <div className="min-h-screen text-ink p-6 lg:p-10">
             {/* Header section */}
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
@@ -108,12 +108,12 @@ const ExecutiveDashboard = () => {
                     <h1 className="text-3xl font-black bg-gradient-to-r from-white via-gray-200 to-gray-500 bg-clip-text text-transparent">
                         Enterprise Project Intelligence
                     </h1>
-                    <p className="text-xs text-gray-400 font-medium">Real-time workspace success forecasting, team allocation modeling, and risk optimization.</p>
+                    <p className="text-xs text-ink-soft font-medium">Real-time workspace success forecasting, team allocation modeling, and risk optimization.</p>
                 </div>
 
                 <button 
                     onClick={fetchDashboardData}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 rounded-xl text-xs font-black text-white transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/5"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-surface-2 border border-line hover:border-line rounded-xl text-xs font-black text-ink transition-all cursor-pointer shadow-lg hover:shadow-indigo-500/5"
                 >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Refresh Intelligence
@@ -127,7 +127,7 @@ const ExecutiveDashboard = () => {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="bg-gradient-to-br from-gray-900 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
+                    className="bg-gradient-to-br from-surface-2 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full filter blur-xl"></div>
                     <div className="flex justify-between items-start mb-4">
@@ -138,11 +138,11 @@ const ExecutiveDashboard = () => {
                             <TrendingUp className="w-3 h-3" /> Optimum
                         </span>
                     </div>
-                    <h2 className="text-xs font-black tracking-wider text-gray-400 uppercase mb-1">Project Health Score</h2>
+                    <h2 className="text-xs font-black tracking-wider text-ink-soft uppercase mb-1">Project Health Score</h2>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white">{stats?.projectHealth || 100}%</span>
+                        <span className="text-4xl font-black text-ink">{stats?.projectHealth || 100}%</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-3 font-medium">Completion rate of active roadmap goals across all projects.</p>
+                    <p className="text-[11px] text-ink-soft mt-3 font-medium">Completion rate of active roadmap goals across all projects.</p>
                 </motion.div>
 
                 {/* Team Productivity Card */}
@@ -150,7 +150,7 @@ const ExecutiveDashboard = () => {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.05 }}
-                    className="bg-gradient-to-br from-gray-900 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
+                    className="bg-gradient-to-br from-surface-2 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full filter blur-xl"></div>
                     <div className="flex justify-between items-start mb-4">
@@ -161,11 +161,11 @@ const ExecutiveDashboard = () => {
                             <Zap className="w-3 h-3" /> High Velocity
                         </span>
                     </div>
-                    <h2 className="text-xs font-black tracking-wider text-gray-400 uppercase mb-1">Team Productivity Score</h2>
+                    <h2 className="text-xs font-black tracking-wider text-ink-soft uppercase mb-1">Team Productivity Score</h2>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white">{stats?.teamProductivity || 80}/100</span>
+                        <span className="text-4xl font-black text-ink">{stats?.teamProductivity || 80}/100</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-3 font-medium">Average performance score computed from task delivery velocity.</p>
+                    <p className="text-[11px] text-ink-soft mt-3 font-medium">Average performance score computed from task delivery velocity.</p>
                 </motion.div>
 
                 {/* AI Risk Score Card */}
@@ -173,7 +173,7 @@ const ExecutiveDashboard = () => {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
-                    className="bg-gradient-to-br from-gray-900 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
+                    className="bg-gradient-to-br from-surface-2 to-[#101424] border border-[#1e2544] rounded-2xl p-6 relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full filter blur-xl"></div>
                     <div className="flex justify-between items-start mb-4">
@@ -184,19 +184,19 @@ const ExecutiveDashboard = () => {
                             <AlertTriangle className="w-3 h-3" /> {stats?.aiRiskScore > 50 ? 'Action Required' : 'Minimal'}
                         </span>
                     </div>
-                    <h2 className="text-xs font-black tracking-wider text-gray-400 uppercase mb-1">Aggregate Risk Score</h2>
+                    <h2 className="text-xs font-black tracking-wider text-ink-soft uppercase mb-1">Aggregate Risk Score</h2>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white">{stats?.aiRiskScore || 0}%</span>
+                        <span className="text-4xl font-black text-ink">{stats?.aiRiskScore || 0}%</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-3 font-medium">Workspace vulnerability rating calculated from overdue and critical tasks.</p>
+                    <p className="text-[11px] text-ink-soft mt-3 font-medium">Workspace vulnerability rating calculated from overdue and critical tasks.</p>
                 </motion.div>
             </div>
 
             {/* Visual Charts section */}
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Main Forecast area chart */}
-                <div className="lg:col-span-2 bg-[#0d1122] border border-[#1e2544] rounded-2xl p-6">
-                    <h2 className="text-sm font-black text-white tracking-wider mb-4 flex items-center gap-2">
+                <div className="lg:col-span-2 bg-card border border-[#1e2544] rounded-2xl p-6">
+                    <h2 className="text-sm font-black text-ink tracking-wider mb-4 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-indigo-400" />
                         ROADMAP DELIVERY & BLOCKER MITIGATION FORECAST
                     </h2>
@@ -215,7 +215,7 @@ const ExecutiveDashboard = () => {
                                 </defs>
                                 <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: 10, fontWeight: 700 }} />
                                 <YAxis stroke="#6b7280" style={{ fontSize: 10, fontWeight: 700 }} />
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" />
                                 <Tooltip contentStyle={{ backgroundColor: '#111827', borderColor: '#1e2544', borderRadius: 12 }} />
                                 <Area type="monotone" dataKey="CompletedTasks" stroke="#6366f1" fillOpacity={1} fill="url(#colorCompleted)" strokeWidth={2} name="Completed Goals Ratio" />
                                 <Area type="monotone" dataKey="RisksDetected" stroke="#f43f5e" fillOpacity={1} fill="url(#colorRisks)" strokeWidth={2} name="Blocker Overdues" />
@@ -225,28 +225,28 @@ const ExecutiveDashboard = () => {
                 </div>
 
                 {/* AI Forecast Summary box */}
-                <div className="bg-[#0d1122] border border-[#1e2544] rounded-2xl p-6 flex flex-col justify-between">
+                <div className="bg-card border border-[#1e2544] rounded-2xl p-6 flex flex-col justify-between">
                     <div>
-                        <h2 className="text-sm font-black text-white tracking-wider mb-4 flex items-center gap-2">
+                        <h2 className="text-sm font-black text-ink tracking-wider mb-4 flex items-center gap-2">
                             <Clock className="w-4 h-4 text-indigo-400 animate-pulse" />
                             AI MILESTONE FORECASTS
                         </h2>
                         
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <div className="flex items-center justify-between border-b border-line pb-3">
                                 <div>
-                                    <span className="text-[10px] font-black text-gray-400 uppercase">Predicted Delay Period</span>
-                                    <p className="text-white font-extrabold text-sm">{stats?.forecasts?.delayDays || 0} Working Days</p>
+                                    <span className="text-[10px] font-black text-ink-soft uppercase">Predicted Delay Period</span>
+                                    <p className="text-ink font-extrabold text-sm">{stats?.forecasts?.delayDays || 0} Working Days</p>
                                 </div>
                                 <span className={`text-[10px] font-extrabold px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20`}>
                                     Delay Warning
                                 </span>
                             </div>
 
-                            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <div className="flex items-center justify-between border-b border-line pb-3">
                                 <div>
-                                    <span className="text-[10px] font-black text-gray-400 uppercase">Workspace Completion Rate</span>
-                                    <p className="text-white font-extrabold text-sm">{stats?.forecasts?.completionRate || 100}%</p>
+                                    <span className="text-[10px] font-black text-ink-soft uppercase">Workspace Completion Rate</span>
+                                    <p className="text-ink font-extrabold text-sm">{stats?.forecasts?.completionRate || 100}%</p>
                                 </div>
                                 <span className="text-[10px] font-extrabold px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                                     Target Velocity
@@ -255,8 +255,8 @@ const ExecutiveDashboard = () => {
 
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="text-[10px] font-black text-gray-400 uppercase">Mitigations Scheduled</span>
-                                    <p className="text-white font-extrabold text-sm">{stats?.forecasts?.risksDetected || 0} Auto Rules Active</p>
+                                    <span className="text-[10px] font-black text-ink-soft uppercase">Mitigations Scheduled</span>
+                                    <p className="text-ink font-extrabold text-sm">{stats?.forecasts?.risksDetected || 0} Auto Rules Active</p>
                                 </div>
                                 <span className="text-[10px] font-extrabold px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     Protected
@@ -268,9 +268,9 @@ const ExecutiveDashboard = () => {
                     <div className="p-4 bg-gradient-to-r from-indigo-950/40 to-blue-950/40 border border-indigo-800/20 rounded-xl mt-4">
                         <div className="flex items-center gap-2 mb-1">
                             <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                            <span className="text-[10px] font-black text-white uppercase tracking-wider">AI Optimizer recommendation</span>
+                            <span className="text-[10px] font-black text-ink uppercase tracking-wider">AI Optimizer recommendation</span>
                         </div>
-                        <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                        <p className="text-[11px] text-ink-soft leading-relaxed font-medium">
                             {stats?.aiRiskScore > 35 
                                 ? 'Task bottlenecks detected in recent sprint logs. Recommend re-allocating tasks using the AI Resource Planner.' 
                                 : 'Timeline risk is low. Productivity levels indicate high team capacity for new epics.'}
@@ -282,12 +282,12 @@ const ExecutiveDashboard = () => {
             {/* Individual Project Success Predictor and Resource Allocation Section */}
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left controls and Project List selector */}
-                <div className="bg-[#0d1122] border border-[#1e2544] rounded-2xl p-6 flex flex-col">
-                    <h2 className="text-sm font-black text-white tracking-wider mb-1 flex items-center gap-2">
+                <div className="bg-card border border-[#1e2544] rounded-2xl p-6 flex flex-col">
+                    <h2 className="text-sm font-black text-ink tracking-wider mb-1 flex items-center gap-2">
                         <Briefcase className="w-4 h-4 text-indigo-400" />
                         PROJECT SELECTOR
                     </h2>
-                    <p className="text-[11px] text-gray-400 font-medium mb-4">Select a project to simulate deadline success and optimal resource mapping.</p>
+                    <p className="text-[11px] text-ink-soft font-medium mb-4">Select a project to simulate deadline success and optimal resource mapping.</p>
 
                     <div className="space-y-2 overflow-y-auto max-h-[300px] flex-1 pr-1">
                         {projectsList.map(p => (
@@ -296,13 +296,13 @@ const ExecutiveDashboard = () => {
                                 onClick={() => setSelectedProject(p.id)}
                                 className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
                                     selectedProject === p.id 
-                                        ? 'bg-indigo-950/40 border-indigo-500/50 text-white font-extrabold'
-                                        : 'bg-gray-900/50 border-gray-800/80 text-gray-400 hover:bg-gray-800/40'
+                                        ? 'bg-indigo-950/40 border-indigo-500/50 text-ink font-extrabold'
+                                        : 'bg-surface-2 border-line text-ink-soft hover:bg-surface-2'
                                 }`}
                             >
                                 <div>
                                     <p className="text-xs font-black truncate max-w-[150px]">{p.name}</p>
-                                    <span className="text-[9px] text-gray-500 capitalize">{p.status}</span>
+                                    <span className="text-[9px] text-ink0 capitalize">{p.status}</span>
                                 </div>
                                 <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
                                     p.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
@@ -315,14 +315,14 @@ const ExecutiveDashboard = () => {
                 </div>
 
                 {/* Project Success & Deadline Predictor details */}
-                <div className="bg-[#0d1122] border border-[#1e2544] rounded-2xl p-6 lg:col-span-2 relative">
-                    <h2 className="text-sm font-black text-white tracking-wider mb-4 flex items-center gap-2">
+                <div className="bg-card border border-[#1e2544] rounded-2xl p-6 lg:col-span-2 relative">
+                    <h2 className="text-sm font-black text-ink tracking-wider mb-4 flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
                         PROJECT INTELLIGENCE FORECAST MODEL
                     </h2>
 
                     {loadingProjectDetails ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-950/30 backdrop-blur-sm rounded-2xl">
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface-2 backdrop-blur-sm rounded-2xl">
                             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-indigo-500"></div>
                         </div>
                     ) : null}
@@ -336,68 +336,68 @@ const ExecutiveDashboard = () => {
                                     <p className="text-2xl font-black mt-1">{projectSuccessData.success_probability}%</p>
                                 </div>
 
-                                <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Delay Probability</span>
+                                <div className="p-4 rounded-xl border border-line bg-surface-2">
+                                    <span className="text-[9px] font-black text-ink-soft uppercase tracking-wider block">Delay Probability</span>
                                     <p className="text-2xl font-black text-rose-400 mt-1">{projectSuccessData.delay_probability}%</p>
                                 </div>
 
-                                <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider block">Timeline Risk Rating</span>
+                                <div className="p-4 rounded-xl border border-line bg-surface-2">
+                                    <span className="text-[9px] font-black text-ink-soft uppercase tracking-wider block">Timeline Risk Rating</span>
                                     <p className="text-2xl font-black text-amber-400 mt-1 capitalize">{projectSuccessData.risk_level}</p>
                                 </div>
                             </div>
 
                             {/* Resource mapper recommendation details */}
                             {resourceData && (
-                                <div className="border-t border-gray-800/80 pt-6">
-                                    <h3 className="text-xs font-black text-white uppercase tracking-wider mb-3.5 flex items-center gap-2">
+                                <div className="border-t border-line pt-6">
+                                    <h3 className="text-xs font-black text-ink uppercase tracking-wider mb-3.5 flex items-center gap-2">
                                         <Users className="w-4 h-4 text-indigo-400" />
                                         RECOMMENDED ROLE ALLOCATION
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {/* Developer Card */}
-                                        <div className="p-3 bg-gray-900/40 border border-gray-800/60 rounded-xl">
+                                        <div className="p-3 bg-surface-2 border border-line rounded-xl">
                                             <span className="text-[9px] font-black text-indigo-400 uppercase block mb-1">Best Developer Candidate</span>
                                             {resourceData.bestDeveloper ? (
                                                 <div>
-                                                    <p className="text-xs font-extrabold text-white">{resourceData.bestDeveloper.name}</p>
-                                                    <span className="text-[9px] text-gray-500 font-bold">Match: {resourceData.bestDeveloper.suitability_score}%</span>
+                                                    <p className="text-xs font-extrabold text-ink">{resourceData.bestDeveloper.name}</p>
+                                                    <span className="text-[9px] text-ink0 font-bold">Match: {resourceData.bestDeveloper.suitability_score}%</span>
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-500">No developer matches</p>
+                                                <p className="text-[10px] text-ink0">No developer matches</p>
                                             )}
                                         </div>
 
                                         {/* Designer Card */}
-                                        <div className="p-3 bg-gray-900/40 border border-gray-800/60 rounded-xl">
+                                        <div className="p-3 bg-surface-2 border border-line rounded-xl">
                                             <span className="text-[9px] font-black text-indigo-400 uppercase block mb-1">Best Designer Candidate</span>
                                             {resourceData.bestDesigner ? (
                                                 <div>
-                                                    <p className="text-xs font-extrabold text-white">{resourceData.bestDesigner.name}</p>
-                                                    <span className="text-[9px] text-gray-500 font-bold">Match: {resourceData.bestDesigner.suitability_score}%</span>
+                                                    <p className="text-xs font-extrabold text-ink">{resourceData.bestDesigner.name}</p>
+                                                    <span className="text-[9px] text-ink0 font-bold">Match: {resourceData.bestDesigner.suitability_score}%</span>
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-500">No designer matches</p>
+                                                <p className="text-[10px] text-ink0">No designer matches</p>
                                             )}
                                         </div>
 
                                         {/* Tester Card */}
-                                        <div className="p-3 bg-gray-900/40 border border-gray-800/60 rounded-xl">
+                                        <div className="p-3 bg-surface-2 border border-line rounded-xl">
                                             <span className="text-[9px] font-black text-indigo-400 uppercase block mb-1">Best Tester Candidate</span>
                                             {resourceData.bestTester ? (
                                                 <div>
-                                                    <p className="text-xs font-extrabold text-white">{resourceData.bestTester.name}</p>
-                                                    <span className="text-[9px] text-gray-500 font-bold">Match: {resourceData.bestTester.suitability_score}%</span>
+                                                    <p className="text-xs font-extrabold text-ink">{resourceData.bestTester.name}</p>
+                                                    <span className="text-[9px] text-ink0 font-bold">Match: {resourceData.bestTester.suitability_score}%</span>
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] text-gray-500">No QA matches</p>
+                                                <p className="text-[10px] text-ink0">No QA matches</p>
                                             )}
                                         </div>
                                     </div>
                                     
-                                    <div className="mt-4 p-3.5 bg-gray-950/60 rounded-xl border border-gray-850">
-                                        <div className="flex justify-between items-center text-[10px] text-gray-400 mb-2">
+                                    <div className="mt-4 p-3.5 bg-surface-2 rounded-xl border border-line">
+                                        <div className="flex justify-between items-center text-[10px] text-ink-soft mb-2">
                                             <span className="font-bold">Ideal Team Size: <strong className="text-indigo-400">{resourceData.recommendedTeamSize} members</strong></span>
                                         </div>
                                         <div className="flex flex-wrap gap-1.5">
@@ -412,8 +412,8 @@ const ExecutiveDashboard = () => {
                             )}
                         </div>
                     ) : (
-                        <div className="h-48 flex items-center justify-center border border-dashed border-gray-800 rounded-xl">
-                            <span className="text-xs text-gray-500">No forecast data loadable for selected project.</span>
+                        <div className="h-48 flex items-center justify-center border border-dashed border-line rounded-xl">
+                            <span className="text-xs text-ink0">No forecast data loadable for selected project.</span>
                         </div>
                     )}
                 </div>

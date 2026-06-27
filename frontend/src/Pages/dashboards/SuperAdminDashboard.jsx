@@ -15,7 +15,6 @@ import { ChartTooltip, CalendarHeatmap, StatRing } from '../../Components/Dashbo
 import { getWorkspaces, getUsers, getAnalytics, getAuditLogs } from '../../Services/superAdminApi';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import toast from 'react-hot-toast';
-import DSAppShell from '../../design-system/DSAppShell.jsx';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -110,8 +109,8 @@ export default function SuperAdminDashboard({ user }) {
   });
 
   if (loading) return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="min-h-screen flex items-center justify-center text-white">
+    <>
+      <div className="min-h-screen flex items-center justify-center text-ink">
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-20 h-20">
             <div className="absolute inset-0 rounded-full border-2 border-red-500/20 animate-ping" />
@@ -120,12 +119,12 @@ export default function SuperAdminDashboard({ user }) {
           <span className="text-xs font-black text-red-400 tracking-[0.35em] uppercase">Initializing Command Center</span>
         </div>
       </div>
-    </DSAppShell>
+    </>
   );
 
   return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
+    <>
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-ink overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -141,8 +140,8 @@ export default function SuperAdminDashboard({ user }) {
                 Global Overview
               </span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1.5">
-              Welcome back, <span className="text-white font-semibold">{user?.name}</span> ·{' '}
+            <p className="text-ink-soft text-sm mt-1.5">
+              Welcome back, <span className="text-ink font-semibold">{user?.name}</span> ·{' '}
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
@@ -155,9 +154,9 @@ export default function SuperAdminDashboard({ user }) {
             </Badge>
             <button
               onClick={fetchAll}
-              className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors"
             >
-              <RefreshCw className="h-4 w-4 text-slate-400" />
+              <RefreshCw className="h-4 w-4 text-ink-soft" />
             </button>
           </div>
         </div>
@@ -191,7 +190,7 @@ export default function SuperAdminDashboard({ user }) {
                 suffix={s.suffix || ''}
                 className={`text-[22px] font-black block ${s.color}`}
               />
-              <p className="text-[11px] text-slate-500 mt-0.5">{s.label}</p>
+              <p className="text-[11px] text-ink-faint mt-0.5">{s.label}</p>
             </GlassCard>
           ))}
         </div>
@@ -206,8 +205,8 @@ export default function SuperAdminDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Platform Growth</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Workspaces & users — last 12 months</p>
+                <h3 className="text-sm font-bold text-ink">Platform Growth</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Workspaces & users — last 12 months</p>
               </div>
               <TrendingUp className="h-4 w-4 text-red-400" />
             </div>
@@ -223,7 +222,7 @@ export default function SuperAdminDashboard({ user }) {
                     <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" />
                 <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -241,14 +240,14 @@ export default function SuperAdminDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">AI Engine Analytics</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Requests & success rate by feature</p>
+                <h3 className="text-sm font-bold text-ink">AI Engine Analytics</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Requests & success rate by feature</p>
               </div>
               <Cpu className="h-4 w-4 text-orange-400" />
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={aiFeatureData} barGap={4} barCategoryGap="22%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -267,8 +266,8 @@ export default function SuperAdminDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Storage Distribution</h3>
-            <p className="text-xs text-slate-500 mb-4">48 GB total platform storage</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Storage Distribution</h3>
+            <p className="text-xs text-ink-faint mb-4">48 GB total platform storage</p>
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie data={storagePie} cx="50%" cy="50%" outerRadius={72} innerRadius={36} paddingAngle={3} dataKey="value">
@@ -281,7 +280,7 @@ export default function SuperAdminDashboard({ user }) {
               {storagePie.map((d, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-[11px] text-slate-400">{d.name}: {d.value}%</span>
+                  <span className="text-[11px] text-ink-soft">{d.name}: {d.value}%</span>
                 </div>
               ))}
             </div>
@@ -293,11 +292,11 @@ export default function SuperAdminDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">System Health Radar</h3>
-            <p className="text-xs text-slate-500 mb-2">Real-time service reliability</p>
+            <h3 className="text-sm font-bold text-ink mb-1">System Health Radar</h3>
+            <p className="text-xs text-ink-faint mb-2">Real-time service reliability</p>
             <ResponsiveContainer width="100%" height={230}>
               <RadarChart data={systemHealth} cx="50%" cy="50%" outerRadius="72%">
-                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarGrid stroke="#e6eaf2" />
                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#475569', fontSize: 10 }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                 <Radar name="Health" dataKey="value" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} strokeWidth={2} dot={{ fill: '#ef4444', r: 2.5 }} />
@@ -311,8 +310,8 @@ export default function SuperAdminDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Global Task Status</h3>
-            <p className="text-xs text-slate-500 mb-4">Platform-wide distribution</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Global Task Status</h3>
+            <p className="text-xs text-ink-faint mb-4">Platform-wide distribution</p>
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie data={taskPie} cx="50%" cy="50%" outerRadius={72} innerRadius={36} paddingAngle={3} dataKey="value">
@@ -325,7 +324,7 @@ export default function SuperAdminDashboard({ user }) {
               {taskPie.map((d, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: TASK_COLORS[i % TASK_COLORS.length] }} />
-                  <span className="text-[11px] text-slate-400 capitalize">{d.name}: {d.value}</span>
+                  <span className="text-[11px] text-ink-soft capitalize">{d.name}: {d.value}</span>
                 </div>
               ))}
             </div>
@@ -342,14 +341,14 @@ export default function SuperAdminDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Email Analytics</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Sent vs opened — last 6 months</p>
+                <h3 className="text-sm font-bold text-ink">Email Analytics</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Sent vs opened — last 6 months</p>
               </div>
               <Mail className="h-4 w-4 text-violet-400" />
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={emailTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" />
                 <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -365,17 +364,17 @@ export default function SuperAdminDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.56, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Platform Activity Heatmap</h3>
-            <p className="text-xs text-slate-500 mb-4">Audit log density — last 12 weeks</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Platform Activity Heatmap</h3>
+            <p className="text-xs text-ink-faint mb-4">Audit log density — last 12 weeks</p>
             <div className="overflow-x-auto pb-1">
               <CalendarHeatmap data={activityHeat} color="#ef4444" weeks={12} />
             </div>
             <div className="flex items-center gap-2 mt-4">
-              <span className="text-[10px] text-slate-500">Less</span>
+              <span className="text-[10px] text-ink-faint">Less</span>
               {[0.12, 0.28, 0.50, 0.72, 0.92].map((o, i) => (
                 <div key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: `rgba(239,68,68,${o})` }} />
               ))}
-              <span className="text-[10px] text-slate-500">More</span>
+              <span className="text-[10px] text-ink-faint">More</span>
             </div>
           </GlassCard>
         </div>
@@ -390,8 +389,8 @@ export default function SuperAdminDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Recent Audit Log</h3>
-                <p className="text-xs text-slate-500 mt-0.5">All workspaces · latest actions</p>
+                <h3 className="text-sm font-bold text-ink">Recent Audit Log</h3>
+                <p className="text-xs text-ink-faint mt-0.5">All workspaces · latest actions</p>
               </div>
               <Shield className="h-4 w-4 text-red-400" />
             </div>
@@ -411,17 +410,17 @@ export default function SuperAdminDashboard({ user }) {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]"
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-2 border border-line"
                 >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-[10px] font-black shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-[10px] font-black shrink-0 text-white">
                     {(log.userName || 'U').charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-slate-300 truncate">
-                      <span className="font-semibold text-white">{log.userName}</span>{' '}
-                      <span className="text-slate-400">{log.action}</span>
+                    <p className="text-[11px] text-ink-soft truncate">
+                      <span className="font-semibold text-ink">{log.userName}</span>{' '}
+                      <span className="text-ink-soft">{log.action}</span>
                     </p>
-                    <p className="text-[10px] text-slate-600">
+                    <p className="text-[10px] text-ink-faint">
                       {new Date(log.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -444,8 +443,8 @@ export default function SuperAdminDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Workspace Health</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Health scores for managed workspaces</p>
+                <h3 className="text-sm font-bold text-ink">Workspace Health</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Health scores for managed workspaces</p>
               </div>
               <Eye className="h-4 w-4 text-orange-400" />
             </div>
@@ -465,6 +464,6 @@ export default function SuperAdminDashboard({ user }) {
         </div>
 
       </div>
-    </DSAppShell>
+    </>
   );
 }

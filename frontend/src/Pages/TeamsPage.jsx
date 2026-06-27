@@ -198,7 +198,7 @@ export default function TeamsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+            <div className="min-h-screen flex flex-col items-center justify-center">
                 <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
                 <p className="text-gray-500 font-semibold animate-pulse">Loading Teams Management...</p>
             </div>
@@ -206,7 +206,7 @@ export default function TeamsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-white py-10 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header */}
@@ -308,7 +308,7 @@ export default function TeamsPage() {
                                                     {isAdmin && (
                                                         <button
                                                             onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
-                                                            className="p-2 border border-red-100 hover:bg-red-50 text-red-650 rounded-xl transition cursor-pointer"
+                                                            className="p-2 border border-red-100 hover:bg-red-50 text-red-600 rounded-xl transition cursor-pointer"
                                                             title="Delete Team"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -469,7 +469,7 @@ export default function TeamsPage() {
                             </h3>
                             <button
                                 onClick={() => setTeamModalOpen(false)}
-                                className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-650 rounded-full transition"
+                                className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
                             >
                                 <X className="w-5 h-5" />
                             </button>

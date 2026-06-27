@@ -6,14 +6,11 @@ import Header from './Components/Header.jsx'
 import DesignSystemProviderWrapper from './design-system/DesignSystemProviderWrapper.jsx'
 import DSAppShell from './design-system/DSAppShell.jsx'
 
-// ─── Eagerly loaded (critical path — minimal, always needed) ─────────────────
 import LoginPage from './Pages/LoginPage.jsx'
 import RegisterPage from './Pages/RegisterPage.jsx'
 
-// ─── Lazily loaded (code-split — loaded only when navigated to) ──────────────
 const LandingPage                 = lazy(() => import('./Pages/LandingPage.jsx'))
 
-// ─── Lazily loaded (code-split — loaded only when navigated to) ──────────────
 const Dashboard                   = lazy(() => import('./Pages/Dashboard.jsx'))
 const ProfilePage                 = lazy(() => import('./Pages/ProfilePage.jsx'))
 const VerifyEmailToken            = lazy(() => import('./Pages/VerifyEmailToken.jsx'))
@@ -41,33 +38,32 @@ const WorkspaceCalendar           = lazy(() => import('./Pages/WorkspaceCalendar
 const AfterRegister               = lazy(() => import('./Pages/AfterRegister.jsx'))
 const SprintPlanningPage          = lazy(() => import('./Pages/SprintPlanningPage.jsx'))
 
-// ─── Page-level loading fallback ─────────────────────────────────────────────
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-950">
+  <div className="min-h-screen flex items-center justify-center bg-surface">
     <div className="flex flex-col items-center gap-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
-      <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand" />
+      <p className="text-ink-soft text-sm animate-pulse">Loading…</p>
     </div>
   </div>
 );
 
-// ─── Auth guard ───────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }) => {
   const { isLoggedIn, loading } = useAuth();
   if (loading) return <PageLoader />;
   return isLoggedIn ? children : <Navigate to="/login" replace />;
 };
 
-// ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const { isLoggedIn, loading } = useAuth();
   const location = useLocation();
 
-  // Hide header & copilot on auth/landing pages for immersive dark experience
   const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password',
     '/after-register', '/verify-email-token', '/verify-email-result'];
   const isFullscreenPage = (!isLoggedIn && location.pathname === '/') ||
     authPaths.slice(1).includes(location.pathname);
+
+  // Whole app uses the light-premium background.
+  const backgroundMode = 'app';
 
   if (loading) return <PageLoader />;
 
@@ -78,7 +74,7 @@ const App = () => {
         header={!isFullscreenPage ? <Header /> : null}
         showCopilot={!isFullscreenPage}
         copilot={null}
-        backgroundMode={isFullscreenPage ? 'hero' : 'subtle'}
+        backgroundMode={backgroundMode}
       >
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -114,16 +110,13 @@ const App = () => {
             <Route path="/executive-dashboard"   element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
             <Route path="/sprint-planning"       element={<ProtectedRoute><SprintPlanningPage /></ProtectedRoute>} />
 
-            {/* Root — dashboard if logged in, landing page otherwise */}
             <Route path="/"                      element={isLoggedIn ? <Dashboard /> : <LandingPage />} />
 
-            {/* Catch-all */}
             <Route path="*"                      element={<Navigate to="/" />} />
 
           </Routes>
         </Suspense>
 
-        {/* Lazy-loaded AI Copilot floating widget */}
         {!isFullscreenPage && (
           <Suspense fallback={null}>
             <AICopilot />

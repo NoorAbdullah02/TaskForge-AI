@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import { checkEmailExists, registerUser, getSetupStatus } from '../Services/authApi';
 import { createWorkspace, joinWorkspace } from '../Services/workspaceApi';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import DSAppShell from '../design-system/DSAppShell.jsx';
 import { GlassCard, Button } from '../design-system/primitives';
 
 const RegisterPage = () => {
@@ -75,7 +74,7 @@ const RegisterPage = () => {
         if (/[!@#$%^&*]/.test(pwd)) strength++;
 
         if (strength <= 2) return { level: 1, text: 'Weak', color: 'bg-red-500' };
-        if (strength <= 3) return { level: 2, text: 'Fair', color: 'bg-yellow-500' };
+        if (strength <= 3) return { level: 2, text: 'Fair', color: 'bg-amber-500' };
         if (strength <= 4) return { level: 3, text: 'Good', color: 'bg-blue-500' };
         return { level: 4, text: 'Strong', color: 'bg-emerald-500' };
     }
@@ -197,308 +196,291 @@ const RegisterPage = () => {
     }
 
     const strengthColors = {
-        1: 'text-red-400',
-        2: 'text-yellow-400',
-        3: 'text-blue-400',
-        4: 'text-emerald-400',
+        1: 'text-danger',
+        2: 'text-amber-600',
+        3: 'text-brand',
+        4: 'text-emerald-600',
     };
 
+    const field = 'w-full py-3 bg-white border border-line rounded-2xl text-xs font-semibold text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/60 transition-all';
+    const tab = (active) =>
+        `flex-1 py-3 text-xs font-bold rounded-xl transition cursor-pointer ${active
+            ? 'bg-gradient-to-r from-brand to-accent text-white shadow-[0_8px_24px_rgba(37,99,235,0.18)]'
+            : 'text-ink-soft hover:text-ink'}`;
+
     return (
-        <DSAppShell backgroundMode="auth">
-            <div className="min-h-screen flex items-center justify-center p-4 text-slate-100">
-                <div className="w-full max-w-lg relative z-10 my-10">
-                    {/* Header */}
-                    <motion.div
-                        className="text-center mb-8"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <Link to="/" className="inline-block mb-3">
-                            <span className="text-2xl font-black bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
-                                <Sparkles className="w-6 h-6 text-blue-400" />
-                                TaskForge AI
-                            </span>
-                        </Link>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-                            {firstTimeSetup ? 'Initialize Platform' : 'Initialize Workspace'}
-                        </h1>
-                        <p className="text-slate-400 text-xs mt-1 font-sans">
-                            {firstTimeSetup
-                                ? 'Configure the primary administrative entity (Super Admin).'
-                                : 'Deploy an isolated neural collaboration instance or request access to a squad.'}
-                        </p>
-                    </motion.div>
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="w-full max-w-lg relative z-10 my-10">
+                {/* Header */}
+                <motion.div
+                    className="text-center mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <Link to="/" className="inline-flex items-center justify-center gap-2 mb-3">
+                        <Sparkles className="w-6 h-6 text-brand" />
+                        <span className="text-2xl font-black text-gradient-brand">TaskForge AI</span>
+                    </Link>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">
+                        {firstTimeSetup ? 'Initialize Platform' : 'Create your workspace'}
+                    </h1>
+                    <p className="text-ink-soft text-xs mt-1">
+                        {firstTimeSetup
+                            ? 'Configure the primary administrative account (Super Admin).'
+                            : 'Spin up a new collaboration workspace or join your team.'}
+                    </p>
+                </motion.div>
 
-                    {/* Tab Switcher */}
-                    {!firstTimeSetup && (
-                        <div className="flex bg-white/[0.02] border border-white/5 p-1 rounded-2xl mb-6">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('create')}
-                                className={`flex-1 py-3 text-xs font-bold rounded-xl transition cursor-pointer ${activeTab === 'create'
-                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/10'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                            >
-                                Create New Workspace
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('join')}
-                                className={`flex-1 py-3 text-xs font-bold rounded-xl transition cursor-pointer ${activeTab === 'join'
-                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/10'
-                                        : 'text-slate-400 hover:text-slate-200'
-                                    }`}
-                            >
-                                Join Existing Workspace
-                            </button>
+                {/* Tab Switcher */}
+                {!firstTimeSetup && (
+                    <div className="flex bg-white border border-line p-1 rounded-2xl mb-6 shadow-soft">
+                        <button type="button" onClick={() => setActiveTab('create')} className={tab(activeTab === 'create')}>
+                            Create New Workspace
+                        </button>
+                        <button type="button" onClick={() => setActiveTab('join')} className={tab(activeTab === 'join')}>
+                            Join Existing Workspace
+                        </button>
+                    </div>
+                )}
+
+                {/* Registration Card */}
+                <GlassCard
+                    padding="p-8"
+                    hoverEffect={false}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Profile Info Sub-heading */}
+                        <div className="pb-3 border-b border-line">
+                            <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Personal Details</span>
                         </div>
-                    )}
 
-                    {/* Registration Card */}
-                    <GlassCard
-                        padding="p-8"
-                        hoverEffect={false}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                    >
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Profile Info Sub-heading */}
-                            <div className="pb-3 border-b border-white/5">
-                                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Personal Details</span>
+                        {/* Full Name */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Full Name</label>
+                            <div className="relative">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="e.g. Sarah Chen"
+                                    className={`${field} pl-11 pr-4`}
+                                    required
+                                />
                             </div>
+                        </div>
 
-                            {/* Full Name */}
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Full Name</label>
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                    <input
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="e.g. Sarah Chen"
-                                        className="w-full pl-11 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl focus:outline-none focus:border-blue-500 text-xs font-semibold text-slate-200 placeholder-slate-500"
-                                        required
-                                    />
+                        {/* Email Address */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Email Address</label>
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={handleEmailChange}
+                                    placeholder="you@example.com"
+                                    className={`${field} pl-11 pr-11 ${emailError ? '!border-danger/60' : isEmailValid ? '!border-emerald-400' : ''}`}
+                                    required
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                    {checkingEmail ? (
+                                        <div className="w-3.5 h-3.5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                    ) : emailError ? (
+                                        <XCircle className="w-3.5 h-3.5 text-danger" />
+                                    ) : isEmailValid ? (
+                                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                    ) : null}
                                 </div>
                             </div>
+                            {emailError && (
+                                <p className="text-[10px] text-danger mt-1.5 flex items-center gap-1 font-semibold">
+                                    <XCircle className="w-3 h-3 flex-shrink-0" />
+                                    {emailError}
+                                </p>
+                            )}
+                        </div>
 
-                            {/* Email Address */}
+                        {/* Passwords */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Email Address</label>
+                                <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Password</label>
                                 <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
                                     <input
-                                        type="email"
-                                        value={email}
-                                        onChange={handleEmailChange}
-                                        placeholder="you@example.com"
-                                        className={`w-full pl-11 pr-11 py-3 bg-white/[0.03] border rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-500/20 text-xs font-semibold text-slate-200 placeholder-slate-500 ${emailError ? 'border-red-500/50' : isEmailValid ? 'border-emerald-500/50' : 'border-white/10'
-                                            }`}
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        className={`${field} pl-11 pr-10`}
                                         required
                                     />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                        {checkingEmail ? (
-                                            <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-                                        ) : emailError ? (
-                                            <XCircle className="w-3.5 h-3.5 text-red-400" />
-                                        ) : isEmailValid ? (
-                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                                        ) : null}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-soft transition"
+                                    >
+                                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Confirm Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        className={`${field} pl-11 pr-10 ${confirmPassword ? (passwordsMatch ? '!border-emerald-400' : '!border-danger/60') : ''}`}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-soft transition"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Password strength & requirements */}
+                        {password && (
+                            <div className="bg-surface-2 border border-line p-3 rounded-2xl space-y-2 mt-1">
+                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                    <span className="text-ink-soft">Security Strength:</span>
+                                    <span className={strengthColors[passwordStrength.level]}>{passwordStrength.text}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4].map(idx => (
+                                        <div key={idx} className={`h-1 flex-1 rounded-full transition ${idx <= passwordStrength.level ? passwordStrength.color : 'bg-line'}`} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Workspace Details Section (only if not firstTimeSetup) */}
+                        {!firstTimeSetup && (
+                            <>
+                                <div className="pb-3 border-b border-line pt-4">
+                                    <span className="text-[10px] font-bold text-brand uppercase tracking-widest">
+                                        {activeTab === 'create' ? 'Workspace Details' : 'Invite Validation'}
+                                    </span>
+                                </div>
+
+                                {/* TAB 1: CREATE WORKSPACE FIELDS */}
+                                {activeTab === 'create' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Workspace Name</label>
+                                            <div className="relative">
+                                                <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                                <input
+                                                    type="text"
+                                                    value={workspaceName}
+                                                    onChange={(e) => {
+                                                        setWorkspaceName(e.target.value);
+                                                        setWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                                                    }}
+                                                    placeholder="e.g. Acme Corporation"
+                                                    className={`${field} pl-11 pr-4`}
+                                                    required={activeTab === 'create' && !firstTimeSetup}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Workspace Slug (URL Part)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint text-xs font-bold font-mono">/</span>
+                                                <input
+                                                    type="text"
+                                                    value={workspaceSlug}
+                                                    onChange={(e) => setWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}
+                                                    placeholder="acme-corp"
+                                                    className={`${field} pl-8 pr-4 font-mono`}
+                                                    required={activeTab === 'create' && !firstTimeSetup}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                {emailError && (
-                                    <p className="text-[10px] text-red-400 mt-1.5 flex items-center gap-1 font-semibold font-sans">
-                                        <XCircle className="w-3 h-3 flex-shrink-0" />
-                                        {emailError}
-                                    </p>
                                 )}
-                            </div>
 
-                            {/* Passwords */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Password</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="••••••••"
-                                            className="w-full pl-11 pr-10 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-350 transition"
-                                        >
-                                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Confirm Password</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                        <input
-                                            type={showConfirmPassword ? 'text' : 'password'}
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            placeholder="••••••••"
-                                            className={`w-full pl-11 pr-10 py-3 bg-white/[0.03] border rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200 ${confirmPassword ? (passwordsMatch ? 'border-emerald-500/50' : 'border-red-500/50') : 'border-white/10'
-                                                }`}
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-355 transition"
-                                        >
-                                            {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Password strength & requirements */}
-                            {password && (
-                                <div className="bg-white/[0.01] border border-white/5 p-3 rounded-2xl space-y-2 mt-1">
-                                    <div className="flex justify-between items-center text-[10px] font-bold">
-                                        <span className="text-slate-400">Security Strength:</span>
-                                        <span className={strengthColors[passwordStrength.level]}>{passwordStrength.text}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                        {[1, 2, 3, 4].map(idx => (
-                                            <div key={idx} className={`h-1 flex-1 rounded-full transition ${idx <= passwordStrength.level ? passwordStrength.color : 'bg-white/5'
-                                                }`} />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Workspace Details Section (only if not firstTimeSetup) */}
-                            {!firstTimeSetup && (
-                                <>
-                                    {/* Workspace Section Sub-heading */}
-                                    <div className="pb-3 border-b border-white/5 pt-4">
-                                        <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">
-                                            {activeTab === 'create' ? 'Workspace Details' : 'Invite Validation'}
-                                        </span>
-                                    </div>
-
-                                    {/* TAB 1: CREATE WORKSPACE FIELDS */}
-                                    {activeTab === 'create' && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Workspace Name</label>
-                                                <div className="relative">
-                                                    <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                    <input
-                                                        type="text"
-                                                        value={workspaceName}
-                                                        onChange={(e) => {
-                                                            setWorkspaceName(e.target.value);
-                                                            // auto slugify
-                                                            setWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
-                                                        }}
-                                                        placeholder="e.g. Acme Corporation"
-                                                        className="w-full pl-11 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200"
-                                                        required={activeTab === 'create' && !firstTimeSetup}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Workspace Slug (URL Part)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold font-mono">/</span>
-                                                    <input
-                                                        type="text"
-                                                        value={workspaceSlug}
-                                                        onChange={(e) => setWorkspaceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}
-                                                        placeholder="acme-corp"
-                                                        className="w-full pl-8 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 text-slate-200"
-                                                        required={activeTab === 'create' && !firstTimeSetup}
-                                                    />
-                                                </div>
+                                {/* TAB 2: JOIN WORKSPACE FIELDS */}
+                                {activeTab === 'join' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Invite Code</label>
+                                            <div className="relative">
+                                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                                <input
+                                                    type="text"
+                                                    value={inviteCode}
+                                                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                                    placeholder="TF-XXXXXX"
+                                                    className={`${field} pl-11 pr-4 font-mono`}
+                                                    required={activeTab === 'join' && !firstTimeSetup}
+                                                />
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* TAB 2: JOIN WORKSPACE FIELDS */}
-                                    {activeTab === 'join' && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Invite Code</label>
-                                                <div className="relative">
-                                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                    <input
-                                                        type="text"
-                                                        value={inviteCode}
-                                                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                                        placeholder="TF-XXXXXX"
-                                                        className="w-full pl-11 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 text-slate-200 placeholder-slate-500"
-                                                        required={activeTab === 'join' && !firstTimeSetup}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Join Passcode (Optional)</label>
-                                                <div className="relative">
-                                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                                    <input
-                                                        type="password"
-                                                        value={workspacePassword}
-                                                        onChange={(e) => setWorkspacePassword(e.target.value)}
-                                                        placeholder="Passcode if required"
-                                                        className="w-full pl-11 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200"
-                                                    />
-                                                </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Join Passcode (Optional)</label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                                                <input
+                                                    type="password"
+                                                    value={workspacePassword}
+                                                    onChange={(e) => setWorkspacePassword(e.target.value)}
+                                                    placeholder="Passcode if required"
+                                                    className={`${field} pl-11 pr-4`}
+                                                />
                                             </div>
                                         </div>
-                                    )}
-                                </>
-                            )}
+                                    </div>
+                                )}
+                            </>
+                        )}
 
-                            {/* Submit Button */}
-                            <Button
-                                type="submit"
-                                disabled={isLoading || !passwordsMatch || !name || !isEmailValid || !password || !!emailError || checkingEmail}
-                                isLoading={isLoading}
-                                icon={ArrowRight}
-                                iconPosition="right"
-                                className="w-full mt-4"
-                            >
-                                {isLoading
-                                    ? (firstTimeSetup ? 'Creating Super Admin Account...' : 'Initializing Workspace...')
-                                    : (firstTimeSetup
-                                        ? 'Create Super Admin Account'
-                                        : activeTab === 'create'
-                                            ? 'Create Workspace Instance'
-                                            : 'Submit Membership Request')}
-                            </Button>
-                        </form>
-                    </GlassCard>
+                        {/* Submit Button */}
+                        <Button
+                            type="submit"
+                            disabled={isLoading || !passwordsMatch || !name || !isEmailValid || !password || !!emailError || checkingEmail}
+                            isLoading={isLoading}
+                            icon={ArrowRight}
+                            iconPosition="right"
+                            className="w-full mt-4"
+                        >
+                            {isLoading
+                                ? (firstTimeSetup ? 'Creating Super Admin Account...' : 'Initializing Workspace...')
+                                : (firstTimeSetup
+                                    ? 'Create Super Admin Account'
+                                    : activeTab === 'create'
+                                        ? 'Create Workspace'
+                                        : 'Submit Membership Request')}
+                        </Button>
+                    </form>
+                </GlassCard>
 
-                    {/* Footer links */}
-                    <motion.p
-                        className="text-center text-slate-500 text-xs mt-8"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        Already possess active credentials?{' '}
-                        <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-bold transition-colors">
-                            Sign in
-                        </Link>
-                    </motion.p>
-                </div>
+                {/* Footer links */}
+                <motion.p
+                    className="text-center text-ink-soft text-xs mt-8"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-brand hover:text-brand-strong font-bold transition-colors">
+                        Sign in
+                    </Link>
+                </motion.p>
             </div>
-        </DSAppShell>
+        </div>
     );
 };
 

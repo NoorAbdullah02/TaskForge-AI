@@ -159,12 +159,12 @@ const WorkspaceCalendar = () => {
             case 'red': return 'bg-red-500/10 text-red-400 border border-red-500/20';
             case 'yellow': return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
             case 'green': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-            default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+            default: return 'bg-slate-500/10 text-ink-soft border border-slate-500/20';
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#060a12] text-slate-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
+        <div className="min-h-screen text-ink py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
             {/* Background glowing overlays */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[120px]" />
@@ -173,13 +173,13 @@ const WorkspaceCalendar = () => {
 
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-white/10 mb-8 flex justify-between items-center">
+                <div className="pb-6 border-b border-line mb-8 flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
                             <CalendarIcon className="w-8 h-8 text-purple-400" />
                             Aggregated Workspace Calendar
                         </h1>
-                        <p className="text-slate-400 mt-1 font-medium font-sans">
+                        <p className="text-ink-soft mt-1 font-medium font-sans">
                             Synched display of team meetings, task deadlines, leaves, and user attendance status.
                         </p>
                     </div>
@@ -188,31 +188,31 @@ const WorkspaceCalendar = () => {
                         onClick={() => setShowModal(true)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-xs font-bold hover:shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition cursor-pointer"
                     >
-                        <Plus className="w-4 h-4 text-white" />
+                        <Plus className="w-4 h-4 text-ink" />
                         Schedule Meeting
                     </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
                     {/* Left Panel: Month Grid */}
-                    <div className="lg:col-span-8 bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col">
+                    <div className="lg:col-span-8 bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col">
                         
                         {/* Month Header Controller */}
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-ink flex items-center gap-2">
                                 {monthNames[month]} {year}
                             </h2>
 
                             <div className="flex gap-2">
                                 <button
                                     onClick={prevMonth}
-                                    className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer"
+                                    className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition cursor-pointer"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={nextMonth}
-                                    className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition cursor-pointer"
+                                    className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition cursor-pointer"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -223,14 +223,14 @@ const WorkspaceCalendar = () => {
                         <div className="grid grid-cols-7 gap-1 flex-1 min-h-[450px]">
                             {/* Days of week */}
                             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                                <div key={d} className="text-center text-[10px] font-black text-slate-550 uppercase tracking-wider py-2">
+                                <div key={d} className="text-center text-[10px] font-black text-ink0 uppercase tracking-wider py-2">
                                     {d}
                                 </div>
                             ))}
 
                             {/* Cells */}
                             {loading ? (
-                                <div className="col-span-7 flex flex-col items-center justify-center py-20 text-slate-500">
+                                <div className="col-span-7 flex flex-col items-center justify-center py-20 text-ink0">
                                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                     <span className="text-xs">Recompiling calendar index...</span>
                                 </div>
@@ -243,11 +243,11 @@ const WorkspaceCalendar = () => {
                                             onClick={() => handleDayClick(cell)}
                                             className={`p-2 rounded-xl text-left transition flex flex-col justify-between border cursor-pointer group min-h-[75px] ${
                                                 cell.isCurrentMonth
-                                                    ? 'bg-white/[0.01] border-white/5 hover:bg-white/[0.03] hover:border-white/10'
-                                                    : 'bg-transparent border-transparent text-slate-650 opacity-40 hover:opacity-70'
+                                                    ? 'bg-surface-2 border-line hover:bg-surface-2 hover:border-line'
+                                                    : 'bg-transparent border-transparent text-ink-faint opacity-40 hover:opacity-70'
                                             }`}
                                         >
-                                            <span className="text-xs font-bold text-slate-400 group-hover:text-white transition">
+                                            <span className="text-xs font-bold text-ink-soft group-hover:text-ink transition">
                                                 {cell.day}
                                             </span>
 
@@ -267,7 +267,7 @@ const WorkspaceCalendar = () => {
                                                     </div>
                                                 ))}
                                                 {dayEvents.length > 3 && (
-                                                    <span className="text-[7px] text-slate-500 font-mono pl-1">+{dayEvents.length - 3} more</span>
+                                                    <span className="text-[7px] text-ink0 font-mono pl-1">+{dayEvents.length - 3} more</span>
                                                 )}
                                             </div>
                                         </button>
@@ -279,30 +279,30 @@ const WorkspaceCalendar = () => {
                     </div>
 
                     {/* Right Panel: Selected Day Focus Feed */}
-                    <div className="lg:col-span-4 bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
+                    <div className="lg:col-span-4 bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
                         <div className="space-y-6">
-                            <div className="border-b border-white/5 pb-4">
-                                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest block">Focus Date Event Summary</h3>
-                                <p className="text-sm font-bold text-white mt-1">
+                            <div className="border-b border-line pb-4">
+                                <h3 className="text-xs font-black text-ink-soft uppercase tracking-widest block">Focus Date Event Summary</h3>
+                                <p className="text-sm font-bold text-ink mt-1">
                                     {selectedDateStr || 'Select a day from the grid'}
                                 </p>
                             </div>
 
                             <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1">
                                 {selectedDayEvents.length === 0 ? (
-                                    <p className="text-xs text-slate-550 italic font-medium py-10 text-center">No scheduled events on this date.</p>
+                                    <p className="text-xs text-ink0 italic font-medium py-10 text-center">No scheduled events on this date.</p>
                                 ) : (
                                     selectedDayEvents.map(e => (
                                         <div key={e.id} className={`p-3.5 rounded-2xl ${getColorClass(e.color)} flex flex-col gap-1.5`}>
-                                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                            <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                                                 <Tag className="w-3.5 h-3.5" />
                                                 {e.title}
                                             </span>
                                             {e.description && (
-                                                <p className="text-[10px] text-slate-300 leading-normal">{e.description}</p>
+                                                <p className="text-[10px] text-ink leading-normal">{e.description}</p>
                                             )}
                                             {e.meta && (
-                                                <div className="flex flex-col gap-1 border-t border-white/5 pt-1.5 mt-1 font-mono text-[9px] text-slate-400">
+                                                <div className="flex flex-col gap-1 border-t border-line pt-1.5 mt-1 font-mono text-[9px] text-ink-soft">
                                                     {e.meta.organizer && <span>Host: {e.meta.organizer}</span>}
                                                     {e.meta.link && (
                                                         <a href={e.meta.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-400 hover:underline">
@@ -318,7 +318,7 @@ const WorkspaceCalendar = () => {
                             </div>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4 mt-4 text-[10px] text-slate-500 font-sans">
+                        <div className="border-t border-line pt-4 mt-4 text-[10px] text-ink0 font-sans">
                             Meetings Scheduled trigger system email invites and updates.
                         </div>
                     </div>
@@ -328,64 +328,64 @@ const WorkspaceCalendar = () => {
             {/* SCHEDULE MEETING MODAL */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-[#0b1322] border border-white/10 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-                        <h2 className="text-lg font-extrabold text-white mb-5 flex items-center gap-2">
+                    <div className="bg-card border border-line w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+                        <h2 className="text-lg font-extrabold text-ink mb-5 flex items-center gap-2">
                             <Video className="w-5 h-5 text-purple-400" />
                             Schedule Workspace Meeting
                         </h2>
 
                         <form onSubmit={handleScheduleMeeting} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Meeting Title</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Meeting Title</label>
                                 <input
                                     type="text"
                                     placeholder="e.g. Sprint Sync, Client Feedback"
                                     value={meetTitle}
                                     onChange={(e) => setMeetTitle(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-purple-500 text-slate-200"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-purple-500 text-ink"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Description / Agenda</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Description / Agenda</label>
                                 <textarea
                                     placeholder="Agenda description..."
                                     value={meetDesc}
                                     onChange={(e) => setMeetDesc(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-4 text-xs font-semibold focus:outline-none focus:border-purple-500 text-slate-200 leading-normal resize-none h-20"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl p-4 text-xs font-semibold focus:outline-none focus:border-purple-500 text-ink leading-normal resize-none h-20"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Start Date/Time</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Start Date/Time</label>
                                     <input
                                         type="datetime-local"
                                         value={meetStart}
                                         onChange={(e) => setMeetStart(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-purple-500 text-slate-355"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-purple-500 text-slate-355"
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">End Date/Time</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">End Date/Time</label>
                                     <input
                                         type="datetime-local"
                                         value={meetEnd}
                                         onChange={(e) => setMeetEnd(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-purple-500 text-slate-355"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-purple-500 text-slate-355"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Virtual Room Link (e.g. Google Meet, Zoom)</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Virtual Room Link (e.g. Google Meet, Zoom)</label>
                                 <input
                                     type="url"
                                     placeholder="https://meet.google.com/..."
                                     value={meetLink}
                                     onChange={(e) => setMeetLink(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-purple-500 text-slate-200"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-purple-500 text-ink"
                                 />
                             </div>
 
@@ -393,7 +393,7 @@ const WorkspaceCalendar = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-2xl transition cursor-pointer text-slate-300"
+                                    className="flex-1 py-3.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
                                 >
                                     Cancel
                                 </button>

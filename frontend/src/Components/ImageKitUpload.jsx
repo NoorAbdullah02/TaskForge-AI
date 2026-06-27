@@ -129,7 +129,7 @@ const ImageKitUpload = ({
 
                 {uploading ? (
                     <div className="flex flex-col items-center gap-3">
-                        <Loader className="w-10 h-10 text-indigo-650 animate-spin" />
+                        <Loader className="w-10 h-10 text-indigo-600 animate-spin" />
                         <div>
                             <p className="text-xs font-bold text-gray-700">Uploading to ImageKit...</p>
                             <p className="text-xxs text-gray-400 mt-1">Please keep this tab open</p>
@@ -147,10 +147,10 @@ const ImageKitUpload = ({
                     <div className="flex flex-col items-center gap-2">
                         <UploadCloud className="w-10 h-10 text-gray-400 hover:text-blue-500 transition-colors" />
                         <div>
-                            <p className="text-xs font-bold text-gray-750">
+                            <p className="text-xs font-bold text-gray-700">
                                 Drag & drop file, or <span className="text-blue-600 hover:underline">browse</span>
                             </p>
-                            <p className="text-xxs text-gray-450 mt-1">
+                            <p className="text-xxs text-gray-400 mt-1">
                                 Files up to {maxSizeMB}MB supported
                             </p>
                         </div>

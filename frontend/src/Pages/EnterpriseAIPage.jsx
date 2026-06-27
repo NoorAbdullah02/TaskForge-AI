@@ -210,7 +210,7 @@ const EnterpriseAIPage = () => {
 
     if (authLoading || !user) {
         return (
-            <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
+            <div className="flex h-screen items-center justify-center bg-surface-2 text-ink">
                 <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
             </div>
         );
@@ -220,25 +220,25 @@ const EnterpriseAIPage = () => {
     const isAdminOrOwner = ['owner', 'super_admin'].includes(user.role);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
+        <div className="min-h-screen text-ink flex flex-col md:flex-row">
             
             {/* Sidebar Navigation */}
-            <aside className="w-full md:w-80 bg-slate-900 border-r border-slate-800 px-6 pb-6 pt-24 flex flex-col justify-between shrink-0">
+            <aside className="w-full md:w-80 bg-surface-2 border-r border-line px-6 pb-6 pt-24 flex flex-col justify-between shrink-0">
                 <div>
                     <div className="flex items-center gap-3 mb-8">
                         <div className="p-2 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl">
-                            <Brain className="h-6 w-6 text-white" />
+                            <Brain className="h-6 w-6 text-ink" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold tracking-tight text-white">Enterprise AI</h2>
-                            <p className="text-xs text-slate-400 capitalize">{user.role.replace('_', ' ')} Workspace</p>
+                            <h2 className="text-xl font-bold tracking-tight text-ink">Enterprise AI</h2>
+                            <p className="text-xs text-ink-soft capitalize">{user.role.replace('_', ' ')} Workspace</p>
                         </div>
                     </div>
 
                     <nav className="space-y-1">
                         <button
                             onClick={() => setActiveTab('copilot')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'copilot' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'copilot' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                         >
                             <span className="flex items-center gap-3">
                                 <Sparkles className="h-5 w-5" /> Copilot Chat
@@ -248,7 +248,7 @@ const EnterpriseAIPage = () => {
 
                         <button
                             onClick={() => setActiveTab('standup')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'standup' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'standup' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                         >
                             <span className="flex items-center gap-3">
                                 <CheckSquare className="h-5 w-5" /> Daily Standup
@@ -258,7 +258,7 @@ const EnterpriseAIPage = () => {
 
                         <button
                             onClick={() => setActiveTab('email')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'email' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'email' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                         >
                             <span className="flex items-center gap-3">
                                 <Mail className="h-5 w-5" /> Email Assistant
@@ -268,7 +268,7 @@ const EnterpriseAIPage = () => {
 
                         <button
                             onClick={() => setActiveTab('weekly')}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'weekly' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'weekly' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                         >
                             <span className="flex items-center gap-3">
                                 <FileText className="h-5 w-5" /> Weekly Performance
@@ -279,10 +279,10 @@ const EnterpriseAIPage = () => {
                         {/* PM / Admin Gated Tab */}
                         {isPMOrAbove && (
                             <>
-                                <div className="pt-4 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">PM & Analytics</div>
+                                <div className="pt-4 pb-2 text-[10px] font-semibold text-ink0 uppercase tracking-wider">PM & Analytics</div>
                                 <button
                                     onClick={() => setActiveTab('health')}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'health' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'health' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                                 >
                                     <span className="flex items-center gap-3">
                                         <Activity className="h-5 w-5" /> Project/Task Health
@@ -292,7 +292,7 @@ const EnterpriseAIPage = () => {
 
                                 <button
                                     onClick={() => setActiveTab('burnout')}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'burnout' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'burnout' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
                                 >
                                     <span className="flex items-center gap-3">
                                         <Flame className="h-5 w-5" /> Team Burnout Heatmap
@@ -306,12 +306,12 @@ const EnterpriseAIPage = () => {
 
                 {/* Scoped Dashboard Insights Card */}
                 {roleDashboardData && (
-                    <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mt-6">
+                    <div className="bg-surface-2 rounded-2xl p-4 border border-line mt-6">
                         <div className="flex items-center gap-2 mb-2">
                             <Brain className="h-4 w-4 text-indigo-400" />
                             <span className="text-xs font-semibold text-indigo-400">AI Recommendation</span>
                         </div>
-                        <p className="text-xs text-slate-300 font-medium line-clamp-3">
+                        <p className="text-xs text-ink font-medium line-clamp-3">
                             {roleDashboardData.metricsSummary}
                         </p>
                     </div>
@@ -321,14 +321,14 @@ const EnterpriseAIPage = () => {
             {/* Main Content Area */}
             <main className="flex-1 p-6 md:p-10 flex flex-col justify-between max-w-7xl mx-auto w-full">
                 
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-800">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-line">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-white">Enterprise AI Engine</h1>
-                        <p className="text-slate-400 text-sm mt-1">Role-aware orchestration powered by Mistral & ML models</p>
+                        <h1 className="text-3xl font-extrabold text-ink">Enterprise AI Engine</h1>
+                        <p className="text-ink-soft text-sm mt-1">Role-aware orchestration powered by Mistral & ML models</p>
                     </div>
-                    <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3">
+                    <div className="px-4 py-2 bg-surface-2 border border-line rounded-xl flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span className="text-xs font-semibold text-slate-300">Model: mistral-large-latest (Active)</span>
+                        <span className="text-xs font-semibold text-ink">Model: mistral-large-latest (Active)</span>
                     </div>
                 </header>
 
@@ -342,51 +342,51 @@ const EnterpriseAIPage = () => {
                                 initial={{ opacity: 0, y: 15 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -15 }}
-                                className="flex flex-col h-[650px] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden"
+                                className="flex flex-col h-[650px] bg-surface-2 border border-line rounded-3xl overflow-hidden"
                             >
-                                <div className="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                                <div className="bg-surface-2 px-6 py-4 border-b border-line flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Sparkles className="h-5 w-5 text-violet-400" />
-                                        <span className="font-semibold text-white">Interactive AI Copilot</span>
+                                        <span className="font-semibold text-ink">Interactive AI Copilot</span>
                                     </div>
-                                    <span className="text-xs text-slate-400">Scoped to your permissions</span>
+                                    <span className="text-xs text-ink-soft">Scoped to your permissions</span>
                                 </div>
 
                                 <div className="flex-1 p-6 overflow-y-auto space-y-4">
                                     {copilotHistory.length === 0 && (
                                         <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
                                             <Brain className="h-12 w-12 text-violet-500/80 mb-4 animate-pulse" />
-                                            <h3 className="font-bold text-lg text-white">Ask anything about your tasks</h3>
-                                            <p className="text-sm text-slate-400 mt-2">
+                                            <h3 className="font-bold text-lg text-ink">Ask anything about your tasks</h3>
+                                            <p className="text-sm text-ink-soft mt-2">
                                                 I have access to your workspace role profile. Ask for roadmap planning, task generation, or summary tips.
                                             </p>
                                         </div>
                                     )}
                                     {copilotHistory.map((msg, i) => (
                                         <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-2xl px-5 py-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-violet-600 text-white rounded-tr-none shadow-md' : 'bg-slate-800 text-slate-200 border border-slate-700/60 rounded-tl-none'}`}>
+                                            <div className={`max-w-2xl px-5 py-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-violet-600 text-white rounded-tr-none shadow-md' : 'bg-surface-2 text-white border border-line rounded-tl-none'}`}>
                                                 <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
                                             </div>
                                         </div>
                                     ))}
                                     {loadingCopilot && (
                                         <div className="flex justify-start">
-                                            <div className="bg-slate-800 px-5 py-3 rounded-2xl rounded-tl-none border border-slate-700/60 flex items-center gap-3">
+                                            <div className="bg-surface-2 px-5 py-3 rounded-2xl rounded-tl-none border border-line flex items-center gap-3">
                                                 <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
-                                                <span className="text-xs text-slate-400">Mistral is thinking...</span>
+                                                <span className="text-xs text-ink-soft">Mistral is thinking...</span>
                                             </div>
                                         </div>
                                     )}
                                     <div ref={chatEndRef} />
                                 </div>
 
-                                <form onSubmit={handleSendCopilot} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+                                <form onSubmit={handleSendCopilot} className="p-4 bg-surface-2 border-t border-line flex gap-3">
                                     <input
                                         type="text"
                                         placeholder="Type your instruction..."
                                         value={copilotInput}
                                         onChange={(e) => setCopilotInput(e.target.value)}
-                                        className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition"
+                                        className="flex-1 bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition"
                                     />
                                     <button
                                         type="submit"
@@ -408,11 +408,11 @@ const EnterpriseAIPage = () => {
                                 exit={{ opacity: 0, y: -15 }}
                                 className="space-y-6"
                             >
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <div className="bg-surface-2 border border-line rounded-3xl p-6">
+                                    <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2">
                                         <CheckSquare className="h-5 w-5 text-indigo-400" /> Daily Standup Report
                                     </h3>
-                                    <p className="text-sm text-slate-400 mb-6">
+                                    <p className="text-sm text-ink-soft mb-6">
                                         Generates a standard Scrum daily status update based on yesterday's commits, timer tracks, and today's outstanding backlogs.
                                     </p>
                                     <button
@@ -427,17 +427,17 @@ const EnterpriseAIPage = () => {
 
                                 {standupResult && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                            <h4 className="font-semibold text-slate-400 text-xs uppercase tracking-wider mb-3">Completed Yesterday</h4>
-                                            <p className="text-sm text-slate-200 leading-relaxed">{standupResult.yesterday}</p>
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6">
+                                            <h4 className="font-semibold text-ink-soft text-xs uppercase tracking-wider mb-3">Completed Yesterday</h4>
+                                            <p className="text-sm text-ink leading-relaxed">{standupResult.yesterday}</p>
                                         </div>
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                            <h4 className="font-semibold text-slate-400 text-xs uppercase tracking-wider mb-3">Focusing Today</h4>
-                                            <p className="text-sm text-slate-200 leading-relaxed">{standupResult.today}</p>
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6">
+                                            <h4 className="font-semibold text-ink-soft text-xs uppercase tracking-wider mb-3">Focusing Today</h4>
+                                            <p className="text-sm text-ink leading-relaxed">{standupResult.today}</p>
                                         </div>
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 border-amber-500/20 bg-amber-500/5">
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6 border-amber-500/20 bg-amber-500/5">
                                             <h4 className="font-semibold text-amber-400 text-xs uppercase tracking-wider mb-3">Blockers & Critical Path</h4>
-                                            <p className="text-sm text-slate-200 leading-relaxed">{standupResult.blockers}</p>
+                                            <p className="text-sm text-ink leading-relaxed">{standupResult.blockers}</p>
                                         </div>
                                     </div>
                                 )}
@@ -453,27 +453,27 @@ const EnterpriseAIPage = () => {
                                 exit={{ opacity: 0, y: -15 }}
                                 className="grid grid-cols-1 lg:grid-cols-2 gap-8"
                             >
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
-                                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <div className="bg-surface-2 border border-line rounded-3xl p-6 space-y-6">
+                                    <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2">
                                         <Mail className="h-5 w-5 text-indigo-400" /> AI Email Assistant
                                     </h3>
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Context / Subject Draft</label>
+                                        <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">Email Context / Subject Draft</label>
                                         <textarea
                                             placeholder="Write down the purpose of the email, e.g. notifying the client about delay on DB integration due to server crash..."
                                             value={emailContext}
                                             onChange={(e) => setEmailContext(e.target.value)}
                                             rows={5}
-                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition"
+                                            className="w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition"
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tone</label>
+                                            <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">Tone</label>
                                             <select
                                                 value={emailTone}
                                                 onChange={(e) => setEmailTone(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600"
+                                                className="w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600"
                                             >
                                                 <option>Professional</option>
                                                 <option>Empathetic</option>
@@ -492,20 +492,20 @@ const EnterpriseAIPage = () => {
                                     </button>
                                 </div>
 
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col">
-                                    <h4 className="font-semibold text-slate-400 text-xs uppercase tracking-wider mb-4">Generated Result</h4>
+                                <div className="bg-surface-2 border border-line rounded-3xl p-6 flex flex-col">
+                                    <h4 className="font-semibold text-ink-soft text-xs uppercase tracking-wider mb-4">Generated Result</h4>
                                     {emailResult ? (
                                         <div className="flex-1 space-y-4">
-                                            <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-750">
-                                                <span className="text-xs text-slate-400 block font-semibold uppercase">Subject</span>
-                                                <span className="text-sm font-medium text-white">{emailResult.subject}</span>
+                                            <div className="p-4 bg-surface-2 rounded-xl border border-line">
+                                                <span className="text-xs text-ink-soft block font-semibold uppercase">Subject</span>
+                                                <span className="text-sm font-medium text-ink">{emailResult.subject}</span>
                                             </div>
-                                            <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-750 flex-1 min-h-[250px] whitespace-pre-wrap text-sm text-slate-200">
+                                            <div className="p-4 bg-surface-2 rounded-xl border border-line flex-1 min-h-[250px] whitespace-pre-wrap text-sm text-ink">
                                                 {emailResult.body}
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl min-h-[300px]">
+                                        <div className="flex-1 flex flex-col items-center justify-center text-ink0 border-2 border-dashed border-line rounded-2xl min-h-[300px]">
                                             <Mail className="h-10 w-10 mb-2 opacity-30" />
                                             <span className="text-sm">No email drafted yet.</span>
                                         </div>
@@ -523,11 +523,11 @@ const EnterpriseAIPage = () => {
                                 exit={{ opacity: 0, y: -15 }}
                                 className="space-y-6"
                             >
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <div className="bg-surface-2 border border-line rounded-3xl p-6">
+                                    <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2">
                                         <FileText className="h-5 w-5 text-indigo-400" /> Weekly AI Progress Report
                                     </h3>
-                                    <p className="text-sm text-slate-400 mb-6">
+                                    <p className="text-sm text-ink-soft mb-6">
                                         Summarizes metrics, finished deliverables, and productivity metrics for the current sprint duration.
                                     </p>
                                     <button
@@ -542,31 +542,31 @@ const EnterpriseAIPage = () => {
 
                                 {weeklyReportResult && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6">
                                             <h4 className="font-semibold text-emerald-400 text-xs uppercase tracking-wider mb-4">Key Accomplishments</h4>
                                             <ul className="space-y-2">
                                                 {weeklyReportResult.achievements.map((item, i) => (
-                                                    <li key={i} className="text-sm text-slate-350 flex items-start gap-2">
+                                                    <li key={i} className="text-sm text-ink flex items-start gap-2">
                                                         <span className="text-emerald-500 mt-1">✓</span> {item}
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 border-red-500/10 bg-red-500/5">
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6 border-red-500/10 bg-red-500/5">
                                             <h4 className="font-semibold text-red-400 text-xs uppercase tracking-wider mb-4">Current Challenges</h4>
                                             <ul className="space-y-2">
                                                 {weeklyReportResult.challenges.map((item, i) => (
-                                                    <li key={i} className="text-sm text-slate-350 flex items-start gap-2">
+                                                    <li key={i} className="text-sm text-ink flex items-start gap-2">
                                                         <span className="text-red-500 mt-1">⚠️</span> {item}
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6">
                                             <h4 className="font-semibold text-indigo-400 text-xs uppercase tracking-wider mb-4">Proposed Focus Areas</h4>
                                             <ul className="space-y-2">
                                                 {weeklyReportResult.focusAreas.map((item, i) => (
-                                                    <li key={i} className="text-sm text-slate-350 flex items-start gap-2">
+                                                    <li key={i} className="text-sm text-ink flex items-start gap-2">
                                                         <span className="text-indigo-500 mt-1">→</span> {item}
                                                     </li>
                                                 ))}
@@ -586,23 +586,23 @@ const EnterpriseAIPage = () => {
                                 exit={{ opacity: 0, y: -15 }}
                                 className="grid grid-cols-1 lg:grid-cols-3 gap-8"
                             >
-                                <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
-                                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                <div className="lg:col-span-1 bg-surface-2 border border-line rounded-3xl p-6 space-y-6">
+                                    <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2">
                                         <Activity className="h-5 w-5 text-indigo-400" /> Health Analyzer
                                     </h3>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Scope</label>
+                                        <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">Scope</label>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => setHealthScoreType('project')}
-                                                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${healthScoreType === 'project' ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${healthScoreType === 'project' ? 'bg-violet-600 text-white' : 'bg-surface-2 text-white'}`}
                                             >
                                                 Project
                                             </button>
                                             <button
                                                 onClick={() => setHealthScoreType('task')}
-                                                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${healthScoreType === 'task' ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${healthScoreType === 'task' ? 'bg-violet-600 text-white' : 'bg-surface-2 text-white'}`}
                                             >
                                                 Task ID
                                             </button>
@@ -611,11 +611,11 @@ const EnterpriseAIPage = () => {
 
                                     {healthScoreType === 'project' ? (
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Select Project</label>
+                                            <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">Select Project</label>
                                             <select
                                                 value={healthScoreId}
                                                 onChange={(e) => setHealthScoreId(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600"
+                                                className="w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600"
                                             >
                                                 {projectsList.map(p => (
                                                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -624,13 +624,13 @@ const EnterpriseAIPage = () => {
                                         </div>
                                     ) : (
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Enter Task ID</label>
+                                            <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">Enter Task ID</label>
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 42"
                                                 value={healthScoreId}
                                                 onChange={(e) => setHealthScoreId(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600"
+                                                className="w-full bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600"
                                             />
                                         </div>
                                     )}
@@ -647,15 +647,15 @@ const EnterpriseAIPage = () => {
 
                                 <div className="lg:col-span-2 space-y-6">
                                     {healthScoreResult ? (
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
-                                            <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+                                        <div className="bg-surface-2 border border-line rounded-3xl p-6 space-y-6">
+                                            <div className="flex justify-between items-center pb-4 border-b border-line">
                                                 <div>
-                                                    <h4 className="font-bold text-white text-lg">{healthScoreResult.name}</h4>
-                                                    <p className="text-slate-400 text-sm">Health Assessment</p>
+                                                    <h4 className="font-bold text-ink text-lg">{healthScoreResult.name}</h4>
+                                                    <p className="text-ink-soft text-sm">Health Assessment</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-xs font-semibold text-slate-400 block uppercase">Health Score</span>
-                                                    <span className={`text-3xl font-black ${healthScoreResult.healthScore >= 75 ? 'text-emerald-450' : healthScoreResult.healthScore >= 50 ? 'text-amber-400' : 'text-red-500'}`}>
+                                                    <span className="text-xs font-semibold text-ink-soft block uppercase">Health Score</span>
+                                                    <span className={`text-3xl font-black ${healthScoreResult.healthScore >= 75 ? 'text-emerald-400' : healthScoreResult.healthScore >= 50 ? 'text-amber-400' : 'text-red-500'}`}>
                                                         {healthScoreResult.healthScore}%
                                                     </span>
                                                 </div>
@@ -663,16 +663,16 @@ const EnterpriseAIPage = () => {
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Narrative Summary</span>
-                                                    <p className="text-sm text-slate-200 leading-relaxed bg-slate-800/30 p-4 rounded-xl border border-slate-800/80">
+                                                    <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider block mb-2">Narrative Summary</span>
+                                                    <p className="text-sm text-ink leading-relaxed bg-surface-2 p-4 rounded-xl border border-line">
                                                         {healthScoreResult.narrative.summary}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">AI Suggestions</span>
-                                                    <ul className="space-y-2 bg-slate-800/30 p-4 rounded-xl border border-slate-800/80">
+                                                    <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider block mb-2">AI Suggestions</span>
+                                                    <ul className="space-y-2 bg-surface-2 p-4 rounded-xl border border-line">
                                                         {(healthScoreResult.narrative.suggestions || healthScoreResult.narrative.recommendations || []).map((sug, i) => (
-                                                            <li key={i} className="text-sm text-slate-300 flex items-start gap-2">
+                                                            <li key={i} className="text-sm text-ink flex items-start gap-2">
                                                                 <span className="text-violet-400 font-bold">•</span> {sug}
                                                             </li>
                                                         ))}
@@ -682,10 +682,10 @@ const EnterpriseAIPage = () => {
 
                                             {healthScoreResult.contributingFactors?.length > 0 && (
                                                 <div>
-                                                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Contributing Factors</span>
+                                                    <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider block mb-2">Contributing Factors</span>
                                                     <div className="flex flex-wrap gap-2">
                                                         {healthScoreResult.contributingFactors.map((fact, i) => (
-                                                            <span key={i} className="px-3 py-1 bg-slate-800 border border-slate-700/80 text-slate-300 text-xs rounded-lg">
+                                                            <span key={i} className="px-3 py-1 bg-surface-2 border border-line text-ink text-xs rounded-lg">
                                                                 {fact}
                                                             </span>
                                                         ))}
@@ -694,7 +694,7 @@ const EnterpriseAIPage = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="h-full min-h-[300px] border-2 border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-slate-500">
+                                        <div className="h-full min-h-[300px] border-2 border-dashed border-line rounded-3xl flex flex-col items-center justify-center text-ink0">
                                             <Activity className="h-12 w-12 mb-3 opacity-25" />
                                             <p className="text-sm">Select an entity and click analyze to calculate ML health status.</p>
                                         </div>
@@ -712,12 +712,12 @@ const EnterpriseAIPage = () => {
                                 exit={{ opacity: 0, y: -15 }}
                                 className="space-y-6"
                             >
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="bg-surface-2 border border-line rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div>
-                                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                        <h3 className="text-lg font-bold text-ink mb-2 flex items-center gap-2">
                                             <Flame className="h-5 w-5 text-red-500" /> Team Burnout Heatmap
                                         </h3>
-                                        <p className="text-sm text-slate-400">
+                                        <p className="text-sm text-ink-soft">
                                             Evaluates active project resource workload, overdue tasks ratio, days since leaves, and calculates critical risk scores.
                                         </p>
                                     </div>
@@ -725,7 +725,7 @@ const EnterpriseAIPage = () => {
                                         <select
                                             value={selectedProject}
                                             onChange={(e) => setSelectedProject(e.target.value)}
-                                            className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600"
+                                            className="bg-surface-2 border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-violet-600"
                                         >
                                             {projectsList.map(p => (
                                                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -745,11 +745,11 @@ const EnterpriseAIPage = () => {
                                 {teamBurnoutResult && (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                         {teamBurnoutResult.map((member, idx) => (
-                                            <div key={idx} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between">
+                                            <div key={idx} className="bg-surface-2 border border-line rounded-3xl p-6 flex flex-col justify-between">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
-                                                        <h4 className="font-bold text-white text-base">{member.userName}</h4>
-                                                        <span className="text-xs text-slate-400">Team Member Analysis</span>
+                                                        <h4 className="font-bold text-ink text-base">{member.userName}</h4>
+                                                        <span className="text-xs text-ink-soft">Team Member Analysis</span>
                                                     </div>
                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${member.prediction.burnout_risk === 'critical' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : member.prediction.burnout_risk === 'high' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : member.prediction.burnout_risk === 'medium' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
                                                         {member.prediction.burnout_risk} risk ({(member.prediction.burnout_probability * 100).toFixed(0)}%)
@@ -757,15 +757,15 @@ const EnterpriseAIPage = () => {
                                                 </div>
 
                                                 <div className="space-y-4">
-                                                    <p className="text-sm text-slate-300 leading-relaxed bg-slate-800/30 p-4 rounded-xl border border-slate-800/80">
+                                                    <p className="text-sm text-ink leading-relaxed bg-surface-2 p-4 rounded-xl border border-line">
                                                         {member.narrative.summary}
                                                     </p>
                                                     
                                                     <div>
-                                                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">Wellness Plan Suggestions</span>
+                                                        <span className="text-[10px] font-semibold text-ink0 uppercase tracking-wider block mb-2">Wellness Plan Suggestions</span>
                                                         <ul className="space-y-1">
                                                             {member.narrative.recommendations.map((rec, i) => (
-                                                                <li key={i} className="text-xs text-slate-400 flex items-start gap-2">
+                                                                <li key={i} className="text-xs text-ink-soft flex items-start gap-2">
                                                                     <span className="text-indigo-400 font-bold">•</span> {rec}
                                                                 </li>
                                                             ))}

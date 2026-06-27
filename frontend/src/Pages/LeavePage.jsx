@@ -160,7 +160,7 @@ const LeavePage = () => {
 
     if (authLoading || isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 flex items-center justify-center p-6">
+            <div className="min-h-screen flex items-center justify-center p-6">
                 <div className="text-center">
                     <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading leave desk...</p>
@@ -189,7 +189,7 @@ const LeavePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6">
+        <div className="min-h-screen p-6">
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -203,7 +203,7 @@ const LeavePage = () => {
 
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-2 hover:-translate-y-0.5"
+                        className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-2 hover:-translate-y-0.5"
                     >
                         <Plus className="w-5 h-5" />
                         Apply for Leave
@@ -275,7 +275,7 @@ const LeavePage = () => {
                                     <p className="text-xs text-gray-400 mb-6">Click the apply button above to submit your first leave request.</p>
                                     <button
                                         onClick={() => setIsModalOpen(true)}
-                                        className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-750 transition"
+                                        className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition"
                                     >
                                         Apply Now
                                     </button>
@@ -306,7 +306,7 @@ const LeavePage = () => {
                                                     <td className="px-6 py-4 font-bold text-gray-700 text-sm">
                                                         {calculateDays(req.startDate, req.endDate)} Days
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm font-semibold text-indigo-650 bg-indigo-50/30 w-fit px-2 py-0.5 rounded capitalize">
+                                                    <td className="px-6 py-4 text-sm font-semibold text-indigo-600 bg-indigo-50/30 w-fit px-2 py-0.5 rounded capitalize">
                                                         {req.leaveType}
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-600 text-sm font-medium max-w-xs truncate" title={req.reason}>
@@ -371,7 +371,7 @@ const LeavePage = () => {
                                                                 <span className="text-gray-400">→</span>
                                                                 <span>{formatDate(req.endDate)}</span>
                                                             </div>
-                                                            <p className="text-xxs text-indigo-650 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 w-fit capitalize">
+                                                            <p className="text-xxs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 w-fit capitalize">
                                                                 {req.leaveType} ({calculateDays(req.startDate, req.endDate)} Days)
                                                             </p>
                                                         </div>
@@ -422,7 +422,7 @@ const LeavePage = () => {
                 <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
                     <div className="bg-white/95 rounded-3xl shadow-2xl p-6 md:p-8 max-w-xl w-full border border-gray-100 relative overflow-hidden backdrop-blur-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-650 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+                            <h2 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
                                 <FileText className="w-7 h-7 text-blue-600" />
                                 Apply for Time Off
                             </h2>
@@ -462,7 +462,7 @@ const LeavePage = () => {
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
                                             required
-                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-semibold text-gray-850"
+                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-semibold text-gray-800"
                                         />
                                     </div>
                                 </div>
@@ -476,7 +476,7 @@ const LeavePage = () => {
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
                                             required
-                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-semibold text-gray-850"
+                                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-semibold text-gray-800"
                                         />
                                     </div>
                                 </div>

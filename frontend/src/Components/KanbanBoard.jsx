@@ -64,7 +64,7 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
                 </div>
                 {task.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
             </div>
-            <p className="text-xxs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded w-fit">
+            <p className="text-xxs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
                 {task.projectName}
             </p>
 
@@ -81,7 +81,7 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
                 </div>
                 {task.dueDate && (
                     <span className="text-gray-400 font-semibold flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-gray-450" />
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
                         {new Date(task.dueDate).toLocaleDateString()}
                     </span>
                 )}
@@ -107,7 +107,7 @@ function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
                     <span className={`w-2.5 h-2.5 rounded-full ${
                         status === 'backlog' ? 'bg-gray-400' :
                         status === 'todo' ? 'bg-blue-400' :
-                        status === 'in-progress' ? 'bg-amber-450 animate-pulse' :
+                        status === 'in-progress' ? 'bg-amber-400 animate-pulse' :
                         status === 'review' ? 'bg-indigo-400' :
                         'bg-emerald-400'
                     }`} />
@@ -237,7 +237,7 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
                             </div>
                             {activeTask.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
                         </div>
-                        <p className="text-xxs font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded w-fit">
+                        <p className="text-xxs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
                             {activeTask.projectName}
                         </p>
 

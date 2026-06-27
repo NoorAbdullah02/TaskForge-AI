@@ -136,7 +136,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-1.5 hover:bg-gray-100 rounded-full transition-all text-gray-400 hover:text-gray-650 cursor-pointer"
+                        className="p-1.5 hover:bg-gray-100 rounded-full transition-all text-gray-400 hover:text-gray-600 cursor-pointer"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -186,7 +186,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                         type="date"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-gray-850 font-bold text-xs bg-white"
+                                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-gray-800 font-bold text-xs bg-white"
                                     />
                                 </div>
                             </div>
@@ -216,7 +216,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                             </button>
                             <button
                                 type="submit"
-                                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 text-white rounded-2xl hover:opacity-95 transition font-extrabold text-sm shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition font-extrabold text-sm shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 Next Step
                                 <ArrowRight className="w-4 h-4" />
@@ -228,7 +228,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                     <div className="space-y-5 relative z-10 animate-fade-in">
                         <div>
                             <h3 className="text-xl font-extrabold text-slate-800">What types of work do you need?</h3>
-                            <p className="text-xs text-slate-550 font-medium mt-1">These form the building blocks of your project.</p>
+                            <p className="text-xs text-slate-500 font-medium mt-1">These form the building blocks of your project.</p>
                         </div>
 
                         {/* List of custom work type cards */}
@@ -244,7 +244,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                         className={`flex items-center justify-between p-3.5 border-2 rounded-2xl transition-all duration-200 cursor-pointer hover:shadow-sm ${
                                             isSelected 
                                                 ? 'border-blue-500 bg-blue-50/15 shadow-sm shadow-blue-500/5' 
-                                                : 'border-gray-250 bg-white hover:border-gray-300'
+                                                : 'border-gray-200 bg-white hover:border-gray-300'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                             })}
                         </div>
 
-                        <p className="text-xxs text-slate-450 font-bold text-center">Don't worry, you can change these later.</p>
+                        <p className="text-xxs text-slate-400 font-bold text-center">Don't worry, you can change these later.</p>
 
                         {/* Submit Buttons */}
                         <div className="flex gap-3">
@@ -290,7 +290,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                             <button
                                 onClick={handleSubmit}
                                 disabled={isLoading || selectedTypes.length === 0}
-                                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 text-white rounded-2xl hover:opacity-95 transition font-extrabold text-sm shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition font-extrabold text-sm shadow-md shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 {isLoading ? (
                                     <>

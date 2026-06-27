@@ -114,7 +114,7 @@ export default function GanttChartPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-white py-10 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header */}
@@ -134,7 +134,7 @@ export default function GanttChartPage() {
                             <select
                                 value={selectedProjectId}
                                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                                className="px-4 py-2 bg-white border border-blue-100 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-850"
+                                className="px-4 py-2 bg-white border border-blue-100 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-800"
                             >
                                 {projects.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name}</option>

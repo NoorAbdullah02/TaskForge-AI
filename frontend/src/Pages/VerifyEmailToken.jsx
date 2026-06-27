@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Mail, CheckCircle, ArrowRight, Sparkles, AlertCircle, Loader } from 'lucide-react';
 import { verifyEmailToken, resendVerificationEmail } from '../Services/authApi';
+import { GlassCard } from '../design-system/primitives';
 
 const EmailVerificationPage = () => {
   const [step, setStep] = useState('verify');
@@ -125,22 +126,7 @@ const EmailVerificationPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden flex items-center justify-center p-4 relative">
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 -right-40 w-80 h-80 bg-gradient-to-tl from-emerald-400/30 to-blue-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-300/20 to-pink-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-
-        <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="currentColor" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
-
+    <div className="min-h-screen overflow-hidden flex items-center justify-center p-4 relative">
       <div className="max-w-2xl w-full relative z-10">
         {step === 'verify' && (
           <div className="animate-in fade-in duration-500">
@@ -149,16 +135,15 @@ const EmailVerificationPage = () => {
                 <Mail className="w-10 h-10 text-white relative z-10" />
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl opacity-0 group-hover:opacity-20 blur transition-opacity"></div>
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 leading-tight">
+              <h1 className="text-5xl md:text-6xl font-bold text-gradient-brand mb-4 leading-tight">
                 Verify Your Email
               </h1>
-              <p className="text-xl text-gray-600 max-w-lg mx-auto">
+              <p className="text-xl text-ink-soft max-w-lg mx-auto">
                 Enter your verification code to activate your account
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 backdrop-blur-xl">
-              <div className="p-8 md:p-12">
+            <GlassCard hoverEffect={false} padding="p-8 md:p-12" className="rounded-3xl"><div>
                 <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl p-6 mb-8 border border-blue-100">
                   <div className="flex items-start gap-4">
                     <Sparkles className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
@@ -266,7 +251,7 @@ const EmailVerificationPage = () => {
                   <button
                     onClick={handleVerifyToken}
                     disabled={isVerifying || !verificationToken.trim() || !email.trim()}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-2 group"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-brand to-accent text-white font-bold rounded-2xl hover:opacity-95 transition-all shadow-[0_10px_30px_rgba(37,99,235,0.25)] disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-2 group"
                   >
                     {isVerifying ? (
                       <>
@@ -314,7 +299,7 @@ const EmailVerificationPage = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlassCard>
           </div>
         )}
 
@@ -325,17 +310,17 @@ const EmailVerificationPage = () => {
                 <CheckCircle className="w-12 h-12 text-white" />
               </div>
 
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4">
+              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-4">
                 Email Verified!
               </h1>
-              <p className="text-xl text-gray-600 max-w-lg mx-auto mb-4">
+              <p className="text-xl text-ink-soft max-w-lg mx-auto mb-4">
                 Your account has been successfully verified.
               </p>
-              <p className="text-lg text-gray-500 max-w-lg mx-auto mb-12">
+              <p className="text-lg text-ink-faint max-w-lg mx-auto mb-12">
                 Redirecting to login page...
               </p>
 
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 p-8 md:p-12 mb-8">
+              <GlassCard hoverEffect={false} padding="p-8 md:p-12" className="rounded-3xl mb-8">
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3 text-lg text-gray-700 justify-center">
                     <CheckCircle className="w-6 h-6 text-green-600" />
@@ -361,13 +346,13 @@ const EmailVerificationPage = () => {
                   </a>
                 </div>
 
-                <div className="mt-6 text-center text-sm text-gray-500">
+                <div className="mt-6 text-center text-sm text-ink-faint">
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-ink-faint rounded-full animate-pulse"></div>
                     <span>Redirecting in 3 seconds...</span>
                   </div>
                 </div>
-              </div>
+              </GlassCard>
             </div>
           </div>
         )}

@@ -170,7 +170,7 @@ const ChatHub = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#060b13] text-slate-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
+        <div className="min-h-screen text-ink py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
             {/* Background glowing overlays */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px]" />
@@ -179,13 +179,13 @@ const ChatHub = () => {
 
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-white/10 mb-8 flex justify-between items-center">
+                <div className="pb-6 border-b border-line mb-8 flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
                             <MessageSquare className="w-8 h-8 text-blue-400" />
                             Enterprise Communication Hub
                         </h1>
-                        <p className="text-slate-400 mt-1 font-medium font-sans">
+                        <p className="text-ink-soft mt-1 font-medium font-sans">
                             Collaborate in real-time with Direct Messages, Group Channels, and Team Rooms.
                         </p>
                     </div>
@@ -194,18 +194,18 @@ const ChatHub = () => {
                         onClick={() => setShowNewRoomModal(true)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] transition cursor-pointer"
                     >
-                        <Plus className="w-4 h-4 text-white" />
+                        <Plus className="w-4 h-4 text-ink" />
                         New Conversation
                     </button>
                 </div>
 
                 {/* Hub Workspace */}
-                <div className="flex-1 min-h-[600px] grid grid-cols-1 lg:grid-cols-12 bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+                <div className="flex-1 min-h-[600px] grid grid-cols-1 lg:grid-cols-12 bg-surface-2 border border-line rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
                     
                     {/* Left Sidebar - Chat channels / DMs */}
-                    <div className="lg:col-span-4 border-r border-white/5 flex flex-col bg-white/[0.01]">
-                        <div className="p-5 border-b border-white/5">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <div className="lg:col-span-4 border-r border-line flex flex-col bg-surface-2">
+                        <div className="p-5 border-b border-line">
+                            <h3 className="text-xs font-black text-ink-soft uppercase tracking-widest flex items-center gap-2">
                                 <Users className="w-4 h-4 text-indigo-400" />
                                 Chat Rooms & Channels
                             </h3>
@@ -213,14 +213,14 @@ const ChatHub = () => {
 
                         <div className="flex-1 overflow-y-auto p-3 space-y-1">
                             {loadingRooms ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                                <div className="flex flex-col items-center justify-center py-20 text-ink0">
                                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                     <span className="text-xs">Fetching active conversations...</span>
                                 </div>
                             ) : rooms.length === 0 ? (
-                                <div className="text-center py-20 text-slate-500">
+                                <div className="text-center py-20 text-ink0">
                                     <p className="text-xs font-semibold">No active chats in this workspace.</p>
-                                    <p className="text-[10px] text-slate-600 mt-1">Start a new conversation to begin.</p>
+                                    <p className="text-[10px] text-ink-faint mt-1">Start a new conversation to begin.</p>
                                 </div>
                             ) : (
                                 rooms.map(r => (
@@ -230,26 +230,26 @@ const ChatHub = () => {
                                         className={`w-full text-left p-3.5 rounded-2xl transition flex flex-col gap-1 cursor-pointer ${
                                             selectedRoom?.id === r.id
                                                 ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 border border-blue-500/30'
-                                                : 'hover:bg-white/[0.02] border border-transparent'
+                                                : 'hover:bg-surface-2 border border-transparent'
                                         }`}
                                     >
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white flex items-center gap-2 truncate">
+                                            <span className="text-xs font-bold text-ink flex items-center gap-2 truncate">
                                                 {r.type === 'direct' ? <User className="w-3.5 h-3.5 text-blue-400" /> : <Hash className="w-3.5 h-3.5 text-indigo-400" />}
                                                 {r.name}
                                             </span>
                                             {r.lastMessage && (
-                                                <span className="text-[9px] text-slate-550 font-mono">
+                                                <span className="text-[9px] text-ink0 font-mono">
                                                     {new Date(r.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             )}
                                         </div>
                                         {r.lastMessage ? (
-                                            <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                                                <span className="font-semibold text-slate-300">{r.lastMessage.senderName}:</span> {r.lastMessage.content}
+                                            <p className="text-[11px] text-ink-soft truncate mt-0.5">
+                                                <span className="font-semibold text-ink">{r.lastMessage.senderName}:</span> {r.lastMessage.content}
                                             </p>
                                         ) : (
-                                            <p className="text-[10px] text-slate-600 italic">No messages yet</p>
+                                            <p className="text-[10px] text-ink-faint italic">No messages yet</p>
                                         )}
                                     </button>
                                 ))
@@ -258,18 +258,18 @@ const ChatHub = () => {
                     </div>
 
                     {/* Middle Column - Message Feed */}
-                    <div className="lg:col-span-8 flex flex-col bg-white/[0.005]">
+                    <div className="lg:col-span-8 flex flex-col bg-surface-2">
                         {selectedRoom ? (
                             <>
                                 {/* Room Header */}
-                                <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                                <div className="p-5 border-b border-line flex items-center justify-between bg-surface-2">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
                                             {selectedRoom.type === 'direct' ? <User className="w-5 h-5" /> : <Hash className="w-5 h-5" />}
                                         </div>
                                         <div>
-                                            <h2 className="text-sm font-bold text-white leading-tight">{selectedRoom.name}</h2>
-                                            <p className="text-[10px] text-slate-400 capitalize mt-0.5">
+                                            <h2 className="text-sm font-bold text-ink leading-tight">{selectedRoom.name}</h2>
+                                            <p className="text-[10px] text-ink-soft capitalize mt-0.5">
                                                 {selectedRoom.type} room • {selectedRoom.members?.length || 0} members
                                             </p>
                                         </div>
@@ -279,7 +279,7 @@ const ChatHub = () => {
                                             <div
                                                 key={m.id}
                                                 title={m.name}
-                                                className="w-7 h-7 bg-white/5 rounded-full border border-white/10 flex items-center justify-center text-[10px] font-bold text-indigo-300 hover:scale-105 transition cursor-pointer overflow-hidden"
+                                                className="w-7 h-7 bg-surface-2 rounded-full border border-line flex items-center justify-center text-[10px] font-bold text-indigo-300 hover:scale-105 transition cursor-pointer overflow-hidden"
                                             >
                                                 {m.avatarUrl ? (
                                                     <img src={m.avatarUrl.split('#')[0]} alt={m.name} className="w-full h-full object-cover" />
@@ -294,22 +294,22 @@ const ChatHub = () => {
                                 {/* Message Stream */}
                                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                     {loadingMessages ? (
-                                        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
                                             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                             <span className="text-xs">Loading message stream...</span>
                                         </div>
                                     ) : messages.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                                            <Sparkles className="w-10 h-10 text-slate-650 animate-pulse mb-3" />
+                                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                                            <Sparkles className="w-10 h-10 text-ink-faint animate-pulse mb-3" />
                                             <p className="text-xs font-semibold">Start of conversation thread</p>
-                                            <p className="text-[10px] text-slate-650 mt-1">Send a message to initialize the dialogue.</p>
+                                            <p className="text-[10px] text-ink-faint mt-1">Send a message to initialize the dialogue.</p>
                                         </div>
                                     ) : (
                                         messages.map(msg => {
                                             const isMe = msg.senderId === user.id;
                                             return (
                                                 <div key={msg.id} className={`flex gap-3 max-w-lg ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
-                                                    <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-blue-300 overflow-hidden flex-shrink-0">
+                                                    <div className="w-8 h-8 rounded-full bg-surface-2 border border-line flex items-center justify-center text-xs font-bold text-blue-300 overflow-hidden flex-shrink-0">
                                                         {msg.senderAvatar ? (
                                                             <img src={msg.senderAvatar.split('#')[0]} alt="Avatar" className="w-full h-full object-cover" />
                                                         ) : (
@@ -319,8 +319,8 @@ const ChatHub = () => {
 
                                                     <div className="flex flex-col gap-1">
                                                         <div className={`flex items-baseline gap-2 ${isMe ? 'justify-end' : ''}`}>
-                                                            <span className="text-[10px] font-black text-slate-300">{msg.senderName}</span>
-                                                            <span className="text-[8px] text-slate-500 font-mono">
+                                                            <span className="text-[10px] font-black text-ink">{msg.senderName}</span>
+                                                            <span className="text-[8px] text-ink0 font-mono">
                                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
@@ -328,7 +328,7 @@ const ChatHub = () => {
                                                         <div className={`p-3.5 rounded-2xl text-xs font-medium leading-relaxed shadow-lg ${
                                                             isMe
                                                                 ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-tr-none'
-                                                                : 'bg-white/[0.04] border border-white/5 text-slate-200 rounded-tl-none'
+                                                                : 'bg-surface-2 border border-line text-ink rounded-tl-none'
                                                         }`}>
                                                             {msg.content}
                                                         </div>
@@ -341,13 +341,13 @@ const ChatHub = () => {
                                 </div>
 
                                 {/* Message Input */}
-                                <form onSubmit={handleSendMessage} className="p-5 border-t border-white/5 bg-white/[0.01] flex items-center gap-3">
+                                <form onSubmit={handleSendMessage} className="p-5 border-t border-line bg-surface-2 flex items-center gap-3">
                                     <input
                                         type="text"
                                         placeholder={`Message ${selectedRoom.name}...`}
                                         value={inputText}
                                         onChange={(e) => setInputText(e.target.value)}
-                                        className="flex-1 bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200 placeholder-slate-500"
+                                        className="flex-1 bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink placeholder-ink-faint"
                                     />
                                     <button
                                         type="submit"
@@ -359,10 +359,10 @@ const ChatHub = () => {
                                 </form>
                             </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-                                <MessageSquare className="w-12 h-12 text-slate-700 mb-3 animate-bounce" />
-                                <h3 className="text-sm font-bold text-white">No Selected Conversation</h3>
-                                <p className="text-xs text-slate-550 mt-1 max-w-xs text-center leading-normal">
+                            <div className="flex-1 flex flex-col items-center justify-center text-ink0 p-8">
+                                <MessageSquare className="w-12 h-12 text-ink-faint mb-3 animate-bounce" />
+                                <h3 className="text-sm font-bold text-ink">No Selected Conversation</h3>
+                                <p className="text-xs text-ink0 mt-1 max-w-xs text-center leading-normal">
                                     Select an active channel from the sidebar or launch a new conversation.
                                 </p>
                             </div>
@@ -374,15 +374,15 @@ const ChatHub = () => {
             {/* NEW CONVERSATION MODAL */}
             {showNewRoomModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-[#0b1322] border border-white/10 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-                        <h2 className="text-lg font-extrabold text-white mb-5 flex items-center gap-2">
+                    <div className="bg-card border border-line w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+                        <h2 className="text-lg font-extrabold text-ink mb-5 flex items-center gap-2">
                             <Plus className="w-5 h-5 text-blue-400" />
                             Start New Conversation
                         </h2>
 
                         <form onSubmit={handleCreateRoomSubmit} className="space-y-4">
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Room Type</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">Room Type</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         type="button"
@@ -390,7 +390,7 @@ const ChatHub = () => {
                                         className={`py-3.5 rounded-2xl text-xs font-bold border transition cursor-pointer ${
                                             newRoomType === 'group'
                                                 ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
-                                                : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.04]'
+                                                : 'bg-surface-2 text-ink-soft border-line hover:bg-surface-2'
                                         }`}
                                     >
                                         Group Channel
@@ -401,7 +401,7 @@ const ChatHub = () => {
                                         className={`py-3.5 rounded-2xl text-xs font-bold border transition cursor-pointer ${
                                             newRoomType === 'direct'
                                                 ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
-                                                : 'bg-white/[0.02] text-slate-400 border-white/5 hover:bg-white/[0.04]'
+                                                : 'bg-surface-2 text-ink-soft border-line hover:bg-surface-2'
                                         }`}
                                     >
                                         Direct Message
@@ -411,26 +411,26 @@ const ChatHub = () => {
 
                             {newRoomType === 'group' ? (
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Channel Name</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">Channel Name</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. general, marketing, project-omega"
                                         value={newRoomName}
                                         onChange={(e) => setNewRoomName(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-slate-200"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink"
                                     />
                                 </div>
                             ) : (
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select User</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">Select User</label>
                                     <select
                                         value={selectedMemberId}
                                         onChange={(e) => setSelectedMemberId(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-blue-500 text-slate-300"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-blue-500 text-ink"
                                     >
-                                        <option value="" className="bg-[#0b1322] text-slate-400">Choose a colleague...</option>
+                                        <option value="" className="bg-card text-ink-soft">Choose a colleague...</option>
                                         {members.filter(m => m.id !== user.id).map(m => (
-                                            <option key={m.id} value={m.id} className="bg-[#0b1322] text-slate-250">
+                                            <option key={m.id} value={m.id} className="bg-card text-ink">
                                                 {m.name} ({m.email})
                                             </option>
                                         ))}
@@ -442,7 +442,7 @@ const ChatHub = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowNewRoomModal(false)}
-                                    className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-2xl transition cursor-pointer text-slate-300"
+                                    className="flex-1 py-3.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
                                 >
                                     Cancel
                                 </button>

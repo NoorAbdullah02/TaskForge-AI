@@ -162,7 +162,7 @@ const TimeTracker = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#070b13] text-slate-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
+        <div className="min-h-screen text-ink py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
             {/* Background glowing overlays */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px]" />
@@ -171,22 +171,22 @@ const TimeTracker = () => {
 
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-white/10 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="pb-6 border-b border-line mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
                             <Clock className="w-8 h-8 text-emerald-400" />
                             Time Tracking Station
                         </h1>
-                        <p className="text-slate-400 mt-1 font-medium font-sans">
+                        <p className="text-ink-soft mt-1 font-medium font-sans">
                             Measure billable hours, record project task time logs, and audit daily productivity workloads.
                         </p>
                     </div>
 
                     <button
                         onClick={() => setShowManualModal(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 transition cursor-pointer"
                     >
-                        <Plus className="w-4 h-4 text-slate-300" />
+                        <Plus className="w-4 h-4 text-ink" />
                         Log Hours Manually
                     </button>
                 </div>
@@ -195,13 +195,13 @@ const TimeTracker = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
                     
                     {/* Live Tracker Card */}
-                    <div className="lg:col-span-8 bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-md">
+                    <div className="lg:col-span-8 bg-surface-2 border border-line rounded-3xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-md">
                         <div className="flex-1 space-y-4 w-full">
                             {activeTimer ? (
                                 <div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Active Log Timer</span>
-                                    <h3 className="text-sm font-bold text-white mt-1">
-                                        {activeTimer.description || <span className="italic text-slate-500">Unlabeled tracking session</span>}
+                                    <span className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Active Log Timer</span>
+                                    <h3 className="text-sm font-bold text-ink mt-1">
+                                        {activeTimer.description || <span className="italic text-ink0">Unlabeled tracking session</span>}
                                     </h3>
                                     {activeTimer.taskTitle && (
                                         <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold font-mono uppercase">
@@ -214,26 +214,26 @@ const TimeTracker = () => {
                                 <form onSubmit={handleStartTimer} className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Tracking Description</label>
+                                            <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Tracking Description</label>
                                             <input
                                                 type="text"
                                                 placeholder="What are you working on?"
                                                 value={description}
                                                 onChange={(e) => setDescription(e.target.value)}
-                                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 text-slate-200"
+                                                className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 text-ink"
                                             />
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Link Active Task</label>
+                                            <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Link Active Task</label>
                                             <select
                                                 value={selectedTaskId}
                                                 onChange={(e) => setSelectedTaskId(e.target.value)}
-                                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
+                                                className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
                                             >
-                                                <option value="" className="bg-[#0b1322] text-slate-500">Choose task (Optional)</option>
+                                                <option value="" className="bg-card text-ink0">Choose task (Optional)</option>
                                                 {tasks.map(t => (
-                                                    <option key={t.id} value={t.id} className="bg-[#0b1322] text-slate-300">
+                                                    <option key={t.id} value={t.id} className="bg-card text-ink">
                                                         {t.title}
                                                     </option>
                                                 ))}
@@ -246,7 +246,7 @@ const TimeTracker = () => {
                                         disabled={submitting}
                                         className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] transition cursor-pointer"
                                     >
-                                        <Play className="w-4 h-4 text-white" />
+                                        <Play className="w-4 h-4 text-ink" />
                                         Initialize Tracker
                                     </button>
                                 </form>
@@ -254,9 +254,9 @@ const TimeTracker = () => {
                         </div>
 
                         {/* Large digital clock */}
-                        <div className="flex flex-col items-center justify-center p-6 bg-white/[0.02] border border-white/5 rounded-2xl md:w-64 w-full">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Elapsed duration</span>
-                            <div className="text-4xl font-extrabold text-white font-mono tracking-wider">
+                        <div className="flex flex-col items-center justify-center p-6 bg-surface-2 border border-line rounded-2xl md:w-64 w-full">
+                            <span className="text-[9px] font-black text-ink-soft uppercase tracking-widest block mb-2">Elapsed duration</span>
+                            <div className="text-4xl font-extrabold text-ink font-mono tracking-wider">
                                 {formatDuration(secondsElapsed)}
                             </div>
                             {activeTimer && (
@@ -274,50 +274,50 @@ const TimeTracker = () => {
                     </div>
 
                     {/* Stats summary */}
-                    <div className="lg:col-span-4 bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col justify-between backdrop-blur-md">
+                    <div className="lg:col-span-4 bg-surface-2 border border-line rounded-3xl p-6 shadow-xl flex flex-col justify-between backdrop-blur-md">
                         <div>
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <h3 className="text-xs font-black text-ink-soft uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <List className="w-4 h-4 text-emerald-400" />
                                 Daily Summary
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-450 font-semibold">Today's Logs</span>
-                                    <span className="text-xs font-mono font-bold text-white">{logs.length} entries</span>
+                                    <span className="text-xs text-ink-soft font-semibold">Today's Logs</span>
+                                    <span className="text-xs font-mono font-bold text-ink">{logs.length} entries</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-450 font-semibold">Accumulated Time</span>
+                                    <span className="text-xs text-ink-soft font-semibold">Accumulated Time</span>
                                     <span className="text-xs font-mono font-bold text-emerald-400">
                                         {formatDuration(logs.reduce((acc, curr) => acc + (curr.duration || 0), 0))}
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <div className="border-t border-white/5 pt-4 mt-4">
-                            <span className="text-[10px] text-slate-500 font-sans block">Timer preserves status in database and will continue running even if you navigate away or close the app.</span>
+                        <div className="border-t border-line pt-4 mt-4">
+                            <span className="text-[10px] text-ink0 font-sans block">Timer preserves status in database and will continue running even if you navigate away or close the app.</span>
                         </div>
                     </div>
                 </div>
 
                 {/* History table */}
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex-1">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex-1">
+                    <h3 className="text-xs font-black text-ink-soft uppercase tracking-widest mb-6 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-indigo-400" />
                         Time Logs History
                     </h3>
 
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                             <span className="text-xs">Gathering work logs...</span>
                         </div>
                     ) : logs.length === 0 ? (
-                        <p className="text-xs text-slate-500 py-10 text-center font-sans">No work hours logged yet.</p>
+                        <p className="text-xs text-ink0 py-10 text-center font-sans">No work hours logged yet.</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs text-slate-300 font-sans border-collapse">
+                            <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                 <thead>
-                                    <tr className="border-b border-white/5 text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                                    <tr className="border-b border-line text-[10px] font-bold text-ink-soft uppercase tracking-wider">
                                         <th className="pb-3 pr-4">Work Description</th>
                                         <th className="pb-3 pr-4">Linked Task</th>
                                         <th className="pb-3 pr-4">Start Time</th>
@@ -327,20 +327,20 @@ const TimeTracker = () => {
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     {logs.map(log => (
-                                        <tr key={log.id} className="hover:bg-white/[0.01] transition-colors">
-                                            <td className="py-3.5 font-bold text-white pr-4">{log.description || <span className="text-slate-500 italic">No description</span>}</td>
+                                        <tr key={log.id} className="hover:bg-surface-2 transition-colors">
+                                            <td className="py-3.5 font-bold text-ink pr-4">{log.description || <span className="text-ink0 italic">No description</span>}</td>
                                             <td className="py-3.5 pr-4">
                                                 {log.taskTitle ? (
-                                                    <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-semibold text-indigo-300 border border-white/5">
+                                                    <span className="px-2 py-0.5 rounded bg-surface-2 text-[10px] font-semibold text-indigo-300 border border-line">
                                                         {log.taskTitle}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-slate-500 italic">None</span>
+                                                    <span className="text-ink0 italic">None</span>
                                                 )}
                                             </td>
-                                            <td className="py-3.5 font-mono text-slate-450 pr-4">{new Date(log.startTime).toLocaleString()}</td>
-                                            <td className="py-3.5 font-mono text-slate-450 pr-4">{log.endTime ? new Date(log.endTime).toLocaleString() : <span className="text-emerald-400 font-bold uppercase text-[9px] animate-pulse">Running</span>}</td>
-                                            <td className="py-3.5 text-right font-mono font-bold text-slate-200">{formatDuration(log.duration)}</td>
+                                            <td className="py-3.5 font-mono text-ink-soft pr-4">{new Date(log.startTime).toLocaleString()}</td>
+                                            <td className="py-3.5 font-mono text-ink-soft pr-4">{log.endTime ? new Date(log.endTime).toLocaleString() : <span className="text-emerald-400 font-bold uppercase text-[9px] animate-pulse">Running</span>}</td>
+                                            <td className="py-3.5 text-right font-mono font-bold text-ink">{formatDuration(log.duration)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -353,56 +353,56 @@ const TimeTracker = () => {
             {/* MANUAL LOG MODAL */}
             {showManualModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-[#0b1322] border border-white/10 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-                        <h2 className="text-lg font-extrabold text-white mb-5 flex items-center gap-2">
+                    <div className="bg-card border border-line w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+                        <h2 className="text-lg font-extrabold text-ink mb-5 flex items-center gap-2">
                             <Plus className="w-5 h-5 text-emerald-400" />
                             Log Time Manually
                         </h2>
 
                         <form onSubmit={handleManualSubmit} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Work Description</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Work Description</label>
                                 <input
                                     type="text"
                                     placeholder="What did you work on?"
                                     value={manualDesc}
                                     onChange={(e) => setManualDesc(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 text-slate-200"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 text-ink"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Start Date/Time</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Start Date/Time</label>
                                     <input
                                         type="datetime-local"
                                         value={manualStart}
                                         onChange={(e) => setManualStart(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-300"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-ink"
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">End Date/Time</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">End Date/Time</label>
                                     <input
                                         type="datetime-local"
                                         value={manualEnd}
                                         onChange={(e) => setManualEnd(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-300"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-4 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-ink"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Link Task</label>
+                                <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Link Task</label>
                                 <select
                                     value={manualTaskId}
                                     onChange={(e) => setManualTaskId(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
                                 >
-                                    <option value="" className="bg-[#0b1322] text-slate-500">Choose task (Optional)</option>
+                                    <option value="" className="bg-card text-ink0">Choose task (Optional)</option>
                                     {tasks.map(t => (
-                                        <option key={t.id} value={t.id} className="bg-[#0b1322] text-slate-300">
+                                        <option key={t.id} value={t.id} className="bg-card text-ink">
                                             {t.title}
                                         </option>
                                     ))}
@@ -413,7 +413,7 @@ const TimeTracker = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowManualModal(false)}
-                                    className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-2xl transition cursor-pointer text-slate-300"
+                                    className="flex-1 py-3.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
                                 >
                                     Cancel
                                 </button>

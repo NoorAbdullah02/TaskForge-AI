@@ -1,0 +1,774 @@
+================================================================================
+                         TASKFORGE AI - PROJECT INFORMATION
+                              Complete Documentation
+                                 Date: 2026-06-27
+
+PROJECT OVERVIEW
+TaskForge AI is an enterprise-ready task and team intelligence platform built 
+to support workspace-based onboarding, team collaboration, project management, 
+notifications, AI-driven insights, and operational reporting.
+
+Repository URL: https://github.com/NoorAbdullah02/TaskForge-AI
+License: ISC
+Current Version: 1.0.0
+Minimum Node.js: 20.0.0+
+
+
+KEY FEATURES
+1. WORKSPACE & ONBOARDING
+   - Workspace-based architecture with invite links
+   - Registration codes for team members
+   - Admin invite emails for workspace setup
+   - First-user super admin bootstrap
+   - Role-based workspace access control
+
+2. TEAM COLLABORATION
+   - Pending workspace join requests
+   - Approval workflow for member management
+   - Real-time socket notifications with socket.io
+   - Team management and member oversight
+
+3. PROJECT MANAGEMENT
+   - Project, Sprint, Epic, Story, Task management
+   - Task assignment and tracking
+   - Milestone management
+   - Time tracking and logging
+   - Kanban board and Gantt chart views
+
+4. EMPLOYEE MANAGEMENT
+   - Attendance tracking
+   - Leave management
+   - Calendar scheduling
+   - Time tracker
+   - Notification workflows
+
+5. AI & INTELLIGENCE FEATURES
+   - Productivity prediction & analytics
+   - Project delay prediction
+   - Burnout risk assessment
+   - Resource optimization recommendations
+   - Project success probability prediction
+   - Deadline estimation
+   - AI-powered task generation from descriptions
+   - Meeting summarization & action item extraction
+   - AI Copilot for workspace assistance
+   - Enterprise AI insights
+
+6. REPORTING & DASHBOARDS
+   - Executive Dashboard
+   - PM Dashboard
+   - Team Leader Dashboard
+   - Employee Dashboard
+   - Owner Dashboard
+   - Super Admin Console
+   - Project Intelligence Dashboard
+   - Reports with export capabilities
+
+7. INFRASTRUCTURE
+   - Email queuing and trigger service
+   - Background job processing with BullMQ
+   - Redis caching and queue management
+   - Real-time notifications
+   - File upload and management
+   - Knowledge Base system
+
+
+TECHNOLOGY STACK
+================================================================================
+
+BACKEND:
+  - Runtime: Node.js (v20+)
+  - Framework: Express.js 5.2.1
+  - Language: TypeScript 5.9.3
+  - Database ORM: Drizzle ORM 0.45.1
+  - Database: PostgreSQL (pg 8.16.3)
+  - Cache & Queue: Redis with IORedis 5.11.1
+  - Job Queue: BullMQ 5.79.1
+  - Authentication: JWT (jsonwebtoken 9.0.3)
+  - Password Hashing: bcryptjs 3.0.3
+  - Real-time: Socket.io 4.8.3
+  - Security: Helmet 8.2.0
+  - Email: Nodemailer 7.0.12, Brevo API, Resend
+  - File Upload: Multer 2.0.2
+  - Image Management: ImageKit 6.0.0
+  - Validation: Zod 4.3.5
+  - AI Integration: Google Generative AI (@google/generative-ai 0.24.1)
+  - Documentation: Swagger UI Express 5.0.1
+  - Scheduling: node-cron 4.5.0
+  - Email Templates: MJML 4.18.0
+  - Development: Nodemon 3.1.11, ts-node 10.9.2
+
+FRONTEND:
+  - Framework: React 19.2.0
+  - Build Tool: Vite 7.2.4
+  - Styling: Tailwind CSS 4.1.18
+  - Router: React Router 7.18.0
+  - State Management: Zustand 5.0.14
+  - HTTP Client: Axios 1.13.2
+  - Animation: Framer Motion 12.41.0, GSAP 3.15.0
+  - 3D Graphics: Three.js 0.185.0, @react-three/fiber, @react-three/drei
+  - Charts: Recharts 3.9.0
+  - Icons: lucide-react 0.562.0
+  - Notifications: react-hot-toast 2.6.0
+  - Real-time: socket.io-client 4.8.3
+  - Data Fetching: @tanstack/react-query 5.101.1
+  - Drag & Drop: @dnd-kit
+  - DOM Manipulation: React DOM 19.2.0
+  - Linting: ESLint 9.39.1
+
+MACHINE LEARNING SERVICE:
+  - Runtime: Python 3.x
+  - Web Framework: FastAPI 0.110.0+
+  - Server: Uvicorn 0.28.0+
+  - Machine Learning: scikit-learn, XGBoost, LightGBM, CatBoost
+  - Data Processing: Pandas 2.2.0+, NumPy 1.26.0+
+  - Model Serialization: joblib 1.3.0+
+  - Validation: Pydantic 2.6.0+
+  - HTTP: httpx 0.27.0+
+  - Pre-trained Models:
+    * attendance_classifier.joblib
+    * burnout_classifier.joblib
+    * delay_classifier.joblib
+    * delay_regressor.joblib
+    * health_regressor.joblib
+    * productivity_regressor.joblib
+    * resource_regressor.joblib
+
+
+REPOSITORY STRUCTURE
+================================================================================
+
+/Backend
+  - TypeScript source code
+  - Express.js server setup
+  - Database configuration and migrations
+
+  ├── src/
+  │   ├── index.ts                      [Main server entry point]
+  │   ├── config/
+  │   │   └── env.ts                    [Environment variables]
+  │   ├── controllers/                  [Request handlers]
+  │   │   ├── adminController.ts
+  │   │   ├── ai.controller.ts          [AI/ML predictions integration]
+  │   │   ├── attendance.controller.ts
+  │   │   ├── calendar.controller.ts
+  │   │   ├── chat.controller.ts
+  │   │   ├── dashboard.controller.ts
+  │   │   ├── epicController.ts
+  │   │   ├── file.controller.ts
+  │   │   ├── kb.controller.ts          [Knowledge Base]
+  │   │   ├── leave.controller.ts
+  │   │   ├── notification.controller.ts
+  │   │   ├── project.controller.ts
+  │   │   ├── projectIntelligence.controller.ts
+  │   │   ├── reportsController.ts
+  │   │   ├── sprintController.ts
+  │   │   ├── storyController.ts
+  │   │   ├── superAdminController.ts
+  │   │   ├── task.controller.ts
+  │   │   ├── teamController.ts
+  │   │   ├── time.controller.ts        [Time tracking]
+  │   │   ├── upload.controller.ts      [File uploads]
+  │   │   ├── userController.ts
+  │   │   └── workspaceController.ts
+  │   ├── db/
+  │   │   └── schema.ts                 [Drizzle ORM schema]
+  │   ├── emails/                       [Email templates]
+  │   ├── lib/                          [Utility libraries]
+  │   ├── middleware/                   [Express middleware]
+  │   ├── repositories/                 [Data access layer]
+  │   ├── routes/                       [API route definitions]
+  │   │   ├── ai.routes.ts              [AI endpoints]
+  │   │   ├── projectIntelligence.routes.ts
+  │   │   ├── attendance.routes.ts
+  │   │   ├── calendar.routes.ts
+  │   │   ├── chat.routes.ts
+  │   │   ├── dashboard.routes.ts
+  │   │   ├── kb.routes.ts
+  │   │   ├── leave.routes.ts
+  │   │   ├── notification.routes.ts
+  │   │   ├── project.routes.ts
+  │   │   ├── reports.routes.ts
+  │   │   ├── task.routes.ts
+  │   │   ├── time.routes.ts
+  │   │   ├── upload.routes.ts
+  │   │   ├── userRoute.ts
+  │   │   ├── workspace.routes.ts
+  │   │   └── agile.routes.ts
+  │   ├── services/                     [Business logic]
+  │   │   ├── ml.service.ts             [ML service interface]
+  │   │   ├── projectIntelligence.service.ts
+  │   │   ├── attendance.service.ts
+  │   │   ├── dashboard.service.ts
+  │   │   ├── notification.service.ts
+  │   │   ├── task.service.ts
+  │   │   ├── project.service.ts
+  │   │   ├── enterpriseAI.service.ts
+  │   │   ├── emailTrigger.service.ts
+  │   │   ├── socket.service.ts
+  │   │   ├── escalation.scheduler.ts
+  │   │   └── automation.scheduler.ts
+  │   ├── tests/                        [Test files]
+  │   ├── validations/                  [Input validation]
+  │   └── workers/                      [Background workers]
+  ├── drizzle/                          [Database migrations]
+  ├── tsconfig.json
+  ├── nodemon.json
+  ├── drizzle.config.ts
+  └── package.json
+
+/frontend
+  - React 19 application
+  - Vite configuration
+  - Component library and design system
+
+  ├── src/
+  │   ├── main.jsx                      [Entry point]
+  │   ├── App.jsx                       [Main app component]
+  │   ├── index.css                     [Global styles]
+  │   ├── Pages/                        [Page components]
+  │   │   ├── Dashboard.jsx
+  │   │   ├── dashboards/
+  │   │   │   ├── EmployeeDashboard.jsx
+  │   │   │   ├── PMDashboard.jsx
+  │   │   │   ├── TeamLeaderDashboard.jsx
+  │   │   │   ├── OwnerDashboard.jsx
+  │   │   │   └── SuperAdminDashboard.jsx
+  │   │   ├── ProjectsPage.jsx
+  │   │   ├── TasksPage.jsx
+  │   │   ├── TaskDetailsPage.jsx
+  │   │   ├── ProjectDetailsPage.jsx
+  │   │   ├── ProjectIntelligenceDashboard.jsx
+  │   │   ├── ExecutiveDashboard.jsx
+  │   │   ├── AIWorkspace.jsx
+  │   │   ├── EnterpriseAIPage.jsx
+  │   │   ├── SprintPlanningPage.jsx
+  │   │   ├── GanttChartPage.jsx
+  │   │   ├── KanbanBoard.jsx
+  │   │   ├── AttendancePage.jsx
+  │   │   ├── LeavePage.jsx
+  │   │   ├── WorkspaceCalendar.jsx
+  │   │   ├── TimeTracker.jsx
+  │   │   ├── ChatHub.jsx
+  │   │   ├── ReportsPage.jsx
+  │   │   ├── KnowledgeBase.jsx
+  │   │   ├── AdminSettingsPage.jsx
+  │   │   ├── SuperAdminConsole.jsx
+  │   │   ├── TeamsPage.jsx
+  │   │   ├── ProfilePage.jsx
+  │   │   ├── LandingPage.jsx
+  │   │   ├── LoginPage.jsx
+  │   │   ├── RegisterPage.jsx
+  │   │   ├── ForgotPassword.jsx
+  │   │   ├── ResetPassword.jsx
+  │   │   └── More pages...
+  │   ├── Components/                   [Reusable components]
+  │   │   ├── KanbanBoard.jsx
+  │   │   ├── TaskModal.jsx
+  │   │   ├── CreateProjectModal.jsx
+  │   │   ├── Header.jsx
+  │   │   ├── DashboardUtils.jsx
+  │   │   ├── ThreeBackground.jsx
+  │   │   ├── AnimatedCounter.jsx
+  │   │   └── More components...
+  │   ├── Services/                     [API services]
+  │   │   ├── aiApi.js                  [AI endpoints]
+  │   │   └── Other API services...
+  │   ├── context/                      [React context]
+  │   ├── design-system/                [Design system components]
+  │   │   ├── primitives.jsx
+  │   │   ├── ThemeProvider.jsx
+  │   │   ├── DesignSystemProviderWrapper.jsx
+  │   │   └── More design components...
+  │   └── public/
+  ├── vite.config.js
+  ├── eslint.config.js
+  ├── index.html
+  └── package.json
+
+/ml-service
+  - Python FastAPI service
+  - Machine learning models
+  - Prediction endpoints
+
+  ├── main.py                           [FastAPI application]
+  ├── config.py                         [Configuration]
+  ├── run.py                            [Script runner]
+  ├── test_api.py                       [API testing script]
+  ├── routers/                          [API route handlers]
+  │   ├── attendance.py                 [Attendance predictions]
+  │   ├── burnout.py                    [Burnout risk predictions]
+  │   ├── delay.py                      [Project delay predictions]
+  │   ├── productivity.py               [Productivity predictions]
+  │   └── resource.py                   [Resource recommendations]
+  ├── schemas/                          [Pydantic validation schemas]
+  │   ├── attendance.py
+  │   ├── burnout.py
+  │   ├── delay.py
+  │   ├── health_score.py
+  │   ├── productivity.py
+  │   └── resource.py
+  ├── services/
+  │   └── predictor.py                  [ML model loading & predictions]
+  ├── training/                         [Model training scripts]
+  │   ├── train_all.py
+  │   ├── train_attendance.py
+  │   ├── train_burnout.py
+  │   ├── train_delay.py
+  │   ├── train_productivity.py
+  │   ├── train_resource.py
+  │   ├── generate_data.py
+  │   └── data/
+  ├── models/                           [Serialized ML models]
+  │   ├── attendance_classifier.joblib
+  │   ├── attendance_scaler.joblib
+  │   ├── burnout_classifier.joblib
+  │   ├── delay_classifier.joblib
+  │   ├── delay_regressor.joblib
+  │   ├── delay_reg_scaler.joblib
+  │   ├── delay_scaler.joblib
+  │   ├── health_regressor.joblib
+  │   ├── productivity_regressor.joblib
+  │   ├── productivity_scaler.joblib
+  │   ├── resource_preprocessor.joblib
+  │   └── resource_regressor.joblib
+  ├── catboost_info/                    [CatBoost training logs]
+  ├── requirements.txt
+  └── config.py
+
+
+ENVIRONMENT VARIABLES
+================================================================================
+
+BACKEND (.env file in Backend/):
+  ├── SERVER CONFIGURATION
+  │   ├── PORT=4000                     [Server port]
+  │   ├── NODE_ENV=development          [Environment: development/production]
+  │   └── ML_SERVICE_URL=http://127.0.0.1:8000  [ML service connection]
+  │
+  ├── DATABASE
+  │   └── DB_URL=postgresql://user:password@localhost:5432/taskforge
+  │
+  ├── APPLICATION URLS
+  │   ├── FRONTEND_URL=http://localhost:5173    [Frontend URL for CORS]
+  │   └── BACKEND_URL=http://localhost:4000     [Backend URL]
+  │
+  ├── AUTHENTICATION
+  │   └── JWT_SECRET=supersecretjwtkey
+  │
+  ├── EMAIL SERVICE
+  │   ├── BREVO_API_KEY=your-brevo-api-key
+  │   ├── EMAIL_FROM=no-reply@taskforge.ai
+  │   └── EMAIL_FROM_NAME=TaskForge AI
+  │
+  ├── AI SERVICES
+  │   ├── GEMINI_API_KEY=your-gemini-api-key
+  │   └── MISTRAL_API_KEY=your-mistral-api-key
+  │
+  ├── CACHE & QUEUE
+  │   └── REDIS_URL=redis://127.0.0.1:6379
+  │
+  └── FILE MANAGEMENT
+      ├── IMAGEKIT_PUBLIC_KEY=your-imagekit-public-key
+      ├── IMAGEKIT_PRIVATE_KEY=your-imagekit-private-key
+      └── IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your-account
+
+FRONTEND (.env file in frontend/):
+  └── VITE_API_BASE_URL=http://localhost:4000/api
+
+ML SERVICE (.env or environment variables):
+  ├── HOST=127.0.0.1
+  ├── PORT=8000
+  ├── BACKEND_URL=http://localhost:4000
+  └── FRONTEND_URL=http://localhost:5173
+
+
+INSTALLATION & SETUP
+
+PREREQUISITES:
+  - Node.js v20 or higher
+  - npm v10 or higher
+  - PostgreSQL database
+  - Redis server
+  - Python 3.8+ (for ML service)
+  - Optional: Email provider (Brevo, Resend, etc.)
+
+STEP-BY-STEP INSTALLATION:
+
+1. Clone Repository:
+   git clone https://github.com/NoorAbdullah02/TaskForge-AI-.git
+   cd "TaskForge AI"
+
+2. Install Dependencies:
+   npm install --prefix Backend --include=dev
+   npm install --prefix frontend --include=dev
+   cd ml-service && pip install -r requirements.txt
+
+3. Database Setup:
+   - Create PostgreSQL database: taskforge
+   - Update DB_URL in Backend/.env with your credentials
+   - Run migrations: npm run db:push --prefix Backend
+
+4. Configure Environment Variables:
+   - Copy template env vars to Backend/.env (see ENVIRONMENT VARIABLES above)
+   - Create frontend/.env with VITE_API_BASE_URL
+
+5. Start Services (in separate terminals):
+   Terminal 1 - Backend:
+     npm run dev --prefix Backend
+
+   Terminal 2 - Frontend:
+     npm run dev --prefix frontend
+
+   Terminal 3 - ML Service:
+     cd ml-service
+     python run.py
+
+6. Access Application:
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:4000/api
+   - ML Service: http://localhost:8000
+   - Swagger Docs: http://localhost:4000/api-docs (if available)
+
+PRODUCTION BUILD:
+   npm run build                        [From root directory]
+
+
+AVAILABLE SCRIPTS
+================================================================================
+
+ROOT LEVEL (package.json):
+  npm run build
+    - Installs backend and frontend dependencies
+    - Builds frontend assets
+    - Compiles backend TypeScript
+
+  npm run start
+    - Runs database migrations
+    - Starts backend server
+
+BACKEND (Backend/package.json):
+  npm run dev
+    - Starts backend with hot reload via Nodemon
+    - Watches for file changes
+
+  npm run build
+    - Compiles TypeScript to JavaScript
+    - Output: Backend/dist/
+
+  npm run db:push
+    - Applies Drizzle ORM schema changes to database
+    - Runs pending migrations
+
+  npm run db:studio
+    - Opens Drizzle Studio GUI
+    - Visual database management
+
+  npm run start
+    - Runs compiled backend from dist/
+    - Production startup
+
+FRONTEND (frontend/package.json):
+  npm run dev
+    - Starts Vite development server with HMR
+    - Default: http://localhost:5173
+
+  npm run build
+    - Builds production frontend assets
+    - Output: frontend/dist/
+
+  npm run lint
+    - Runs ESLint checks
+    - Reports code quality issues
+
+  npm run preview
+    - Previews built frontend locally
+
+ML SERVICE (ml-service/):
+  python run.py
+    - Starts FastAPI server
+    - Default: http://127.0.0.1:8000
+
+  python test_api.py
+    - Tests all ML prediction endpoints
+    - Requires running FastAPI server
+
+
+API ENDPOINTS & CONNECTIONS
+================================================================================
+
+ML SERVICE CONNECTION:
+
+Backend to ML Service:
+  Location: Backend/src/services/ml.service.ts (Line 3)
+  Base URL: http://127.0.0.1:8000/api/predict
+
+Available ML Prediction Endpoints:
+  - POST /api/predict/delay                [Project delay prediction]
+  - POST /api/predict/attendance           [Attendance prediction]
+  - POST /api/predict/productivity         [Productivity forecast]
+  - POST /api/predict/resource             [Resource recommendations]
+  - POST /api/predict/burnout              [Burnout risk assessment]
+  - POST /api/predict/project-success      [Project success probability]
+  - POST /api/predict/deadline             [Deadline estimation]
+  - POST /api/predict/health               [Health score]
+
+Frontend Calls to Backend AI Endpoints:
+  Location: frontend/src/Services/aiApi.js
+  - GET /api/ai/predict-deadline/{type}/{id}          [Line 49-50]
+  - GET /api/ai/predict-project-success/{projectId}   [Line 54-55]
+  - GET /api/ai/predict-productivity/{userId}         [Line 59-60]
+
+Backend AI Controller to ML Service:
+  Location: Backend/src/controllers/ai.controller.ts
+  - predictDeadline()         → MLService.predictDeadline()        [Line 565]
+  - predictProjectSuccess()   → MLService.predictProjectSuccess()  [Line 701]
+  - predictProductivity()     → MLService.predictProductivity()    [Line 707]
+
+CORS Configuration (ML Service):
+  Allowed Origins:
+    - http://localhost:5173        [Frontend]
+    - http://127.0.0.1:5173        [Frontend]
+    - http://localhost:4000        [Backend]
+    - http://127.0.0.1:4000        [Backend]
+
+
+KEY CONTROLLERS & SERVICES
+================================================================================
+
+AI CONTROLLER (Backend/src/controllers/ai.controller.ts):
+  - generateTasks()              [Generate tasks from project description]
+  - summarizeMeeting()           [Summarize meeting notes to action items]
+  - copilot()                    [AI copilot chat interface]
+  - resourcePlanner()            [Recommend resources for projects]
+  - predictDeadline()            [Predict deadline using ML]
+  - predictProjectSuccess()      [Predict project success probability]
+  - predictProductivity()        [Predict employee productivity]
+
+PROJECT INTELLIGENCE SERVICE:
+  - Tracks project health metrics
+  - Provides insights on team performance
+  - Monitors project risks
+  - Generates intelligence recommendations
+
+DASHBOARD SERVICE:
+  - Employee dashboard data aggregation
+  - PM dashboard insights
+  - Team lead reporting
+  - Executive summaries
+
+EMAIL TRIGGER SERVICE:
+  - Workspace onboarding emails
+  - Task assignment notifications
+  - Leave requests
+  - Project updates
+  - Scheduled reminders
+
+NOTIFICATION SERVICE:
+  - Real-time socket notifications
+  - Database notification persistence
+  - User notification preferences
+
+
+DATABASE SCHEMA HIGHLIGHTS
+================================================================================
+
+Primary Entities:
+  - users               [User accounts and profiles]
+  - workspaces          [Workspace/organization]
+  - workspaceMembers    [User workspace memberships]
+  - projects            [Projects]
+  - projectMembers      [Project team assignments]
+  - sprints             [Sprint management]
+  - tasks               [Task items]
+  - epics               [Epic stories]
+  - stories             [User stories]
+  - milestones          [Project milestones]
+  - attendance          [Attendance records]
+  - leaves              [Leave requests]
+  - time_logs           [Time tracking entries]
+  - notifications       [User notifications]
+  - chats               [Chat messages]
+  - files               [File uploads]
+  - aiRequests          [AI request history]
+
+Key Relationships:
+  - users → workspaces (many-to-many via workspaceMembers)
+  - projects → tasks, sprints, epics
+  - tasks → time_logs, assignments
+  - workspaces → projects, teams
+
+
+AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+JWT Authentication:
+  - Secret: JWT_SECRET environment variable
+  - Token stored in HTTP-only cookies
+  - Middleware validates token on protected routes
+
+Role-Based Access Control (RBAC):
+  - super_admin        [System administrator]
+  - admin              [Workspace administrator]
+  - team_lead          [Team manager]
+  - pm                 [Project manager]
+  - employee           [Regular team member]
+
+Workspace Onboarding:
+  1. First registered user becomes super_admin
+  2. Admin can invite users via email
+  3. Create workspace with invite code
+  4. Users can join via code or invitation link
+  5. Admin approval for join requests (optional)
+
+
+PROJECT STATUS
+================================================================================
+
+COMPLETED FEATURES:
+  ✓ Core project management (tasks, sprints, projects)
+  ✓ Team collaboration
+  ✓ Attendance & leave management
+  ✓ Real-time notifications
+  ✓ AI-powered predictions (delay, productivity, success)
+  ✓ Multiple dashboard views (by role)
+  ✓ File management & uploads
+  ✓ Email triggers & notifications
+  ✓ Time tracking
+  ✓ Knowledge base
+  ✓ Chat functionality
+  ✓ Calendar scheduling
+  ✓ Reports & analytics
+  ✓ Admin & super admin consoles
+  ✓ Workspace management
+  ✓ Socket.io real-time features
+
+IN DEVELOPMENT / PLANNED:
+  - Additional ML models
+  - Advanced analytics
+  - Integration with third-party tools
+  - Mobile application
+  - Performance optimizations
+
+
+DEPLOYMENT NOTES
+================================================================================
+
+Production Setup:
+  1. Set NODE_ENV=production in Backend/.env
+  2. Build frontend: npm run build --prefix frontend
+  3. Backend serves frontend statically when NODE_ENV=production
+  4. Set appropriate environment variables for production
+  5. Use production database (PostgreSQL)
+  6. Use production Redis instance
+  7. Configure email provider credentials
+  8. Set up SSL/HTTPS
+  9. Configure CORS for production domain
+  10. Set up ML service on separate host/port if needed
+
+Scaling Considerations:
+  - Redis for distributed caching
+  - BullMQ for distributed job processing
+  - PostgreSQL connection pooling
+  - Load balancing for multiple backend instances
+  - Socket.io adapter for multi-instance deployments
+
+
+TESTING
+================================================================================
+
+Backend Testing:
+  - Unit tests in Backend/src/tests/
+  - API testing available in ml-service/test_api.py
+
+ML Service Testing:
+  - Run: python ml-service/test_api.py
+  - Tests all prediction endpoints
+  - Requires FastAPI server running on http://127.0.0.1:8000
+
+Frontend Testing:
+  - ESLint: npm run lint --prefix frontend
+
+
+COMMON ISSUES & TROUBLESHOOTING
+================================================================================
+
+Issue: "Cannot connect to database"
+  Solution: Verify PostgreSQL is running, check DB_URL in .env
+
+Issue: "ML Service connection failed"
+  Solution: Start ML service on port 8000, check ML_SERVICE_URL in Backend/.env
+
+Issue: "Redis connection error"
+  Solution: Start Redis server, verify REDIS_URL in .env
+
+Issue: "Email not sending"
+  Solution: Check BREVO_API_KEY and email credentials in .env
+
+Issue: "Socket.io not connecting"
+  Solution: Verify backend socket.io setup, check CORS origins
+
+Issue: "Frontend API calls failing"
+  Solution: Verify VITE_API_BASE_URL, check backend CORS settings
+
+
+USEFUL RESOURCES
+================================================================================
+
+Documentation Files:
+  - README.md              [Main project documentation]
+  - Backend/package.json   [Backend dependencies]
+  - frontend/package.json  [Frontend dependencies]
+  - ml-service/requirements.txt [ML service dependencies]
+
+External Tools:
+  - Drizzle Studio: npm run db:studio --prefix Backend
+  - Swagger UI: http://localhost:4000/api-docs (if configured)
+  - Socket.io Admin: Can be configured for real-time monitoring
+
+Performance Monitoring:
+  - Redis monitoring tools
+  - PostgreSQL query logs
+  - Node.js performance profiling tools
+
+
+PROJECT STATISTICS
+================================================================================
+
+Repository Structure:
+  - Backend Controllers: 18+ controller files
+  - Frontend Pages: 30+ page components
+  - API Routes: 15+ route modules
+  - Database Tables: 25+ tables
+  - ML Models: 7 trained models
+  - Service Modules: 12+ service classes
+
+Code Organization:
+  - MVC Architecture (Backend)
+  - Component-based (Frontend)
+  - Modular service architecture
+  - Clear separation of concerns
+
+Dependencies:
+  - Backend: 20+ npm packages
+  - Frontend: 20+ npm packages
+  - ML Service: 11 Python packages
+
+
+CONTACT & CONTRIBUTION
+================================================================================
+
+GitHub Repository:
+  https://github.com/NoorAbdullah02/TaskForge-AI-
+
+Issues & Bug Reports:
+  https://github.com/NoorAbdullah02/TaskForge-AI-/issues
+
+License:
+  ISC License
+
+
+================================================================================
+                            END OF DOCUMENTATION
+                                 2026-06-27
+================================================================================

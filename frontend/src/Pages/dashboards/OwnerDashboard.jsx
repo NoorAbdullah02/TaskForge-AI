@@ -16,7 +16,6 @@ import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import { getExecutiveStats } from '../../Services/aiApi';
 import toast from 'react-hot-toast';
-import DSAppShell from '../../design-system/DSAppShell.jsx';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -98,8 +97,8 @@ export default function OwnerDashboard({ user }) {
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
   if (loading) return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="min-h-screen flex items-center justify-center text-white">
+    <>
+      <div className="min-h-screen flex items-center justify-center text-ink">
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-20 h-20">
             <div className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-ping" />
@@ -108,12 +107,12 @@ export default function OwnerDashboard({ user }) {
           <span className="text-xs font-black text-violet-400 tracking-[0.35em] uppercase">Loading Workspace Overview</span>
         </div>
       </div>
-    </DSAppShell>
+    </>
   );
 
   return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
+    <>
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-ink overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -129,8 +128,8 @@ export default function OwnerDashboard({ user }) {
                 Workspace Dashboard
               </span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1.5">
-              Welcome back, <span className="text-white font-semibold">{user?.name}</span> ·{' '}
+            <p className="text-ink-soft text-sm mt-1.5">
+              Welcome back, <span className="text-ink font-semibold">{user?.name}</span> ·{' '}
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
@@ -141,8 +140,8 @@ export default function OwnerDashboard({ user }) {
             <Badge status="warning" pulse={stats?.leaves?.pending > 0}>
               {stats?.leaves?.pending || 0} Pending Leaves
             </Badge>
-            <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-              <RefreshCw className="h-4 w-4 text-slate-400" />
+            <button onClick={fetchAll} className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors">
+              <RefreshCw className="h-4 w-4 text-ink-soft" />
             </button>
           </div>
         </div>
@@ -167,7 +166,7 @@ export default function OwnerDashboard({ user }) {
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
               <AnimatedCounter value={s.value} suffix={s.suffix || ''} className={`text-3xl font-black block ${s.color}`} />
-              <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+              <p className="text-xs text-ink-faint mt-1">{s.label}</p>
             </GlassCard>
           ))}
         </div>
@@ -181,8 +180,8 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Project Status Distribution</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Workspace-wide project health</p>
+                <h3 className="text-sm font-bold text-ink">Project Status Distribution</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Workspace-wide project health</p>
               </div>
               <Briefcase className="h-4 w-4 text-violet-400" />
             </div>
@@ -199,10 +198,10 @@ export default function OwnerDashboard({ user }) {
                 {projectsByStatus.map((d, i) => (
                   <div key={i}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-400 capitalize">{d.name.replace('_', ' ')}</span>
+                      <span className="text-ink-soft capitalize">{d.name.replace('_', ' ')}</span>
                       <span className="font-bold" style={{ color: d.color }}>{d.value}</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${(d.value / Math.max(...projectsByStatus.map(x => x.value))) * 100}%` }}
@@ -225,14 +224,14 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Sprint Velocity</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Planned vs completed story points</p>
+                <h3 className="text-sm font-bold text-ink">Sprint Velocity</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Planned vs completed story points</p>
               </div>
               <BarChart3 className="h-4 w-4 text-purple-400" />
             </div>
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={sprintVelocity} barGap={3} barCategoryGap="28%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
                 <XAxis dataKey="sprint" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -253,8 +252,8 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Resource Utilization</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Team capacity — last 6 months</p>
+                <h3 className="text-sm font-bold text-ink">Resource Utilization</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Team capacity — last 6 months</p>
               </div>
               <Users className="h-4 w-4 text-violet-400" />
             </div>
@@ -274,7 +273,7 @@ export default function OwnerDashboard({ user }) {
                     <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" />
                 <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -293,14 +292,14 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Task Priority Breakdown</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Current task distribution by urgency</p>
+                <h3 className="text-sm font-bold text-ink">Task Priority Breakdown</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Current task distribution by urgency</p>
               </div>
               <Layers className="h-4 w-4 text-purple-400" />
             </div>
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={taskByPriority} layout="vertical" barCategoryGap="24%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" horizontal={false} />
                 <XAxis type="number" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} width={60} />
                 <Tooltip content={<ChartTooltip />} />
@@ -320,17 +319,17 @@ export default function OwnerDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Team Attendance Heatmap</h3>
-            <p className="text-xs text-slate-500 mb-5">Check-in density — last 12 weeks</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Team Attendance Heatmap</h3>
+            <p className="text-xs text-ink-faint mb-5">Check-in density — last 12 weeks</p>
             <div className="overflow-x-auto pb-1">
               <CalendarHeatmap data={attendanceHeat} color="#8b5cf6" weeks={12} />
             </div>
             <div className="flex items-center gap-2 mt-4">
-              <span className="text-[10px] text-slate-500">Less</span>
+              <span className="text-[10px] text-ink-faint">Less</span>
               {[0.12, 0.28, 0.50, 0.72, 0.92].map((o, i) => (
                 <div key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: `rgba(139,92,246,${o})` }} />
               ))}
-              <span className="text-[10px] text-slate-500">More</span>
+              <span className="text-[10px] text-ink-faint">More</span>
             </div>
           </GlassCard>
 
@@ -342,8 +341,8 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Leave Analytics</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Leave requests by status</p>
+                <h3 className="text-sm font-bold text-ink">Leave Analytics</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Leave requests by status</p>
               </div>
               <CalendarOff className="h-4 w-4 text-fuchsia-400" />
             </div>
@@ -361,7 +360,7 @@ export default function OwnerDashboard({ user }) {
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: LEAVE_COLORS[i % LEAVE_COLORS.length] }} />
-                      <span className="text-xs text-slate-400">{d.name}</span>
+                      <span className="text-xs text-ink-soft">{d.name}</span>
                     </div>
                     <span className="text-sm font-bold" style={{ color: LEAVE_COLORS[i % LEAVE_COLORS.length] }}>{d.value}</span>
                   </div>
@@ -381,14 +380,14 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Member Productivity</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Tasks completed per member</p>
+                <h3 className="text-sm font-bold text-ink">Member Productivity</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Tasks completed per member</p>
               </div>
               <TrendingUp className="h-4 w-4 text-violet-400" />
             </div>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={memberProductivity} layout="vertical" barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" horizontal={false} />
                 <XAxis type="number" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
                 <Tooltip content={<ChartTooltip />} />
@@ -405,8 +404,8 @@ export default function OwnerDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Workspace Activity</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Recent events in your workspace</p>
+                <h3 className="text-sm font-bold text-ink">Workspace Activity</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Recent events in your workspace</p>
               </div>
               <Activity className="h-4 w-4 text-purple-400" />
             </div>
@@ -425,17 +424,17 @@ export default function OwnerDashboard({ user }) {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]"
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-2 border border-line"
                 >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-[10px] font-black shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-[10px] font-black shrink-0 text-white">
                     {(log.userName || 'U').charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-slate-300 truncate">
-                      <span className="font-semibold text-white">{log.userName}</span>{' '}
-                      <span className="text-slate-400">{log.action} a {log.entityType}</span>
+                    <p className="text-[11px] text-ink-soft truncate">
+                      <span className="font-semibold text-ink">{log.userName}</span>{' '}
+                      <span className="text-ink-soft">{log.action} a {log.entityType}</span>
                     </p>
-                    <p className="text-[10px] text-slate-600">{new Date(log.createdAt).toLocaleString()}</p>
+                    <p className="text-[10px] text-ink-faint">{new Date(log.createdAt).toLocaleString()}</p>
                   </div>
                     <Badge
                       status={log.entityType === 'member' ? 'warning' : log.entityType === 'project' ? 'success' : 'info'}
@@ -450,6 +449,6 @@ export default function OwnerDashboard({ user }) {
         </div>
 
       </div>
-    </DSAppShell>
+    </>
   );
 }

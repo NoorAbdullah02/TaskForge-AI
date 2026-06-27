@@ -16,7 +16,6 @@ import { ChartTooltip, StatRing } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import toast from 'react-hot-toast';
-import DSAppShell from '../../design-system/DSAppShell.jsx';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
 const PRIORITY_COLORS = { low: '#10b981', medium: '#3b82f6', high: '#f59e0b', urgent: '#ef4444' };
@@ -101,8 +100,8 @@ export default function TeamLeaderDashboard({ user }) {
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
   if (loading) return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="min-h-screen flex items-center justify-center text-white">
+    <>
+      <div className="min-h-screen flex items-center justify-center text-ink">
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-20 h-20">
             <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
@@ -111,12 +110,12 @@ export default function TeamLeaderDashboard({ user }) {
           <span className="text-xs font-black text-emerald-400 tracking-[0.35em] uppercase">Loading Team Overview</span>
         </div>
       </div>
-    </DSAppShell>
+    </>
   );
 
   return (
-    <DSAppShell backgroundMode="subtle">
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-white overflow-x-hidden">
+    <>
+      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-ink overflow-x-hidden">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -132,8 +131,8 @@ export default function TeamLeaderDashboard({ user }) {
                 Team Command
               </span>
             </h1>
-            <p className="text-slate-400 text-sm mt-1.5">
-              Welcome back, <span className="text-white font-semibold">{user?.name}</span> ·{' '}
+            <p className="text-ink-soft text-sm mt-1.5">
+              Welcome back, <span className="text-ink font-semibold">{user?.name}</span> ·{' '}
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           </div>
@@ -144,8 +143,8 @@ export default function TeamLeaderDashboard({ user }) {
             <Badge status="danger" pulse={blockedTasks > 0}>
               {blockedTasks} Blocked
             </Badge>
-            <button onClick={fetchAll} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-              <RefreshCw className="h-4 w-4 text-slate-400" />
+            <button onClick={fetchAll} className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors">
+              <RefreshCw className="h-4 w-4 text-ink-soft" />
             </button>
           </div>
         </div>
@@ -170,7 +169,7 @@ export default function TeamLeaderDashboard({ user }) {
                 <s.icon className={`h-5 w-5 ${s.color}`} />
               </div>
               <AnimatedCounter value={s.value} className={`text-3xl font-black block ${s.color}`} />
-              <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+              <p className="text-xs text-ink-faint mt-1">{s.label}</p>
             </GlassCard>
           ))}
         </div>
@@ -185,14 +184,14 @@ export default function TeamLeaderDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Task Distribution by Member</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Done, in-progress, blocked per person</p>
+                <h3 className="text-sm font-bold text-ink">Task Distribution by Member</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Done, in-progress, blocked per person</p>
               </div>
               <BarChart3 className="h-4 w-4 text-emerald-400" />
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={memberTasks} barGap={3} barCategoryGap="22%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -211,14 +210,14 @@ export default function TeamLeaderDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Team Performance Radar</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Multi-member skill comparison</p>
+                <h3 className="text-sm font-bold text-ink">Team Performance Radar</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Multi-member skill comparison</p>
               </div>
               <TrendingUp className="h-4 w-4 text-teal-400" />
             </div>
             <ResponsiveContainer width="100%" height={250}>
               <RadarChart data={memberRadar} cx="50%" cy="50%" outerRadius="72%">
-                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarGrid stroke="#e6eaf2" />
                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#475569', fontSize: 10 }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                 {MEMBERS.slice(0, 3).map((m, i) => (
@@ -237,11 +236,11 @@ export default function TeamLeaderDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Sprint Velocity</h3>
-            <p className="text-xs text-slate-500 mb-4">Tasks done/sprint vs average</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Sprint Velocity</h3>
+            <p className="text-xs text-ink-faint mb-4">Tasks done/sprint vs average</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={sprintVelocity} barCategoryGap="28%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
                 <XAxis dataKey="sprint" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -257,16 +256,16 @@ export default function TeamLeaderDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Attendance Summary</h3>
-            <p className="text-xs text-slate-500 mb-3">This month per member</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Attendance Summary</h3>
+            <p className="text-xs text-ink-faint mb-3">This month per member</p>
             <div className="space-y-2.5 overflow-y-auto max-h-[220px]">
               {attendanceSummary.map((m, i) => {
                 const total = m.present + m.late + m.absent;
                 return (
                   <div key={i}>
                     <div className="flex justify-between text-[11px] mb-1">
-                      <span className="text-slate-300 font-medium">{m.name}</span>
-                      <span className="text-slate-500">{m.present}/{total} days</span>
+                      <span className="text-ink-soft font-medium">{m.name}</span>
+                      <span className="text-ink-faint">{m.present}/{total} days</span>
                     </div>
                     <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
                       <motion.div initial={{ width:0 }} animate={{ width:`${(m.present/total)*100}%` }} transition={{ duration:0.7, delay:i*0.08 }} className="bg-emerald-500 h-full" />
@@ -285,8 +284,8 @@ export default function TeamLeaderDashboard({ user }) {
             transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             padding="p-6"
           >
-            <h3 className="text-sm font-bold text-white mb-1">Task Status</h3>
-            <p className="text-xs text-slate-500 mb-4">Team task breakdown</p>
+            <h3 className="text-sm font-bold text-ink mb-1">Task Status</h3>
+            <p className="text-xs text-ink-faint mb-4">Team task breakdown</p>
             <ResponsiveContainer width="100%" height={185}>
               <PieChart>
                 <Pie data={taskByStatus} cx="50%" cy="50%" outerRadius={72} innerRadius={36} paddingAngle={3} dataKey="value">
@@ -299,7 +298,7 @@ export default function TeamLeaderDashboard({ user }) {
               {taskByStatus.map((d, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.fill }} />
-                  <span className="text-[10px] text-slate-400">{d.name}: {d.value}</span>
+                  <span className="text-[10px] text-ink-soft">{d.name}: {d.value}</span>
                 </div>
               ))}
             </div>
@@ -316,8 +315,8 @@ export default function TeamLeaderDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-white">Member Performance Scores</h3>
-                <p className="text-xs text-slate-500 mt-0.5">AI-calculated productivity ratings</p>
+                <h3 className="text-sm font-bold text-ink">Member Performance Scores</h3>
+                <p className="text-xs text-ink-faint mt-0.5">AI-calculated productivity ratings</p>
               </div>
               <Award className="h-4 w-4 text-emerald-400" />
             </div>
@@ -336,8 +335,8 @@ export default function TeamLeaderDashboard({ user }) {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Team Activity</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Recent actions by your team</p>
+                <h3 className="text-sm font-bold text-ink">Team Activity</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Recent actions by your team</p>
               </div>
               <Activity className="h-4 w-4 text-teal-400" />
             </div>
@@ -356,17 +355,17 @@ export default function TeamLeaderDashboard({ user }) {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]"
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-2 border border-line"
                 >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[10px] font-black shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[10px] font-black shrink-0 text-white">
                     {(log.userName || 'U').charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-slate-300 truncate">
-                      <span className="font-semibold text-white">{log.userName}</span>{' '}
-                      <span className="text-slate-400">{log.action} {log.entityType}</span>
+                    <p className="text-[11px] text-ink-soft truncate">
+                      <span className="font-semibold text-ink">{log.userName}</span>{' '}
+                      <span className="text-ink-soft">{log.action} {log.entityType}</span>
                     </p>
-                    <p className="text-[10px] text-slate-600">{new Date(log.createdAt).toLocaleTimeString()}</p>
+                    <p className="text-[10px] text-ink-faint">{new Date(log.createdAt).toLocaleTimeString()}</p>
                   </div>
                     <Badge
                       status={log.action === 'completed' ? 'success' : log.action === 'blocked' ? 'danger' : 'info'}
@@ -381,6 +380,6 @@ export default function TeamLeaderDashboard({ user }) {
         </div>
 
       </div>
-    </DSAppShell>
+    </>
   );
 }

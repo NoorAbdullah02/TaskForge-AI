@@ -346,7 +346,7 @@ const ProjectDetailsPage = () => {
 
     if (authLoading || isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6 flex items-center justify-center">
+            <div className="min-h-screen p-6 flex items-center justify-center">
                 <div className="text-center">
                     <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading workspace details...</p>
@@ -364,7 +364,7 @@ const ProjectDetailsPage = () => {
     const milestones = project.tasks.filter(t => t.isMilestone);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6">
+        <div className="min-h-screen p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Back Button & Header */}
                 <button
@@ -397,7 +397,7 @@ const ProjectDetailsPage = () => {
                                     </span>
                                 )}
                                 {deadlinePrediction && (
-                                    <span className="bg-indigo-50 text-indigo-750 border border-indigo-200 px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1">
+                                    <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1">
                                         AI Est. End: {new Date(deadlinePrediction.predicted_date).toLocaleDateString()}
                                     </span>
                                 )}
@@ -476,7 +476,7 @@ const ProjectDetailsPage = () => {
                             <div className="lg:col-span-2 bg-white rounded-3xl p-6 md:p-8 shadow border border-gray-100 space-y-6">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-800 mb-3">Project Description</h3>
-                                    <p className="text-gray-650 font-medium leading-relaxed">
+                                    <p className="text-gray-600 font-medium leading-relaxed">
                                         {project.description || 'No description has been written for this project yet.'}
                                     </p>
                                 </div>
@@ -605,7 +605,7 @@ const ProjectDetailsPage = () => {
                                                 type="date"
                                                 value={taskDueDate}
                                                 onChange={(e) => setTaskDueDate(e.target.value)}
-                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-750 bg-white"
+                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
                                             />
                                             <label className="flex items-center gap-2 cursor-pointer bg-gray-50 border-2 border-gray-300 rounded-xl px-3 py-2 text-sm font-bold text-gray-700">
                                                 <input
@@ -690,7 +690,7 @@ const ProjectDetailsPage = () => {
                                                                     {t.priority}
                                                                 </span>
                                                                 {t.assigneeName && (
-                                                                    <span className="bg-blue-50 text-blue-750 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-1 border border-blue-100">
+                                                                    <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-1 border border-blue-100">
                                                                         👤 {t.assigneeName}
                                                                     </span>
                                                                 )}
@@ -751,7 +751,7 @@ const ProjectDetailsPage = () => {
 
                             {milestones.length === 0 ? (
                                 <div className="py-12 text-center">
-                                    <Trophy className="w-16 h-16 text-gray-250 mx-auto mb-3" />
+                                    <Trophy className="w-16 h-16 text-gray-200 mx-auto mb-3" />
                                     <p className="text-gray-400 font-bold">No milestones created yet.</p>
                                 </div>
                             ) : (
@@ -930,7 +930,7 @@ const ProjectDetailsPage = () => {
                                             type="date"
                                             value={editStart}
                                             onChange={(e) => setEditStart(e.target.value)}
-                                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-750 bg-white"
+                                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
                                         />
                                     </div>
 
@@ -940,7 +940,7 @@ const ProjectDetailsPage = () => {
                                             type="date"
                                             value={editEnd}
                                             onChange={(e) => setEditEnd(e.target.value)}
-                                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-750 bg-white"
+                                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
                                         />
                                     </div>
                                 </div>
@@ -1045,7 +1045,7 @@ const ProjectDetailsPage = () => {
                                                                     console.error('Failed to track download:', err);
                                                                 }
                                                             }}
-                                                            className="font-bold text-sm text-blue-650 hover:underline truncate block"
+                                                            className="font-bold text-sm text-blue-600 hover:underline truncate block"
                                                         >
                                                             {doc.fileName}
                                                         </a>
@@ -1068,7 +1068,7 @@ const ProjectDetailsPage = () => {
                                                                 }
                                                             }
                                                         }}
-                                                        className="px-3 py-1.5 bg-white border border-gray-250 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
+                                                        className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
                                                     >
                                                         Versions
                                                     </button>
@@ -1085,7 +1085,7 @@ const ProjectDetailsPage = () => {
                                                                 }
                                                             }
                                                         }}
-                                                        className="px-3 py-1.5 bg-white border border-gray-250 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
+                                                        className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-xxs font-extrabold text-gray-700 transition"
                                                     >
                                                         Download Logs
                                                     </button>
@@ -1106,7 +1106,7 @@ const ProjectDetailsPage = () => {
                                                                 toast.error('Failed to delete document');
                                                             }
                                                         }}
-                                                        className="text-gray-400 hover:text-red-650 transition p-2 bg-white hover:bg-red-50 rounded-xl border border-gray-250 animate-in"
+                                                        className="text-gray-400 hover:text-red-600 transition p-2 bg-white hover:bg-red-50 rounded-xl border border-gray-200 animate-in"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -1151,7 +1151,7 @@ const ProjectDetailsPage = () => {
                                                         {versionHistory[doc.id]?.map((v, vIdx) => (
                                                             <div key={vIdx} className="py-2 flex justify-between items-center text-xxs font-semibold">
                                                                 <div>
-                                                                    <a href={v.fileUrl.split('#')[0]} target="_blank" rel="noopener noreferrer" className="font-extrabold text-blue-650 hover:underline">
+                                                                    <a href={v.fileUrl.split('#')[0]} target="_blank" rel="noopener noreferrer" className="font-extrabold text-blue-600 hover:underline">
                                                                         {v.fileName} (v{v.version})
                                                                     </a>
                                                                     <span className="text-gray-400 block text-[9px] mt-0.5">Uploaded on {new Date(v.createdAt).toLocaleString()}</span>

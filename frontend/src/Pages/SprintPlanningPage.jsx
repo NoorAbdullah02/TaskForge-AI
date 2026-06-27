@@ -217,7 +217,7 @@ export default function SprintPlanningPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-white py-10 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header Controls */}
@@ -237,7 +237,7 @@ export default function SprintPlanningPage() {
                             <select
                                 value={selectedProjectId}
                                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                                className="px-4 py-2 bg-white border border-blue-100 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-850"
+                                className="px-4 py-2 bg-white border border-blue-100 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-800"
                             >
                                 {projects.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -373,7 +373,7 @@ export default function SprintPlanningPage() {
                                                             )}
                                                             <button
                                                                     onClick={() => handleDeleteSprintClick(fs.id, fs.name)}
-                                                                    className="p-1.5 hover:bg-red-50 text-red-650 rounded-lg transition"
+                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition"
                                                                     title="Delete Sprint"
                                                             >
                                                                 <AlertCircle className="w-4 h-4" />
@@ -539,7 +539,7 @@ export default function SprintPlanningPage() {
                                     onChange={(e) => setSprintForm({ ...sprintForm, goal: e.target.value })}
                                     placeholder="Define what this sprint will achieve"
                                     rows={2}
-                                    className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-850"
+                                    className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800"
                                 />
                             </div>
 

@@ -10,10 +10,10 @@ const TeamLeaderDashboard  = lazy(() => import('./dashboards/TeamLeaderDashboard
 const EmployeeDashboard    = lazy(() => import('./dashboards/EmployeeDashboard'));
 
 const DashLoader = () => (
-  <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center">
     <div className="flex flex-col items-center gap-4">
-      <Loader2 className="h-10 w-10 text-indigo-400 animate-spin" />
-      <span className="text-xs text-slate-400 tracking-[0.3em] uppercase font-semibold">
+      <Loader2 className="h-10 w-10 text-brand animate-spin" />
+      <span className="text-xs text-ink-faint tracking-[0.3em] uppercase font-semibold">
         Loading Dashboard…
       </span>
     </div>

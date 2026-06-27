@@ -265,7 +265,7 @@ const ProjectsPage = () => {
 
     if (authLoading || isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6 flex items-center justify-center">
+            <div className="min-h-screen p-6 flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading projects...</p>
@@ -275,7 +275,7 @@ const ProjectsPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6 pb-12">
+        <div className="min-h-screen p-6 pb-12">
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header */}
@@ -322,7 +322,7 @@ const ProjectsPage = () => {
 
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-650/15 flex items-center gap-2 cursor-pointer"
+                            className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-600/15 flex items-center gap-2 cursor-pointer"
                         >
                             <Plus className="w-5 h-5" />
                             New Project
@@ -339,7 +339,7 @@ const ProjectsPage = () => {
                             placeholder="Search projects..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-155 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-750"
+                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-155 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700"
                         />
                     </div>
 
@@ -501,7 +501,7 @@ const ProjectsPage = () => {
 
                                             <h3 
                                                 onClick={() => navigate(`/projects/${project.id}`)}
-                                                className="text-2xl font-extrabold text-gray-850 hover:text-blue-600 transition-colors mb-2 line-clamp-1 cursor-pointer flex items-center gap-1.5"
+                                                className="text-2xl font-extrabold text-gray-800 hover:text-blue-600 transition-colors mb-2 line-clamp-1 cursor-pointer flex items-center gap-1.5"
                                             >
                                                 {project.name}
                                                 {project.password && <Shield className="w-4 h-4 text-emerald-600 inline" title="Password protected" />}
@@ -537,7 +537,7 @@ const ProjectsPage = () => {
 
                                                 <button
                                                     onClick={() => navigate(`/projects/${project.id}`)}
-                                                    className="flex items-center gap-1 text-blue-650 hover:text-blue-800 transition-colors group cursor-pointer"
+                                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors group cursor-pointer"
                                                 >
                                                     <span className="text-xs font-extrabold">Open Hub</span>
                                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -551,7 +551,7 @@ const ProjectsPage = () => {
 
                         {/* Pagination controls */}
                         {pagination.pages > 1 && (
-                            <div className="mt-8 flex justify-center items-center gap-3 font-semibold text-gray-750">
+                            <div className="mt-8 flex justify-center items-center gap-3 font-semibold text-gray-700">
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
@@ -585,7 +585,7 @@ const ProjectsPage = () => {
                         <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                    <LogIn className="text-blue-650 w-6 h-6" />
+                                    <LogIn className="text-blue-600 w-6 h-6" />
                                     Join Protected Project
                                 </h3>
                                 <button 
@@ -605,7 +605,7 @@ const ProjectsPage = () => {
                                         placeholder="e.g. PROJ-XXXXXX"
                                         value={joinForm.inviteCode}
                                         onChange={(e) => setJoinForm({ ...joinForm, inviteCode: e.target.value.toUpperCase().trim() })}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-850"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-800"
                                     />
                                 </div>
 
@@ -616,7 +616,7 @@ const ProjectsPage = () => {
                                         placeholder="Enter project password if required"
                                         value={joinForm.password}
                                         onChange={(e) => setJoinForm({ ...joinForm, password: e.target.value })}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-850"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-800"
                                     />
                                 </div>
 
@@ -624,7 +624,7 @@ const ProjectsPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => setIsJoinModalOpen(false)}
-                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-750 font-bold rounded-2xl transition cursor-pointer"
+                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
                                     >
                                         Cancel
                                     </button>
@@ -652,7 +652,7 @@ const ProjectsPage = () => {
                         <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                    <Copy className="text-blue-650 w-6 h-6" />
+                                    <Copy className="text-blue-600 w-6 h-6" />
                                     Clone Project
                                 </h3>
                                 <button 
@@ -670,14 +670,14 @@ const ProjectsPage = () => {
                                         type="text"
                                         value={duplicateName}
                                         onChange={(e) => setDuplicateName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-850"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-800"
                                     />
                                 </div>
 
                                 <div className="flex justify-end gap-3 pt-4">
                                     <button
                                         onClick={() => setIsDuplicateModalOpen(false)}
-                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-750 font-bold rounded-2xl transition cursor-pointer"
+                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
                                     >
                                         Cancel
                                     </button>
@@ -737,14 +737,14 @@ const ProjectsPage = () => {
                                 <div className="flex justify-end gap-3 pt-4">
                                     <button
                                         onClick={() => setIsTransferModalOpen(false)}
-                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-750 font-bold rounded-2xl transition cursor-pointer"
+                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleTransferSave}
                                         disabled={transferring || !transferTargetUserId}
-                                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-750 text-white font-bold rounded-2xl transition shadow cursor-pointer flex items-center gap-2"
+                                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl transition shadow cursor-pointer flex items-center gap-2"
                                     >
                                         {transferring ? (
                                             <>
@@ -785,7 +785,7 @@ const ProjectsPage = () => {
                                         <span className="text-xs font-bold text-gray-400 uppercase">Invite Code</span>
                                         <button 
                                             onClick={() => handleCopy(credentialsProject.inviteCode, 'Code')}
-                                            className="p-1 hover:bg-gray-250 rounded transition text-blue-600 cursor-pointer"
+                                            className="p-1 hover:bg-gray-200 rounded transition text-blue-600 cursor-pointer"
                                             title="Copy Code"
                                         >
                                             <Copy className="w-4 h-4" />
@@ -799,7 +799,7 @@ const ProjectsPage = () => {
                                         <span className="text-xs font-bold text-gray-400 uppercase">Invite Link</span>
                                         <button 
                                             onClick={() => handleCopy(credentialsProject.inviteLink, 'Link')}
-                                            className="p-1 hover:bg-gray-250 rounded transition text-blue-600 cursor-pointer"
+                                            className="p-1 hover:bg-gray-200 rounded transition text-blue-600 cursor-pointer"
                                             title="Copy Link"
                                         >
                                             <Copy className="w-4 h-4" />

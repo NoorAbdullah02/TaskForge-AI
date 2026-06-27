@@ -4,7 +4,6 @@ import { Mail, ArrowLeft, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { requestPasswordReset } from '../Services/authApi';
-import DSAppShell from '../design-system/DSAppShell.jsx';
 import { GlassCard, Input, Button } from '../design-system/primitives';
 
 const ForgotPassword = () => {
@@ -37,7 +36,6 @@ const ForgotPassword = () => {
     };
 
     return (
-        <DSAppShell backgroundMode="auth">
             <div className="min-h-screen flex items-center justify-center p-4">
                 <div className="w-full max-w-md relative z-10">
                     {/* Header */}
@@ -48,14 +46,14 @@ const ForgotPassword = () => {
                         transition={{ duration: 0.5 }}
                     >
                         <Link to="/" className="inline-block mb-5">
-                            <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">
+                            <span className="text-2xl font-bold text-gradient-brand">
                                 TaskForge AI
                             </span>
                         </Link>
-                        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+                        <h1 className="text-3xl sm:text-4xl font-bold text-ink mb-3">
                             Forgot password?
                         </h1>
-                        <p className="text-gray-400">
+                        <p className="text-ink-soft">
                             No worries, we'll send you a reset token
                         </p>
                     </motion.div>
@@ -79,10 +77,10 @@ const ForgotPassword = () => {
                             />
 
                             {previewUrl && (
-                                <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3">
-                                    <p className="text-xs text-indigo-300">
+                                <div className="rounded-xl border border-brand/20 bg-brand/5 p-3">
+                                    <p className="text-xs text-brand">
                                         Preview URL (dev):{' '}
-                                        <a href={previewUrl} target="_blank" rel="noreferrer" className="underline hover:text-indigo-200 transition-colors">
+                                        <a href={previewUrl} target="_blank" rel="noreferrer" className="underline hover:text-brand-strong transition-colors">
                                             Open preview
                                         </a>
                                     </p>
@@ -112,19 +110,18 @@ const ForgotPassword = () => {
                     </GlassCard>
 
                     <motion.p
-                        className="text-center text-gray-600 text-xs mt-6"
+                        className="text-center text-ink-faint text-xs mt-6"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 }}
                     >
                         Remember your password?{' '}
-                        <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                        <Link to="/login" className="text-brand hover:text-brand-strong font-medium transition-colors">
                             Sign in
                         </Link>
                     </motion.p>
                 </div>
             </div>
-        </DSAppShell>
     );
 };
 

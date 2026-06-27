@@ -10,12 +10,12 @@
 export const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+    <div className="bg-surface-2 backdrop-blur-xl border border-line rounded-xl px-3 py-2 shadow-2xl">
       {label !== undefined && label !== null && (
-        <p className="text-[11px] text-slate-400 mb-1.5">{label}</p>
+        <p className="text-[11px] text-ink-soft mb-1.5">{label}</p>
       )}
       {payload.map((p, i) => (
-        <p key={i} className="text-xs font-semibold" style={{ color: p.color || p.fill || '#fff' }}>
+        <p key={i} className="text-xs font-semibold" style={{ color: p.color || p.fill || '#0b1220' }}>
           {p.name}: {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
         </p>
       ))}
@@ -53,7 +53,7 @@ export const CalendarHeatmap = ({ data = {}, color = '#6366f1', weeks = 12 }) =>
       {/* Day labels */}
       <div className="flex flex-col gap-0.5 mr-1 justify-around">
         {DAYS.map((d, i) => (
-          <span key={i} className="text-[9px] text-slate-600 h-3 flex items-center">{d}</span>
+          <span key={i} className="text-[9px] text-ink-faint h-3 flex items-center">{d}</span>
         ))}
       </div>
 
@@ -101,7 +101,7 @@ export const StatRing = ({ value = 0, color = '#6366f1', label, subLabel, size =
         >
           <circle
             cx={size / 2} cy={size / 2} r={r}
-            fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={size * 0.07}
+            fill="none" stroke="#e6eaf2" strokeWidth={size * 0.07}
           />
           <circle
             cx={size / 2} cy={size / 2} r={r}
@@ -115,7 +115,7 @@ export const StatRing = ({ value = 0, color = '#6366f1', label, subLabel, size =
           <span className="text-xs font-black" style={{ color }}>{label ?? `${value}%`}</span>
         </div>
       </div>
-      {subLabel && <span className="text-[10px] text-slate-500 text-center">{subLabel}</span>}
+      {subLabel && <span className="text-[10px] text-ink0 text-center">{subLabel}</span>}
     </div>
   );
 };

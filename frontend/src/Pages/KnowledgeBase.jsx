@@ -112,7 +112,7 @@ const KnowledgeBase = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#070b12] text-slate-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
+        <div className="min-h-screen text-ink py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
             {/* Background glowing overlays */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px]" />
@@ -121,13 +121,13 @@ const KnowledgeBase = () => {
 
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-white/10 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="pb-6 border-b border-line mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
                             <BookOpen className="w-8 h-8 text-indigo-400" />
                             Workspace Knowledge Base
                         </h1>
-                        <p className="text-slate-400 mt-1 font-medium font-sans">
+                        <p className="text-ink-soft mt-1 font-medium font-sans">
                             Central wiki documentation, SOP compliance checklists, shared notes, and resource guides.
                         </p>
                     </div>
@@ -136,13 +136,13 @@ const KnowledgeBase = () => {
                         onClick={handleNewPageClick}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] transition cursor-pointer"
                     >
-                        <Plus className="w-4 h-4 text-white" />
+                        <Plus className="w-4 h-4 text-ink" />
                         Create Document
                     </button>
                 </div>
 
                 {/* Sub Tab selection */}
-                <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1.5 rounded-2xl mb-8 w-fit">
+                <div className="flex gap-2 bg-surface-2 border border-line p-1.5 rounded-2xl mb-8 w-fit">
                     {[
                         { id: 'wiki', name: 'Wiki Pages', icon: BookOpen },
                         { id: 'doc', name: 'Documentation', icon: FileText },
@@ -157,7 +157,7 @@ const KnowledgeBase = () => {
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer ${
                                     activeTab === t.id
                                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg border border-blue-500/30'
-                                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                                        : 'text-ink-soft hover:text-ink hover:bg-surface-2'
                                 }`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -168,26 +168,26 @@ const KnowledgeBase = () => {
                 </div>
 
                 {/* Main Workspace Layout */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 bg-surface-2 border border-line rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
                     
                     {/* Left Sidebar - Documents directory */}
-                    <div className="lg:col-span-4 border-r border-white/5 flex flex-col bg-white/[0.01]">
-                        <div className="p-5 border-b border-white/5">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest block">
+                    <div className="lg:col-span-4 border-r border-line flex flex-col bg-surface-2">
+                        <div className="p-5 border-b border-line">
+                            <h3 className="text-xs font-black text-ink-soft uppercase tracking-widest block">
                                 Document Directory
                             </h3>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-3 space-y-1">
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                                <div className="flex flex-col items-center justify-center py-20 text-ink0">
                                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                     <span className="text-xs">Scanning directory...</span>
                                 </div>
                             ) : pages.length === 0 ? (
-                                <div className="text-center py-20 text-slate-500">
+                                <div className="text-center py-20 text-ink0">
                                     <p className="text-xs font-semibold">No records found.</p>
-                                    <p className="text-[10px] text-slate-600 mt-1">Create a new document to populate this tab.</p>
+                                    <p className="text-[10px] text-ink-faint mt-1">Create a new document to populate this tab.</p>
                                 </div>
                             ) : (
                                 pages.map(p => (
@@ -196,12 +196,12 @@ const KnowledgeBase = () => {
                                         className={`w-full text-left p-3.5 rounded-2xl transition flex items-center justify-between group ${
                                             selectedPage?.id === p.id
                                                 ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/10 border border-blue-500/30'
-                                                : 'hover:bg-white/[0.02] border border-transparent'
+                                                : 'hover:bg-surface-2 border border-transparent'
                                         }`}
                                     >
                                         <button
                                             onClick={() => handleSelectPage(p)}
-                                            className="flex-1 text-left text-xs font-bold text-white pr-2 truncate cursor-pointer"
+                                            className="flex-1 text-left text-xs font-bold text-ink pr-2 truncate cursor-pointer"
                                         >
                                             {p.title}
                                         </button>
@@ -218,27 +218,27 @@ const KnowledgeBase = () => {
                     </div>
 
                     {/* Right Column - Editor / Viewer */}
-                    <div className="lg:col-span-8 flex flex-col p-6 bg-white/[0.005]">
+                    <div className="lg:col-span-8 flex flex-col p-6 bg-surface-2">
                         {editMode ? (
                             <form onSubmit={handleSave} className="flex-1 flex flex-col gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Document Title</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Document Title</label>
                                     <input
                                         type="text"
                                         placeholder="Enter title..."
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-200"
+                                        className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-ink"
                                     />
                                 </div>
 
                                 <div className="flex-1 flex flex-col space-y-1.5 min-h-[300px]">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Content (Plain text / Markdown support)</label>
+                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Content (Plain text / Markdown support)</label>
                                     <textarea
                                         placeholder="Draft document content here..."
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        className="w-full flex-1 bg-white/[0.03] border border-white/10 rounded-2xl p-5 text-xs font-medium focus:outline-none focus:border-indigo-500 text-slate-200 font-mono leading-relaxed resize-none"
+                                        className="w-full flex-1 bg-surface-2 border border-line rounded-2xl p-5 text-xs font-medium focus:outline-none focus:border-indigo-500 text-ink font-mono leading-relaxed resize-none"
                                     />
                                 </div>
 
@@ -253,7 +253,7 @@ const KnowledgeBase = () => {
                                                 setContent(selectedPage.content);
                                             }
                                         }}
-                                        className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-xl transition cursor-pointer text-slate-350"
+                                        className="px-5 py-2.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-xl transition cursor-pointer text-ink"
                                     >
                                         Cancel
                                     </button>
@@ -267,10 +267,10 @@ const KnowledgeBase = () => {
                             </form>
                         ) : selectedPage ? (
                             <div className="flex-1 flex flex-col gap-6">
-                                <div className="border-b border-white/5 pb-4 flex justify-between items-start gap-4">
+                                <div className="border-b border-line pb-4 flex justify-between items-start gap-4">
                                     <div>
-                                        <h2 className="text-xl font-bold text-white">{selectedPage.title}</h2>
-                                        <div className="flex items-center gap-4 text-[10px] text-slate-500 mt-2 font-mono">
+                                        <h2 className="text-xl font-bold text-ink">{selectedPage.title}</h2>
+                                        <div className="flex items-center gap-4 text-[10px] text-ink0 mt-2 font-mono">
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="w-3.5 h-3.5" />
                                                 Updated {new Date(selectedPage.updatedAt).toLocaleDateString()}
@@ -288,15 +288,15 @@ const KnowledgeBase = () => {
                                     </button>
                                 </div>
 
-                                <div className="flex-1 text-slate-350 text-xs leading-relaxed font-sans whitespace-pre-wrap font-medium">
-                                    {selectedPage.content || <span className="italic text-slate-550">Empty document. Click Edit Page to add context.</span>}
+                                <div className="flex-1 text-ink text-xs leading-relaxed font-sans whitespace-pre-wrap font-medium">
+                                    {selectedPage.content || <span className="italic text-ink0">Empty document. Click Edit Page to add context.</span>}
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-                                <BookOpen className="w-12 h-12 text-slate-700 mb-3 animate-bounce" />
-                                <h3 className="text-sm font-bold text-white">No Selected Document</h3>
-                                <p className="text-xs text-slate-550 mt-1 max-w-xs text-center leading-normal">
+                            <div className="flex-1 flex flex-col items-center justify-center text-ink0 p-8">
+                                <BookOpen className="w-12 h-12 text-ink-faint mb-3 animate-bounce" />
+                                <h3 className="text-sm font-bold text-ink">No Selected Document</h3>
+                                <p className="text-xs text-ink0 mt-1 max-w-xs text-center leading-normal">
                                     Choose a document from the directory catalog directory or create one.
                                 </p>
                             </div>

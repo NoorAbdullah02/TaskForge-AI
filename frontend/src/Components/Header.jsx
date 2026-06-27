@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Bell, Search, Building2, ChevronDown } from 'lucide-react';
+import { LogOut, Settings, Bell, Search, Building2, ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import { logoutUser } from '../Services/authApi.js';
@@ -18,7 +18,26 @@ const Header = () => {
     const [searchOpen, setSearchOpen] = useState(false);
     const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
+
+    // Banglish: ekta jaygate nav links rakhi, mobile + desktop duitatei use korbo
+    const navLinks = [
+        { to: '/projects', label: 'Projects' },
+        { to: '/tasks', label: 'Tasks' },
+        { to: '/chat', label: '💬 Chat' },
+        { to: '/kb', label: '📚 Wiki' },
+        { to: '/time-tracker', label: '⏱️ Timer' },
+        { to: '/calendar', label: '🗓️ Calendar' },
+        { to: '/attendance', label: 'Attendance' },
+        { to: '/leaves', label: 'Leaves' },
+        { to: '/ai-workspace', label: 'AI Workspace' },
+        { to: '/executive-dashboard', label: 'Executive Dashboard' },
+        ...(user?.role === 'super_admin' ? [{ to: '/super-admin', label: 'Super Admin Portal' }] : []),
+        ...((user?.role === 'admin' || user?.role === 'manager' || user?.role === 'owner')
+            ? [{ to: '/reports', label: 'Reports' }, { to: '/admin-settings', label: 'Admin Settings' }]
+            : []),
+    ];
 
     const fetchUnreadCount = useCallback(async () => {
         if (!isLoggedIn) return;
@@ -201,6 +220,15 @@ const Header = () => {
                     <div className="flex items-center gap-4">
                         {isLoggedIn ? (
                             <>
+                                {/* Mobile menu toggle */}
+                                <button
+                                    onClick={() => setMobileMenuOpen((v) => !v)}
+                                    className="lg:hidden p-2.5 hover:bg-blue-100/50 rounded-xl transition cursor-pointer"
+                                    aria-label="Toggle menu"
+                                >
+                                    {mobileMenuOpen ? <X className="w-5 h-5 text-ink-soft" /> : <Menu className="w-5 h-5 text-ink-soft" />}
+                                </button>
+
                                 {/* Workspace Selector */}
                                 {user?.role !== 'super_admin' && (
                                     <div className="relative">
@@ -226,7 +254,7 @@ const Header = () => {
                                                             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition ${
                                                                 w.id === user?.activeWorkspaceId
                                                                     ? 'bg-blue-50 text-blue-600 font-extrabold'
-                                                                    : 'text-slate-650 hover:bg-slate-50 font-bold'
+                                                                    : 'text-ink-soft hover:bg-slate-50 font-bold'
                                                             }`}
                                                         >
                                                             <span className="truncate pr-2">{w.name}</span>
@@ -266,7 +294,7 @@ const Header = () => {
                                             onClick={() => setSearchOpen(true)}
                                             className="p-2.5 hover:bg-blue-100/50 rounded-xl transition cursor-pointer"
                                         >
-                                            <Search className="w-4 h-4 text-gray-650" />
+                                            <Search className="w-4 h-4 text-ink-soft" />
                                         </button>
                                     )}
                                 </div>
@@ -276,7 +304,7 @@ const Header = () => {
                                      onClick={() => setNotificationCenterOpen(true)}
                                      className="relative p-2.5 hover:bg-blue-100/50 rounded-xl transition group cursor-pointer"
                                  >
-                                     <Bell className={`w-4 h-4 transition ${unreadCount > 0 ? 'text-blue-650' : 'text-gray-650'}`} />
+                                     <Bell className={`w-4 h-4 transition ${unreadCount > 0 ? 'text-brand' : 'text-ink-soft'}`} />
                                      {unreadCount > 0 && (
                                          <span className="absolute top-1.5 right-1.5 bg-red-500 text-white font-extrabold text-[8px] flex items-center justify-center min-w-[12px] h-[12px] rounded-full border border-white animate-pulse">
                                              {unreadCount}
@@ -376,10 +404,28 @@ const Header = () => {
                     </div>
                 </div>
             </div>
-            <NotificationCenter 
-                isOpen={notificationCenterOpen} 
-                onClose={() => setNotificationCenterOpen(false)} 
-                onUnreadCountChange={setUnreadCount} 
+            {/* Mobile nav drawer */}
+            {isLoggedIn && mobileMenuOpen && (
+                <div className="lg:hidden border-t border-blue-100/60 bg-white/95 backdrop-blur-xl shadow-lg">
+                    <nav className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 gap-1">
+                        {navLinks.map((l) => (
+                            <Link
+                                key={l.to}
+                                to={l.to}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="px-3 py-2.5 rounded-xl text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                                {l.label}
+                            </Link>
+                        ))}
+                    </nav>
+                </div>
+            )}
+
+            <NotificationCenter
+                isOpen={notificationCenterOpen}
+                onClose={() => setNotificationCenterOpen(false)}
+                onUnreadCountChange={setUnreadCount}
             />
         </header>
     );

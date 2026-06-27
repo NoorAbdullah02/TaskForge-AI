@@ -1,1 +1,122 @@
 @import "tailwindcss";
+
+/* ── Light-premium design tokens wired into Tailwind v4 ───────────────────── */
+@theme {
+  /* Brand */
+  --color-brand: #2563eb;
+  --color-brand-soft: #3b82f6;
+  --color-brand-strong: #1d4ed8;
+  --color-accent: #7c3aed;
+  --color-accent-soft: #8b5cf6;
+
+  /* Surfaces (light premium) */
+  --color-surface: #f6f8fc;        /* app background base */
+  --color-surface-2: #eef2f9;      /* subtle secondary */
+  --color-card: #ffffff;           /* card background */
+  --color-line: #e6eaf2;           /* hairline borders */
+
+  /* Text */
+  --color-ink: #0b1220;            /* primary text */
+  --color-ink-soft: #4b5563;       /* secondary text */
+  --color-ink-faint: #8a93a6;      /* tertiary text */
+
+  /* Semantic */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Radii */
+  --radius-card: 18px;
+  --radius-xl2: 28px;
+
+  /* Shadows (soft, premium) */
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --shadow-float: 0 12px 40px rgba(16, 24, 40, 0.10);
+  --shadow-glow: 0 8px 30px rgba(37, 99, 235, 0.18);
+
+  /* Motion */
+  --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ── Global base ─────────────────────────────────────────────────────────── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ── Reusable utilities (single source of truth for glass + mesh) ─────────── */
+@layer utilities {
+  /* Premium light glass card */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(230, 234, 242, 0.9);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: var(--shadow-soft);
+  }
+  .glass-strong {
+    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(230, 234, 242, 1);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: var(--shadow-float);
+  }
+
+  /* Animated gradient mesh background (light) */
+  .bg-mesh-light {
+    background-color: var(--color-surface);
+    background-image:
+      radial-gradient(at 18% 12%, rgba(37, 99, 235, 0.10) 0px, transparent 45%),
+      radial-gradient(at 82% 8%, rgba(124, 58, 237, 0.10) 0px, transparent 45%),
+      radial-gradient(at 70% 78%, rgba(16, 185, 129, 0.08) 0px, transparent 45%),
+      radial-gradient(at 12% 82%, rgba(59, 130, 246, 0.08) 0px, transparent 45%);
+  }
+
+  /* Subtle grid overlay */
+  .bg-grid-light {
+    background-image:
+      linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(124, 58, 237, 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(circle at 50% 25%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.15) 60%, transparent 78%);
+    mask-image: radial-gradient(circle at 50% 25%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.15) 60%, transparent 78%);
+  }
+
+  .text-gradient-brand {
+    background-image: linear-gradient(135deg, var(--color-brand), var(--color-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* Gentle blob drift used by the light background */
+@keyframes blob-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(18px, -16px) scale(1.06); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob-anim { animation: none !important; }
+}
+
+/* Refined scrollbar */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(11, 18, 32, 0.16);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(11, 18, 32, 0.28); background-clip: content-box; }

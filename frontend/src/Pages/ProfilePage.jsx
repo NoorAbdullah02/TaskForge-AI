@@ -365,10 +365,10 @@ export default function ProfilePage() {
 
     if (loading || !profileData) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-400 text-xs font-semibold">Decrypting settings instance...</p>
+                    <p className="text-ink-soft text-xs font-semibold">Decrypting settings instance...</p>
                 </div>
             </div>
         );
@@ -389,7 +389,7 @@ export default function ProfilePage() {
 
     return (
         <div className={`min-h-screen py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${
-            settings.theme === 'dark' ? 'bg-[#07070d] text-slate-100' : 'bg-gradient-to-br from-slate-50 via-blue-50/20 to-white text-slate-800'
+            settings.theme === 'dark' ? 'bg-card text-ink' : 'bg-gradient-to-br from-slate-50 via-blue-50/20 to-white text-ink-faint'
         }`}>
             <div className="max-w-6xl mx-auto">
                 {/* Header Section */}
@@ -399,7 +399,7 @@ export default function ProfilePage() {
                             <Settings className="w-7 h-7 text-blue-500" />
                             {getSettingsTitle()}
                         </h1>
-                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink0'}`}>
                             Adjust role settings, manage active login tokens, generate API access codes, and customize workspace viewports.
                         </p>
                     </div>
@@ -413,7 +413,7 @@ export default function ProfilePage() {
                     {/* Left tabs selector */}
                     <div className="lg:col-span-1 space-y-2">
                         <div className={`backdrop-blur-xl border p-4 rounded-3xl shadow-xl space-y-1 ${
-                            settings.theme === 'dark' ? 'bg-white/[0.02] border-white/10' : 'bg-white/90 border-blue-100/50 shadow-blue-100/10'
+                            settings.theme === 'dark' ? 'bg-surface-2 border-line' : 'bg-surface-2 border-blue-100/50 shadow-blue-100/10'
                         }`}>
                             {[
                                 { id: 'profile', label: 'My Profile', icon: User },
@@ -436,8 +436,8 @@ export default function ProfilePage() {
                                             activeTab === tab.id
                                                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
                                                 : settings.theme === 'dark'
-                                                    ? 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-100'
-                                                    : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                                                    ? 'text-ink-soft hover:bg-surface-2 hover:text-ink'
+                                                    : 'text-ink-faint hover:bg-blue-50 hover:text-blue-600'
                                         }`}
                                     >
                                         <Icon className="w-4 h-4 shrink-0" />
@@ -458,13 +458,13 @@ export default function ProfilePage() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                                 className={`border p-6 sm:p-8 rounded-3xl shadow-xl backdrop-blur-xl ${
-                                    settings.theme === 'dark' ? 'bg-white/[0.02] border-white/10' : 'bg-white/90 border-blue-100/50 shadow-blue-100/10'
+                                    settings.theme === 'dark' ? 'bg-surface-2 border-line' : 'bg-surface-2 border-blue-100/50 shadow-blue-100/10'
                                 }`}
                             >
                                 {/* TAB 1: PROFILE */}
                                 {activeTab === 'profile' && (
                                     <div className="space-y-6">
-                                        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-white/5">
+                                        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-line">
                                             {/* Avatar Box */}
                                             <div className="relative group">
                                                 <div className="w-24 h-24 rounded-3xl bg-blue-600 text-white text-3xl font-extrabold flex items-center justify-center shadow-md border-2 border-blue-400 overflow-hidden shrink-0">
@@ -474,14 +474,14 @@ export default function ProfilePage() {
                                                         profileData.name.charAt(0).toUpperCase()
                                                     )}
                                                 </div>
-                                                <label className="absolute inset-0 bg-slate-900/60 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                                <label className="absolute inset-0 bg-surface-2 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
                                                     <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                                                    <Camera className="w-5 h-5 text-white" />
+                                                    <Camera className="w-5 h-5 text-ink" />
                                                 </label>
                                             </div>
                                             <div className="text-center sm:text-left">
                                                 <h3 className="text-lg font-bold">{profileData.name}</h3>
-                                                <p className="text-xs text-gray-500 mt-1">{profileData.position || 'Professional Specialist'}</p>
+                                                <p className="text-xs text-ink0 mt-1">{profileData.position || 'Professional Specialist'}</p>
                                                 <div className="mt-2">{getRoleBadge(profileData.role)}</div>
                                             </div>
                                         </div>
@@ -489,48 +489,48 @@ export default function ProfilePage() {
                                         <form onSubmit={handleSaveProfile} className="space-y-4">
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Display Name</label>
+                                                    <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Display Name</label>
                                                     <input
                                                         type="text"
                                                         value={editData.name || ''}
                                                         onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                                                         className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                         required
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Professional Position</label>
+                                                    <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Professional Position</label>
                                                     <input
                                                         type="text"
                                                         value={editData.position || ''}
                                                         onChange={(e) => setEditData({ ...editData, position: e.target.value })}
                                                         placeholder="e.g. Lead Devops Architect"
                                                         className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Mobile Phone</label>
+                                                    <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Mobile Phone</label>
                                                     <input
                                                         type="text"
                                                         value={editData.phone || ''}
                                                         onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                                                         placeholder="+1 (555) 019-2834"
                                                         className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Department Division</label>
+                                                    <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Department Division</label>
                                                     <select
                                                         value={editData.departmentId || ''}
                                                         onChange={(e) => setEditData({ ...editData, departmentId: parseInt(e.target.value, 10) || null })}
                                                         className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                     >
                                                         <option value="">Not Assigned / Operations</option>
@@ -560,27 +560,27 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Credentials</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Change your login passcode to keep your active workspace secure.</p>
+                                            <p className="text-xs text-ink0 mt-1">Change your login passcode to keep your active workspace secure.</p>
                                         </div>
 
                                         <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
                                             {/* Old Pass */}
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Current Password</label>
+                                                <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Current Password</label>
                                                 <div className="relative">
                                                     <input
                                                         type={showPasswords.old ? 'text' : 'password'}
                                                         value={passwordData.oldPassword}
                                                         onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
                                                         className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -589,21 +589,21 @@ export default function ProfilePage() {
 
                                             {/* New Pass */}
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">New Password</label>
+                                                <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">New Password</label>
                                                 <div className="relative">
                                                     <input
                                                         type={showPasswords.new ? 'text' : 'password'}
                                                         value={passwordData.newPassword}
                                                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                                                         className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -612,21 +612,21 @@ export default function ProfilePage() {
 
                                             {/* Confirm Pass */}
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Confirm New Password</label>
+                                                <label className="block text-[10px] font-bold text-ink-soft uppercase mb-2">Confirm New Password</label>
                                                 <div className="relative">
                                                     <input
                                                         type={showPasswords.confirm ? 'text' : 'password'}
                                                         value={passwordData.confirmPassword}
                                                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                                                         className={`w-full pl-4 pr-10 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                            settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                            settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                         }`}
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -652,15 +652,15 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Email Address & Verification</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Check email delivery configurations or verify your communication channel.</p>
+                                            <p className="text-xs text-ink0 mt-1">Check email delivery configurations or verify your communication channel.</p>
                                         </div>
 
                                         <div className={`p-5 rounded-2xl border ${
-                                            settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-blue-50/30 border-blue-100/60'
+                                            settings.theme === 'dark' ? 'bg-surface-2 border-line' : 'bg-blue-50/30 border-blue-100/60'
                                         }`}>
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                 <div>
-                                                    <span className="text-[10px] font-extrabold text-slate-400 uppercase">Primary Workspace Email</span>
+                                                    <span className="text-[10px] font-extrabold text-ink-soft uppercase">Primary Workspace Email</span>
                                                     <p className="text-sm font-extrabold mt-1">{profileData.email}</p>
                                                 </div>
                                                 <div>
@@ -680,7 +680,7 @@ export default function ProfilePage() {
 
                                             {!profileData.isEmailVerified && (
                                                 <div className="mt-4 pt-4 border-t border-dashed border-gray-200/40">
-                                                    <p className="text-xs text-slate-400 mb-3 font-medium">Click the button below to request an OTP code or link to complete verification.</p>
+                                                    <p className="text-xs text-ink-soft mb-3 font-medium">Click the button below to request an OTP code or link to complete verification.</p>
                                                     {!showVerifyInput ? (
                                                         <button
                                                             onClick={handleSendVerification}
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                                                                 placeholder="Enter 8-char OTP"
                                                                 maxLength={8}
                                                                 className={`px-3 py-2 rounded-xl border text-xs font-bold font-mono focus:outline-none focus:border-blue-500 ${
-                                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                                    settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                                 }`}
                                                             />
                                                             <button
@@ -720,19 +720,19 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Center</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Configure advanced identity verification features to protect against spoofing.</p>
+                                            <p className="text-xs text-ink0 mt-1">Configure advanced identity verification features to protect against spoofing.</p>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {/* Security Strength */}
                                             <div className={`p-5 rounded-2xl border ${
-                                                settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-slate-100'
+                                                settings.theme === 'dark' ? 'bg-surface-2 border-line' : 'bg-white border-slate-100'
                                             }`}>
                                                 <h4 className="text-xs font-extrabold flex items-center gap-1.5">
                                                     <ShieldCheck className="text-emerald-500 w-4 h-4" />
                                                     Identity Health
                                                 </h4>
-                                                <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
+                                                <p className="text-xs text-ink-soft mt-1 font-semibold leading-relaxed">
                                                     Your account security level is currently: <span className="text-emerald-500 font-extrabold">Good</span>. 
                                                     Password was initialized securely.
                                                 </p>
@@ -740,12 +740,12 @@ export default function ProfilePage() {
 
                                             {/* 2FA Card */}
                                             <div className={`p-5 rounded-2xl border ${
-                                                settings.theme === 'dark' ? 'bg-white/[0.01] border-white/5' : 'bg-white border-slate-100'
+                                                settings.theme === 'dark' ? 'bg-surface-2 border-line' : 'bg-white border-slate-100'
                                             }`}>
                                                 <div className="flex items-center justify-between">
                                                     <div>
                                                         <h4 className="text-xs font-extrabold">Two-Factor Authentication (2FA)</h4>
-                                                        <p className="text-[10px] text-gray-400 font-medium mt-1">Requires an OTP sent to your verified email address on login.</p>
+                                                        <p className="text-[10px] text-ink-soft font-medium mt-1">Requires an OTP sent to your verified email address on login.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
                                                         <input 
@@ -767,7 +767,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Notification Channels</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
+                                            <p className="text-xs text-ink0 mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
                                         </div>
 
                                         <div className="space-y-3">
@@ -780,7 +780,7 @@ export default function ProfilePage() {
                                                 <div key={item.key} className="flex items-center justify-between p-4 rounded-xl hover:bg-blue-50/20 transition-colors">
                                                     <div>
                                                         <h4 className="text-xs font-bold">{item.title}</h4>
-                                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{item.desc}</p>
+                                                        <p className="text-[10px] text-ink-soft font-medium mt-0.5">{item.desc}</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
                                                         <input 
@@ -808,7 +808,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Theme Preference</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Adjust workspace theme styling to protect eye health during extended operations.</p>
+                                            <p className="text-xs text-ink0 mt-1">Adjust workspace theme styling to protect eye health during extended operations.</p>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 max-w-sm">
@@ -817,7 +817,7 @@ export default function ProfilePage() {
                                                 className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
                                                     settings.theme === 'light' 
                                                         ? 'border-blue-500 bg-blue-500/10 text-blue-500 font-extrabold shadow-md' 
-                                                        : 'border-gray-300/40 text-gray-400'
+                                                        : 'border-gray-300/40 text-ink-soft'
                                                 }`}
                                             >
                                                 <Paintbrush className="w-6 h-6" />
@@ -828,7 +828,7 @@ export default function ProfilePage() {
                                                 className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
                                                     settings.theme === 'dark' 
                                                         ? 'border-blue-400 bg-blue-400/10 text-blue-400 font-extrabold shadow-md' 
-                                                        : 'border-white/10 text-slate-400'
+                                                        : 'border-line text-ink-soft'
                                                 }`}
                                             >
                                                 <Paintbrush className="w-6 h-6" />
@@ -843,7 +843,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Language Preferences</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Choose your preferred localized interface dialect.</p>
+                                            <p className="text-xs text-ink0 mt-1">Choose your preferred localized interface dialect.</p>
                                         </div>
 
                                         <div className="max-w-xs">
@@ -854,7 +854,7 @@ export default function ProfilePage() {
                                                     toast.success(`Language changed to ${e.target.value.toUpperCase()}`);
                                                 }}
                                                 className={`w-full px-4 py-3 rounded-2xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                    settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                 }`}
                                             >
                                                 <option value="en">English (US)</option>
@@ -873,17 +873,17 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Active Token Sessions</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Manage active device connections authorized to request workspace information.</p>
+                                            <p className="text-xs text-ink0 mt-1">Manage active device connections authorized to request workspace information.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
-                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Device / Agent</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">IP Location</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Established</th>
-                                                        <th className="px-6 py-3.5 text-right font-extrabold text-gray-500">Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Device / Agent</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">IP Location</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Established</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink0">Action</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -895,10 +895,10 @@ export default function ProfilePage() {
                                                                     <span className="truncate">{sess.userAgent || 'Web browser client'}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-400">
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink-soft">
                                                                 {sess.ip || 'Localhost (Loopback)'}
                                                             </td>
-                                                            <td className="px-6 py-4 text-gray-400">
+                                                            <td className="px-6 py-4 text-ink-soft">
                                                                 {new Date(sess.createdAt).toLocaleString()}
                                                             </td>
                                                             <td className="px-6 py-4 text-right">
@@ -915,7 +915,7 @@ export default function ProfilePage() {
 
                                                     {sessions.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-ink-soft italic font-medium">
                                                                 No active sessions retrieved.
                                                             </td>
                                                         </tr>
@@ -931,18 +931,18 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Developer API Integrations</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Provision neural tokens to make programatic calls directly into TaskForge pipelines.</p>
+                                            <p className="text-xs text-ink0 mt-1">Provision neural tokens to make programatic calls directly into TaskForge pipelines.</p>
                                         </div>
 
                                         {/* Generation Form */}
-                                        <form onSubmit={handleCreateApiKey} className="flex gap-2 max-w-md bg-white/[0.01] border border-white/5 p-4 rounded-2xl">
+                                        <form onSubmit={handleCreateApiKey} className="flex gap-2 max-w-md bg-surface-2 border border-line p-4 rounded-2xl">
                                             <input
                                                 type="text"
                                                 value={newKeyName}
                                                 onChange={(e) => setNewKeyName(e.target.value)}
                                                 placeholder="e.g. CI/CD Deployment Token"
                                                 className={`flex-1 px-4 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                    settings.theme === 'dark' ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-blue-100 text-gray-800'
+                                                    settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
                                                 }`}
                                                 required
                                             />
@@ -963,7 +963,7 @@ export default function ProfilePage() {
                                                     <Check className="w-4 h-4" />
                                                     Copy key immediately. For security, it will not be shown again.
                                                 </p>
-                                                <div className="flex items-center gap-2 bg-slate-900 border border-emerald-500/20 p-2 rounded-xl">
+                                                <div className="flex items-center gap-2 bg-surface-2 border border-emerald-500/20 p-2 rounded-xl">
                                                     <span className="font-mono flex-1 select-all select-none truncate text-[10px] tracking-wider font-extrabold">{justCreatedKey}</span>
                                                     <button
                                                         onClick={() => {
@@ -983,22 +983,22 @@ export default function ProfilePage() {
                                         {/* API Keys List */}
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
-                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Token Description</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Key Hash Preview</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Provisioned</th>
-                                                        <th className="px-6 py-3.5 text-right font-extrabold text-gray-500">Revocation</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Token Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Key Hash Preview</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Provisioned</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink0">Revocation</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
                                                     {apiKeysList.map((key) => (
                                                         <tr key={key.id} className="hover:bg-blue-50/10 transition-colors">
                                                             <td className="px-6 py-4 font-bold">{key.name}</td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-400">
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink-soft">
                                                                 {key.key ? `${key.key.substring(0, 12)}...` : 'tf_live_************************'}
                                                             </td>
-                                                            <td className="px-6 py-4 text-gray-400">
+                                                            <td className="px-6 py-4 text-ink-soft">
                                                                 {new Date(key.createdAt).toLocaleDateString()}
                                                             </td>
                                                             <td className="px-6 py-4 text-right">
@@ -1015,7 +1015,7 @@ export default function ProfilePage() {
 
                                                     {apiKeysList.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-ink-soft italic font-medium">
                                                                 No authorized API keys retrieved.
                                                             </td>
                                                         </tr>
@@ -1031,17 +1031,17 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">User Audit Tracker</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
+                                            <p className="text-xs text-ink0 mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
-                                                <thead className={settings.theme === 'dark' ? 'bg-white/[0.01]' : 'bg-slate-50'}>
+                                                <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Operation Action</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Execution Description</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Client IP</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-gray-500">Timestamp</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Operation Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Execution Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Client IP</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Timestamp</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -1052,15 +1052,15 @@ export default function ProfilePage() {
                                                                     {log.action}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-6 py-4 text-gray-400 font-semibold">{log.details}</td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-gray-500">{log.ipAddress || 'Loopback'}</td>
-                                                            <td className="px-6 py-4 text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
+                                                            <td className="px-6 py-4 text-ink-soft font-semibold">{log.details}</td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink0">{log.ipAddress || 'Loopback'}</td>
+                                                            <td className="px-6 py-4 text-ink-soft">{new Date(log.createdAt).toLocaleString()}</td>
                                                         </tr>
                                                     ))}
 
                                                     {activityLogs.length === 0 && (
                                                         <tr>
-                                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                                            <td colSpan={4} className="px-6 py-8 text-center text-ink-soft italic font-medium">
                                                                 No audit logs recorded for this account.
                                                             </td>
                                                         </tr>

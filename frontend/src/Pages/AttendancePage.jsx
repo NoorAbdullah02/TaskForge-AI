@@ -254,7 +254,7 @@ const AttendancePage = () => {
 
     if (authLoading || checkingStatus) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 flex items-center justify-center p-6">
+            <div className="min-h-screen flex items-center justify-center p-6">
                 <div className="text-center">
                     <Clock className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading attendance workspace...</p>
@@ -289,7 +289,7 @@ const AttendancePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-6">
+        <div className="min-h-screen p-6">
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -318,7 +318,7 @@ const AttendancePage = () => {
                             <Clock className="w-5 h-5 text-indigo-600" />
                             <div>
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Local Desk Time</p>
-                                <p className="text-sm font-extrabold text-gray-850">
+                                <p className="text-sm font-extrabold text-gray-800">
                                     {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </p>
                             </div>
@@ -331,7 +331,7 @@ const AttendancePage = () => {
                     <button
                         onClick={() => setActiveMode('daily')}
                         className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                            activeMode === 'daily' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'text-gray-500 hover:text-blue-650'
+                            activeMode === 'daily' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'text-gray-500 hover:text-blue-600'
                         }`}
                     >
                         <UserCheck className="w-4 h-4 inline-block mr-1.5 align-text-bottom" />
@@ -473,7 +473,7 @@ const AttendancePage = () => {
                                             <button 
                                                 onClick={() => setQrSubTab('show')}
                                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                                                    qrSubTab === 'show' ? 'bg-white text-gray-850 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                    qrSubTab === 'show' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                             >
                                                 My QR Code
@@ -481,7 +481,7 @@ const AttendancePage = () => {
                                             <button 
                                                 onClick={() => setQrSubTab('scan')}
                                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                                                    qrSubTab === 'scan' ? 'bg-white text-gray-850 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                    qrSubTab === 'scan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                                 }`}
                                             >
                                                 Scanner Simulator
@@ -519,7 +519,7 @@ const AttendancePage = () => {
                                                         Active Check-in Code
                                                     </p>
                                                     <p className="text-xxs text-gray-400 font-bold uppercase tracking-wider">
-                                                        Expires in: <span className="text-blue-650 font-extrabold">{formatTimeLeft(timeLeft)}</span>
+                                                        Expires in: <span className="text-blue-600 font-extrabold">{formatTimeLeft(timeLeft)}</span>
                                                     </p>
                                                     <div className="max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap bg-gray-50 text-gray-500 text-[10px] font-mono p-1.5 rounded-lg border border-gray-150 select-all" title="Click to select token">
                                                         {qrToken}
@@ -530,7 +530,7 @@ const AttendancePage = () => {
                                             <button 
                                                 onClick={handleGenerateQR}
                                                 disabled={qrLoading}
-                                                className="py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-650 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                className="py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                             >
                                                 <RefreshCw className="w-3.5 h-3.5" />
                                                 Regenerate Badge
@@ -610,7 +610,7 @@ const AttendancePage = () => {
                     )}
 
                     {/* Monthly Summary Stats */}
-                    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-3xl p-6 md:p-8 text-white shadow-2xl flex flex-col justify-between border border-slate-750">
+                    <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-3xl p-6 md:p-8 text-white shadow-2xl flex flex-col justify-between border border-slate-700">
                         <div>
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-bold text-slate-400 uppercase tracking-wider">Month Summary</h3>

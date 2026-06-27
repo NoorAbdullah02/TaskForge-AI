@@ -349,15 +349,15 @@ export default function ReportsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center text-white">
+            <div className="min-h-screen flex flex-col items-center justify-center text-ink">
                 <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-gray-400 font-semibold animate-pulse">Loading Reports Control Panel...</p>
+                <p className="text-ink-soft font-semibold animate-pulse">Loading Reports Control Panel...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#080d1a] py-10 px-4 sm:px-6 lg:px-8 text-slate-100 relative overflow-hidden">
+        <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 text-ink relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[140px]" />
                 <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px]" />
@@ -365,52 +365,52 @@ export default function ReportsPage() {
 
             <div className="max-w-7xl mx-auto relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-white/10 mb-8">
-                    <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                <div className="pb-6 border-b border-line mb-8">
+                    <h1 className="text-3xl font-extrabold text-ink flex items-center gap-3">
                         <FileText className="w-8 h-8 text-blue-400 animate-pulse" />
                         Executive Reports & Data Export
                     </h1>
-                    <p className="text-slate-400 mt-1 font-medium font-sans">Compile, download, and email workspace metrics in CSV, XLS, or PDF formats.</p>
+                    <p className="text-ink-soft mt-1 font-medium font-sans">Compile, download, and email workspace metrics in CSV, XLS, or PDF formats.</p>
                 </div>
 
                 {/* Dashboard Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     
                     {/* Card 1: Attendance Log Export */}
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
+                    <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
                         <div>
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center">
                                     <Calendar className="w-5 h-5" />
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-200">Attendance Log Export</h2>
+                                <h2 className="text-sm font-bold text-ink">Attendance Log Export</h2>
                             </div>
-                            <p className="text-xs text-slate-400 font-sans leading-relaxed mb-6">Download check-in metrics, late percentages, and active operating days logs.</p>
+                            <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Download check-in metrics, late percentages, and active operating days logs.</p>
                             
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Employee</label>
+                                        <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1">Employee</label>
                                         <select
                                             value={attendanceUser}
                                             onChange={(e) => setAttendanceUser(e.target.value)}
-                                            className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-slate-200 focus:outline-none"
+                                            className="w-full px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs text-ink focus:outline-none"
                                         >
-                                            <option value="all" className="bg-slate-900">All Employees</option>
+                                            <option value="all" className="bg-surface-2">All Employees</option>
                                             {users.map(u => (
-                                                <option key={u.id} value={u.id} className="bg-slate-900">{u.name}</option>
+                                                <option key={u.id} value={u.id} className="bg-surface-2">{u.name}</option>
                                             ))}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Month</label>
+                                        <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1">Month</label>
                                         <select
                                             value={attendanceMonth}
                                             onChange={(e) => setAttendanceMonth(e.target.value)}
-                                            className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-slate-200 focus:outline-none"
+                                            className="w-full px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs text-ink focus:outline-none"
                                         >
                                             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                                <option key={m} value={m} className="bg-slate-900">
+                                                <option key={m} value={m} className="bg-surface-2">
                                                     {new Date(2026, m - 1).toLocaleString('en-US', { month: 'long' })}
                                                 </option>
                                             ))}
@@ -419,28 +419,28 @@ export default function ReportsPage() {
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleExportAttendance('csv')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportAttendance('csv')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> CSV
                                     </button>
-                                    <button onClick={() => handleExportAttendance('excel')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportAttendance('excel')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> XLS
                                     </button>
-                                    <button onClick={() => handleExportAttendance('pdf')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportAttendance('pdf')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> PDF
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4 mt-6">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Direct Email Dispatch</label>
+                        <div className="border-t border-line pt-4 mt-6">
+                            <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1.5">Direct Email Dispatch</label>
                             <div className="flex gap-2">
                                 <input
                                     type="email"
                                     placeholder="recipient@example.com"
                                     value={emailAttendance}
                                     onChange={(e) => setEmailAttendance(e.target.value)}
-                                    className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none"
+                                    className="flex-1 px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none"
                                 />
                                 <button
                                     onClick={handleEmailAttendance}
@@ -454,54 +454,54 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Card 2: Project Performance */}
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
+                    <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
                         <div>
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="w-9 h-9 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center">
                                     <CheckSquare className="w-5 h-5" />
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-200">Project Performance</h2>
+                                <h2 className="text-sm font-bold text-ink">Project Performance</h2>
                             </div>
-                            <p className="text-xs text-slate-400 font-sans leading-relaxed mb-6">Retrieve milestones, epic status counts, and completed sprint velocities.</p>
+                            <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Retrieve milestones, epic status counts, and completed sprint velocities.</p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select Project</label>
+                                    <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1">Select Project</label>
                                     <select
                                         value={projectSelected}
                                         onChange={(e) => setProjectSelected(e.target.value)}
-                                        className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-slate-200 focus:outline-none"
+                                        className="w-full px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs text-ink focus:outline-none"
                                     >
-                                        <option value="" className="bg-slate-900">Select Project...</option>
+                                        <option value="" className="bg-surface-2">Select Project...</option>
                                         {projects.map(p => (
-                                            <option key={p.id} value={p.id} className="bg-slate-900">{p.name}</option>
+                                            <option key={p.id} value={p.id} className="bg-surface-2">{p.name}</option>
                                         ))}
                                     </select>
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleExportProject('csv')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportProject('csv')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> CSV
                                     </button>
-                                    <button onClick={() => handleExportProject('excel')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportProject('excel')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> XLS
                                     </button>
-                                    <button onClick={() => handleExportProject('pdf')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportProject('pdf')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> PDF
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4 mt-6">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Direct Email Dispatch</label>
+                        <div className="border-t border-line pt-4 mt-6">
+                            <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1.5">Direct Email Dispatch</label>
                             <div className="flex gap-2">
                                 <input
                                     type="email"
                                     placeholder="recipient@example.com"
                                     value={emailProject}
                                     onChange={(e) => setEmailProject(e.target.value)}
-                                    className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none"
+                                    className="flex-1 px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none"
                                 />
                                 <button
                                     onClick={handleEmailProject}
@@ -515,54 +515,54 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Card 3: Team Squad Summary */}
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
+                    <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
                         <div>
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center">
                                     <Users className="w-5 h-5" />
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-200">Team Squad Statistics</h2>
+                                <h2 className="text-sm font-bold text-ink">Team Squad Statistics</h2>
                             </div>
-                            <p className="text-xs text-slate-400 font-sans leading-relaxed mb-6">Export headcount breakdown, division structure, and squad leader assignments.</p>
+                            <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Export headcount breakdown, division structure, and squad leader assignments.</p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Select Team</label>
+                                    <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1">Select Team</label>
                                     <select
                                         value={teamSelected}
                                         onChange={(e) => setTeamSelected(e.target.value)}
-                                        className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-slate-200 focus:outline-none"
+                                        className="w-full px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs text-ink focus:outline-none"
                                     >
-                                        <option value="" className="bg-slate-900">Select Team...</option>
+                                        <option value="" className="bg-surface-2">Select Team...</option>
                                         {teams.map(t => (
-                                            <option key={t.id} value={t.id} className="bg-slate-900">{t.name}</option>
+                                            <option key={t.id} value={t.id} className="bg-surface-2">{t.name}</option>
                                         ))}
                                     </select>
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleExportTeam('csv')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportTeam('csv')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> CSV
                                     </button>
-                                    <button onClick={() => handleExportTeam('excel')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportTeam('excel')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> XLS
                                     </button>
-                                    <button onClick={() => handleExportTeam('pdf')} className="flex-1 py-2 bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <button onClick={() => handleExportTeam('pdf')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
                                         <Download className="w-3 h-3" /> PDF
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4 mt-6">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Direct Email Dispatch</label>
+                        <div className="border-t border-line pt-4 mt-6">
+                            <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1.5">Direct Email Dispatch</label>
                             <div className="flex gap-2">
                                 <input
                                     type="email"
                                     placeholder="recipient@example.com"
                                     value={emailTeam}
                                     onChange={(e) => setEmailTeam(e.target.value)}
-                                    className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none"
+                                    className="flex-1 px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none"
                                 />
                                 <button
                                     onClick={handleEmailTeam}
@@ -576,31 +576,31 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Card 4: Workspace Productivity Report (Email Only) */}
-                    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
+                    <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
                         <div>
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="w-9 h-9 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center">
                                     <BarChart3 className="w-5 h-5" />
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-200">Global Productivity</h2>
+                                <h2 className="text-sm font-bold text-ink">Global Productivity</h2>
                             </div>
-                            <p className="text-xs text-slate-400 font-sans leading-relaxed mb-6">Generates productivity efficiency logs by mapping completed project tasks inside the active workspace and emails it to directors.</p>
+                            <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Generates productivity efficiency logs by mapping completed project tasks inside the active workspace and emails it to directors.</p>
                             
-                            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-center gap-2">
+                            <div className="p-4 bg-surface-2 border border-line rounded-2xl flex items-center justify-center gap-2">
                                 <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                <span className="text-xxs font-bold text-slate-300 uppercase tracking-wide">Multi-Project Analysis</span>
+                                <span className="text-xxs font-bold text-ink uppercase tracking-wide">Multi-Project Analysis</span>
                             </div>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4 mt-6">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5">Direct Email Dispatch</label>
+                        <div className="border-t border-line pt-4 mt-6">
+                            <label className="block text-[9px] font-bold text-ink-soft uppercase mb-1.5">Direct Email Dispatch</label>
                             <div className="flex gap-2">
                                 <input
                                     type="email"
                                     placeholder="recipient@example.com"
                                     value={emailProductivity}
                                     onChange={(e) => setEmailProductivity(e.target.value)}
-                                    className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/10 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none"
+                                    className="flex-1 px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-semibold text-ink focus:outline-none"
                                 />
                                 <button
                                     onClick={handleEmailProductivity}

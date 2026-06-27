@@ -143,9 +143,9 @@ export default function ProjectIntelligenceDashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b0f19] text-white">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-card text-ink">
                 <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-gray-400 font-semibold">Analyzing Project Intelligence Metrics...</p>
+                <p className="text-ink-soft font-semibold">Analyzing Project Intelligence Metrics...</p>
             </div>
         );
     }
@@ -163,21 +163,21 @@ export default function ProjectIntelligenceDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0b0f19] text-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen text-ink py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto space-y-8">
                 
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card backdrop-blur-md p-6 rounded-3xl border border-line">
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={() => navigate(`/projects/${id}`)}
-                            className="p-3 bg-gray-800/80 hover:bg-gray-700/80 rounded-2xl transition border border-gray-700 text-gray-400 hover:text-white"
+                            className="p-3 bg-surface-2 hover:bg-gray-700/80 rounded-2xl transition border border-line text-ink-soft hover:text-ink"
                         >
                             <ArrowLeft className="h-5 w-5" />
                         </button>
                         <div>
                             <span className="text-xs uppercase tracking-wider font-semibold text-blue-500">Enterprise intelligence portal</span>
-                            <h1 className="text-2xl md:text-3xl font-extrabold text-white">
+                            <h1 className="text-2xl md:text-3xl font-extrabold text-ink">
                                 {project?.name} - Analytics
                             </h1>
                         </div>
@@ -199,7 +199,7 @@ export default function ProjectIntelligenceDashboard() {
                         
                         <button
                             onClick={loadData}
-                            className="px-5 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold rounded-2xl border border-gray-700 transition text-sm cursor-pointer"
+                            className="px-5 py-3 bg-surface-2 hover:bg-gray-700 text-ink font-semibold rounded-2xl border border-line transition text-sm cursor-pointer"
                         >
                             Refresh Metrics
                         </button>
@@ -209,9 +209,9 @@ export default function ProjectIntelligenceDashboard() {
                 {/* KPI Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* circular health score */}
-                    <div className="bg-[#111827]/40 backdrop-blur-md p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
+                    <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line flex items-center justify-between">
                         <div>
-                            <span className="text-gray-400 text-xs font-semibold uppercase">Project Health Score</span>
+                            <span className="text-ink-soft text-xs font-semibold uppercase">Project Health Score</span>
                             <div className="flex items-baseline gap-2 mt-2">
                                 <span className={`text-4xl font-extrabold ${
                                     (100 - (health?.riskScore || 0)) >= 80 ? 'text-green-500' :
@@ -219,7 +219,7 @@ export default function ProjectIntelligenceDashboard() {
                                 }`}>
                                     {health ? 100 - health.riskScore : 'N/A'}
                                 </span>
-                                <span className="text-gray-500 text-sm">/ 100</span>
+                                <span className="text-ink0 text-sm">/ 100</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-blue-500/10 text-blue-500">
@@ -228,9 +228,9 @@ export default function ProjectIntelligenceDashboard() {
                     </div>
 
                     {/* risk score */}
-                    <div className="bg-[#111827]/40 backdrop-blur-md p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
+                    <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line flex items-center justify-between">
                         <div>
-                            <span className="text-gray-400 text-xs font-semibold uppercase">Workspace Risk Index</span>
+                            <span className="text-ink-soft text-xs font-semibold uppercase">Workspace Risk Index</span>
                             <div className="flex items-baseline gap-2 mt-2">
                                 <span className={`text-4xl font-extrabold ${
                                     (health?.riskScore || 0) < 30 ? 'text-green-400' :
@@ -238,7 +238,7 @@ export default function ProjectIntelligenceDashboard() {
                                 }`}>
                                     {health?.riskScore || 0}
                                 </span>
-                                <span className="text-gray-500 text-sm">/ 100</span>
+                                <span className="text-ink0 text-sm">/ 100</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-red-500/10 text-red-400">
@@ -247,14 +247,14 @@ export default function ProjectIntelligenceDashboard() {
                     </div>
 
                     {/* Sprint Velocity */}
-                    <div className="bg-[#111827]/40 backdrop-blur-md p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
+                    <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line flex items-center justify-between">
                         <div>
-                            <span className="text-gray-400 text-xs font-semibold uppercase">Sprint Velocity</span>
+                            <span className="text-ink-soft text-xs font-semibold uppercase">Sprint Velocity</span>
                             <div className="flex items-baseline gap-2 mt-2">
-                                <span className="text-4xl font-extrabold text-white">
+                                <span className="text-4xl font-extrabold text-ink">
                                     {health?.sprintVelocity || 0}
                                 </span>
-                                <span className="text-gray-500 text-sm">pts completed</span>
+                                <span className="text-ink0 text-sm">pts completed</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-violet-500/10 text-violet-500">
@@ -263,14 +263,14 @@ export default function ProjectIntelligenceDashboard() {
                     </div>
 
                     {/* Team Productivity */}
-                    <div className="bg-[#111827]/40 backdrop-blur-md p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
+                    <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line flex items-center justify-between">
                         <div>
-                            <span className="text-gray-400 text-xs font-semibold uppercase">Productivity (30d)</span>
+                            <span className="text-ink-soft text-xs font-semibold uppercase">Productivity (30d)</span>
                             <div className="flex items-baseline gap-2 mt-2">
-                                <span className="text-4xl font-extrabold text-white">
+                                <span className="text-4xl font-extrabold text-ink">
                                     {health?.teamProductivity || 0}
                                 </span>
-                                <span className="text-gray-500 text-sm">tasks closed</span>
+                                <span className="text-ink0 text-sm">tasks closed</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-500">
@@ -280,7 +280,7 @@ export default function ProjectIntelligenceDashboard() {
                 </div>
 
                 {/* Tabs Selector */}
-                <div className="flex border-b border-gray-800">
+                <div className="flex border-b border-line">
                     {[
                         { id: 'health', label: 'Project Health', icon: Activity },
                         { id: 'workload', label: 'Workload Balancer', icon: Users },
@@ -293,7 +293,7 @@ export default function ProjectIntelligenceDashboard() {
                             className={`flex items-center gap-2 px-6 py-4 border-b-2 font-bold text-sm transition cursor-pointer ${
                                 activeTab === tab.id 
                                 ? 'border-blue-500 text-blue-500' 
-                                : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-800'
+                                : 'border-transparent text-ink-soft hover:text-ink hover:border-line'
                             }`}
                         >
                             <tab.icon className="h-4 w-4" />
@@ -309,8 +309,8 @@ export default function ProjectIntelligenceDashboard() {
                     {activeTab === 'health' && health && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             {/* Health Distribution Chart */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-1">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-1">
+                                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                     <Activity className="h-5 w-5 text-blue-500" />
                                     Task Health Distribution
                                 </h3>
@@ -337,26 +337,26 @@ export default function ProjectIntelligenceDashboard() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <div className="flex justify-between items-center bg-gray-900/40 p-3 rounded-xl border border-gray-800/50">
+                                    <div className="flex justify-between items-center bg-surface-2 p-3 rounded-xl border border-line">
                                         <div className="flex items-center gap-2">
-                                            <span className="h-3 w-3 rounded-full bg-[#10b981]"></span>
-                                            <span className="text-sm font-semibold text-gray-300">Healthy (Green)</span>
+                                            <span className="h-3 w-3 rounded-full bg-card"></span>
+                                            <span className="text-sm font-semibold text-ink">Healthy (Green)</span>
                                         </div>
-                                        <span className="text-sm font-bold text-white">{health.taskHealthDistribution.Green}</span>
+                                        <span className="text-sm font-bold text-ink">{health.taskHealthDistribution.Green}</span>
                                     </div>
-                                    <div className="flex justify-between items-center bg-gray-900/40 p-3 rounded-xl border border-gray-800/50">
+                                    <div className="flex justify-between items-center bg-surface-2 p-3 rounded-xl border border-line">
                                         <div className="flex items-center gap-2">
-                                            <span className="h-3 w-3 rounded-full bg-[#f59e0b]"></span>
-                                            <span className="text-sm font-semibold text-gray-300">Warning (Yellow)</span>
+                                            <span className="h-3 w-3 rounded-full bg-card"></span>
+                                            <span className="text-sm font-semibold text-ink">Warning (Yellow)</span>
                                         </div>
-                                        <span className="text-sm font-bold text-white">{health.taskHealthDistribution.Yellow}</span>
+                                        <span className="text-sm font-bold text-ink">{health.taskHealthDistribution.Yellow}</span>
                                     </div>
-                                    <div className="flex justify-between items-center bg-gray-900/40 p-3 rounded-xl border border-gray-800/50">
+                                    <div className="flex justify-between items-center bg-surface-2 p-3 rounded-xl border border-line">
                                         <div className="flex items-center gap-2">
-                                            <span className="h-3 w-3 rounded-full bg-[#ef4444]"></span>
-                                            <span className="text-sm font-semibold text-gray-300">Critical (Red)</span>
+                                            <span className="h-3 w-3 rounded-full bg-card"></span>
+                                            <span className="text-sm font-semibold text-ink">Critical (Red)</span>
                                         </div>
-                                        <span className="text-sm font-bold text-white">{health.taskHealthDistribution.Red}</span>
+                                        <span className="text-sm font-bold text-ink">{health.taskHealthDistribution.Red}</span>
                                     </div>
                                     <div className="mt-4 p-3 bg-blue-500/5 text-blue-400 text-xs rounded-xl border border-blue-500/10 font-semibold flex items-center gap-2">
                                         <Clock className="h-4 w-4 flex-shrink-0" />
@@ -366,9 +366,9 @@ export default function ProjectIntelligenceDashboard() {
                             </div>
 
                             {/* AI recommendations */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-2">
-                                <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-2">
+                                <div className="flex items-center justify-between border-b border-line pb-4">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         <Brain className="h-5 w-5 text-purple-400 animate-pulse" />
                                         AI recommendations & Action Plans
                                     </h3>
@@ -377,7 +377,7 @@ export default function ProjectIntelligenceDashboard() {
                                         Mistral AI active
                                     </span>
                                 </div>
-                                <div className="prose prose-invert max-w-none text-gray-300 text-sm leading-relaxed whitespace-pre-wrap bg-gray-950/40 p-6 rounded-2xl border border-gray-800/50 font-medium">
+                                <div className="prose prose-invert max-w-none text-ink text-sm leading-relaxed whitespace-pre-wrap bg-surface-2 p-6 rounded-2xl border border-line font-medium">
                                     {health.aiRecommendations}
                                 </div>
                             </div>
@@ -388,8 +388,8 @@ export default function ProjectIntelligenceDashboard() {
                     {activeTab === 'workload' && workload && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             {/* Capacity Heatmap Grid */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-2">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-2">
+                                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                     <Users className="h-5 w-5 text-blue-500" />
                                     Active Task Distribution & Capacities
                                 </h3>
@@ -400,12 +400,12 @@ export default function ProjectIntelligenceDashboard() {
                                         return (
                                             <div 
                                                 key={cap.userId} 
-                                                className="bg-gray-900/40 p-5 rounded-2xl border border-gray-800/60 flex flex-col justify-between space-y-4"
+                                                className="bg-surface-2 p-5 rounded-2xl border border-line flex flex-col justify-between space-y-4"
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <h4 className="font-bold text-white text-base">{cap.userName}</h4>
-                                                        <span className="text-gray-500 text-xs font-semibold">Resource</span>
+                                                        <h4 className="font-bold text-ink text-base">{cap.userName}</h4>
+                                                        <span className="text-ink0 text-xs font-semibold">Resource</span>
                                                     </div>
                                                     <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${
                                                         cap.status === 'Underloaded' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
@@ -417,11 +417,11 @@ export default function ProjectIntelligenceDashboard() {
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <div className="flex justify-between text-xs font-semibold text-gray-400">
+                                                    <div className="flex justify-between text-xs font-semibold text-ink-soft">
                                                         <span>Active tasks</span>
                                                         <span>{heat?.activeTasksCount || 0} tasks</span>
                                                     </div>
-                                                    <div className="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden">
+                                                    <div className="w-full bg-surface-2 h-2.5 rounded-full overflow-hidden">
                                                         <div 
                                                             className={`h-full rounded-full ${
                                                                 cap.status === 'Underloaded' ? 'bg-green-500' :
@@ -430,7 +430,7 @@ export default function ProjectIntelligenceDashboard() {
                                                             style={{ width: `${Math.min(100, ((heat?.activeTasksCount || 0) / 8) * 100)}%` }}
                                                         ></div>
                                                     </div>
-                                                    <div className="flex justify-between text-xs font-semibold text-gray-500">
+                                                    <div className="flex justify-between text-xs font-semibold text-ink0">
                                                         <span>Capacity remaining</span>
                                                         <span>{cap.capacityHours} hrs/week</span>
                                                     </div>
@@ -442,15 +442,15 @@ export default function ProjectIntelligenceDashboard() {
                             </div>
 
                             {/* Resource balancing AI suggestions */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-1">
-                                <div className="border-b border-gray-800 pb-4 flex justify-between items-center">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-1">
+                                <div className="border-b border-line pb-4 flex justify-between items-center">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         <Sparkles className="h-5 w-5 text-amber-500" />
                                         Resource Balancer AI
                                     </h3>
-                                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider bg-gray-900 border border-gray-800 px-2 py-0.5 rounded">Mistral Suggested</span>
+                                    <span className="text-[10px] text-ink0 font-bold uppercase tracking-wider bg-surface-2 border border-line px-2 py-0.5 rounded">Mistral Suggested</span>
                                 </div>
-                                <div className="prose prose-invert max-w-none text-gray-300 text-xs leading-relaxed whitespace-pre-wrap bg-gray-950/40 p-4 rounded-xl border border-gray-800/50 font-medium">
+                                <div className="prose prose-invert max-w-none text-ink text-xs leading-relaxed whitespace-pre-wrap bg-surface-2 p-4 rounded-xl border border-line font-medium">
                                     {workload.aiSuggestions}
                                 </div>
                             </div>
@@ -461,8 +461,8 @@ export default function ProjectIntelligenceDashboard() {
                     {activeTab === 'burnout' && burnout && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             {/* Burnout Table */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-2">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-2">
+                                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                     <Flame className="h-5 w-5 text-red-500" />
                                     Workspace Burnout Scores
                                 </h3>
@@ -471,11 +471,11 @@ export default function ProjectIntelligenceDashboard() {
                                     {burnout.burnoutScores.map(userScore => (
                                         <div 
                                             key={userScore.userId}
-                                            className="bg-gray-900/40 p-5 rounded-2xl border border-gray-800/60 flex flex-col sm:flex-row justify-between sm:items-center gap-4"
+                                            className="bg-surface-2 p-5 rounded-2xl border border-line flex flex-col sm:flex-row justify-between sm:items-center gap-4"
                                         >
                                             <div className="space-y-1 flex-1">
                                                 <div className="flex items-center gap-3">
-                                                    <h4 className="font-bold text-white text-base">{userScore.userName}</h4>
+                                                    <h4 className="font-bold text-ink text-base">{userScore.userName}</h4>
                                                     <span className={`px-2 py-0.5 text-xxs font-bold rounded-full ${
                                                         userScore.riskLevel === 'Low' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                                                         userScore.riskLevel === 'Medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
@@ -484,17 +484,17 @@ export default function ProjectIntelligenceDashboard() {
                                                         {userScore.riskLevel} Risk
                                                     </span>
                                                 </div>
-                                                <div className="flex gap-4 text-xs font-semibold text-gray-500">
-                                                    <span>Overtime days: <strong className="text-gray-300">{userScore.metrics.overtimeDays}</strong></span>
-                                                    <span>Active Tasks: <strong className="text-gray-300">{userScore.metrics.activeTasks}</strong></span>
-                                                    <span>Overdue: <strong className="text-gray-300">{userScore.metrics.overdueTasks}</strong></span>
-                                                    <span>Attendance: <strong className="text-gray-300">{userScore.metrics.attendanceRate}%</strong></span>
+                                                <div className="flex gap-4 text-xs font-semibold text-ink0">
+                                                    <span>Overtime days: <strong className="text-ink">{userScore.metrics.overtimeDays}</strong></span>
+                                                    <span>Active Tasks: <strong className="text-ink">{userScore.metrics.activeTasks}</strong></span>
+                                                    <span>Overdue: <strong className="text-ink">{userScore.metrics.overdueTasks}</strong></span>
+                                                    <span>Attendance: <strong className="text-ink">{userScore.metrics.attendanceRate}%</strong></span>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-4">
                                                 <div className="text-right">
-                                                    <span className="text-xs font-semibold text-gray-500">Burnout Index</span>
+                                                    <span className="text-xs font-semibold text-ink0">Burnout Index</span>
                                                     <p className={`text-2xl font-black ${
                                                         userScore.burnoutScore >= 70 ? 'text-red-500' :
                                                         userScore.burnoutScore >= 40 ? 'text-amber-500' : 'text-green-500'
@@ -502,7 +502,7 @@ export default function ProjectIntelligenceDashboard() {
                                                         {userScore.burnoutScore}
                                                     </p>
                                                 </div>
-                                                <div className="w-20 bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                                                <div className="w-20 bg-surface-2 h-1.5 rounded-full overflow-hidden">
                                                     <div 
                                                         className={`h-full rounded-full ${
                                                             userScore.burnoutScore >= 70 ? 'bg-red-500' :
@@ -518,14 +518,14 @@ export default function ProjectIntelligenceDashboard() {
                             </div>
 
                             {/* Preventative Recommendations */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-1">
-                                <div className="border-b border-gray-800 pb-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-1">
+                                <div className="border-b border-line pb-4">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         <Brain className="h-5 w-5 text-purple-400" />
                                         Mitigation Guidelines
                                     </h3>
                                 </div>
-                                <div className="prose prose-invert max-w-none text-gray-300 text-xs leading-relaxed whitespace-pre-wrap bg-gray-950/40 p-4 rounded-xl border border-gray-800/50 font-medium">
+                                <div className="prose prose-invert max-w-none text-ink text-xs leading-relaxed whitespace-pre-wrap bg-surface-2 p-4 rounded-xl border border-line font-medium">
                                     {burnout.aiRecommendations}
                                 </div>
                             </div>
@@ -540,19 +540,19 @@ export default function ProjectIntelligenceDashboard() {
                             <div className="space-y-6 lg:col-span-2">
                                 
                                 {/* Add Dependency Card */}
-                                <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-4">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         <Plus className="h-5 w-5 text-blue-500" />
                                         Establish Task Dependency
                                     </h3>
                                     
                                     <form onSubmit={handleAddDependency} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                         <div className="flex flex-col gap-1.5 sm:col-span-1">
-                                            <label className="text-xs font-semibold text-gray-400">Target Task</label>
+                                            <label className="text-xs font-semibold text-ink-soft">Target Task</label>
                                             <select
                                                 value={depTaskId}
                                                 onChange={(e) => setDepTaskId(e.target.value)}
-                                                className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                                className="bg-surface-2 border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-blue-500"
                                             >
                                                 <option value="">Select Task</option>
                                                 {project?.tasks?.map(t => (
@@ -562,11 +562,11 @@ export default function ProjectIntelligenceDashboard() {
                                         </div>
 
                                         <div className="flex flex-col gap-1.5 sm:col-span-1">
-                                            <label className="text-xs font-semibold text-gray-400">Dependency Type</label>
+                                            <label className="text-xs font-semibold text-ink-soft">Dependency Type</label>
                                             <select
                                                 value={depType}
                                                 onChange={(e) => setDepType(e.target.value)}
-                                                className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                                className="bg-surface-2 border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-blue-500"
                                             >
                                                 <option value="FS">Finish-to-Start (FS)</option>
                                                 <option value="SS">Start-to-Start (SS)</option>
@@ -576,11 +576,11 @@ export default function ProjectIntelligenceDashboard() {
                                         </div>
 
                                         <div className="flex flex-col gap-1.5 sm:col-span-1">
-                                            <label className="text-xs font-semibold text-gray-400">Depends On Predecessor</label>
+                                            <label className="text-xs font-semibold text-ink-soft">Depends On Predecessor</label>
                                             <select
                                                 value={depParentId}
                                                 onChange={(e) => setDepParentId(e.target.value)}
-                                                className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                                className="bg-surface-2 border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:border-blue-500"
                                             >
                                                 <option value="">Select Predecessor</option>
                                                 {project?.tasks?.map(t => (
@@ -602,14 +602,14 @@ export default function ProjectIntelligenceDashboard() {
                                 </div>
 
                                 {/* Active Dependencies List */}
-                                <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-4">
+                                    <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                         <CheckSquare className="h-5 w-5 text-violet-500" />
                                         Task Dependencies Ledger
                                     </h3>
 
                                     {dependenciesData.dependencies.length === 0 ? (
-                                        <p className="text-gray-500 text-sm text-center py-6">No task dependency mappings defined.</p>
+                                        <p className="text-ink0 text-sm text-center py-6">No task dependency mappings defined.</p>
                                     ) : (
                                         <div className="divide-y divide-gray-800">
                                             {dependenciesData.dependencies.map(dep => {
@@ -621,19 +621,19 @@ export default function ProjectIntelligenceDashboard() {
                                                             <Link to={`/tasks/${dep.taskId}`} className="text-sm font-bold text-blue-400 hover:underline">
                                                                 {task?.title || `Task #${dep.taskId}`}
                                                             </Link>
-                                                            <span className="px-2 py-0.5 bg-gray-900 border border-gray-800 text-[10px] font-black rounded text-gray-400">
+                                                            <span className="px-2 py-0.5 bg-surface-2 border border-line text-[10px] font-black rounded text-ink-soft">
                                                                 {dep.dependencyType}
                                                             </span>
-                                                            <ChevronRight className="h-3 w-3 text-gray-500" />
-                                                            <span className="text-xs text-gray-400 font-medium">Predecessor:</span>
-                                                            <Link to={`/tasks/${dep.dependsOnTaskId}`} className="text-sm font-bold text-gray-300 hover:underline">
+                                                            <ChevronRight className="h-3 w-3 text-ink0" />
+                                                            <span className="text-xs text-ink-soft font-medium">Predecessor:</span>
+                                                            <Link to={`/tasks/${dep.dependsOnTaskId}`} className="text-sm font-bold text-ink hover:underline">
                                                                 {parent?.title || `Task #${dep.dependsOnTaskId}`}
                                                             </Link>
                                                         </div>
 
                                                         <button
                                                             onClick={() => handleDeleteDependency(dep.id)}
-                                                            className="p-2 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl transition cursor-pointer"
+                                                            className="p-2 hover:bg-red-500/10 text-white0 hover:text-red-500 rounded-xl transition cursor-pointer"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -646,8 +646,8 @@ export default function ProjectIntelligenceDashboard() {
                             </div>
 
                             {/* Right panel: Alerts & Violations */}
-                            <div className="bg-[#111827]/60 backdrop-blur-md p-6 rounded-3xl border border-gray-800 space-y-6 lg:col-span-1">
-                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <div className="bg-card backdrop-blur-md p-6 rounded-3xl border border-line space-y-6 lg:col-span-1">
+                                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                                     <AlertTriangle className="h-5 w-5 text-red-500" />
                                     Dynamic Constraint Violations
                                 </h3>
@@ -656,7 +656,7 @@ export default function ProjectIntelligenceDashboard() {
                                     <div className="bg-green-500/5 border border-green-500/10 p-5 rounded-2xl text-center space-y-2">
                                         <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto" />
                                         <p className="text-green-400 font-bold text-sm">Clear</p>
-                                        <p className="text-gray-500 text-xs">All dependencies comply with logical rules.</p>
+                                        <p className="text-ink0 text-xs">All dependencies comply with logical rules.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -674,7 +674,7 @@ export default function ProjectIntelligenceDashboard() {
                                                     <span className="text-[10px] font-black uppercase tracking-wider">
                                                         {risk.severity} severity
                                                     </span>
-                                                    <p className="text-xs font-semibold leading-relaxed text-gray-300">
+                                                    <p className="text-xs font-semibold leading-relaxed text-ink">
                                                         {risk.message}
                                                     </p>
                                                 </div>
