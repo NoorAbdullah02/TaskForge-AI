@@ -3,11 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 // Lazy-load each role dashboard for code splitting
-const SuperAdminDashboard  = lazy(() => import('./dashboards/SuperAdminDashboard'));
-const OwnerDashboard       = lazy(() => import('./dashboards/OwnerDashboard'));
-const PMDashboard          = lazy(() => import('./dashboards/PMDashboard'));
-const TeamLeaderDashboard  = lazy(() => import('./dashboards/TeamLeaderDashboard'));
-const EmployeeDashboard    = lazy(() => import('./dashboards/EmployeeDashboard'));
+const SuperAdminDashboard = lazy(() => import('./dashboards/SuperAdminDashboard'));
+const OwnerDashboard = lazy(() => import('./dashboards/OwnerDashboard'));
+const PMDashboard = lazy(() => import('./dashboards/PMDashboard'));
+const TeamLeaderDashboard = lazy(() => import('./dashboards/TeamLeaderDashboard'));
+const EmployeeDashboard = lazy(() => import('./dashboards/EmployeeDashboard'));
 
 const DashLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -24,9 +24,9 @@ export default function Dashboard() {
   const { user, loading } = useAuth();
 
   if (loading) return <DashLoader />;
-  if (!user)   return null;
+  if (!user) return null;
 
-  const role = user.role;
+  const role = user.role === 'workspace_owner' ? 'owner' : user.role;
 
   const renderDashboard = () => {
     switch (role) {

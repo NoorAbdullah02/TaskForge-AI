@@ -307,10 +307,10 @@ export class ProjectController {
             const details = await ProjectService.getProjectDetails(projectId);
             if (!details) return res.status(404).json({ message: 'Project not found' });
 
-            // Security: Must be Project Manager or Workspace Owner to create tasks
-            const isPM = await isProjectManager(user.id, user.role, projectId);
-            if (!isPM) {
-                return res.status(403).json({ message: 'Access denied: Only project managers/owners can create tasks' });
+            // Security: Allow project members and workspace owners/admins to create tasks
+            const isMember = await isProjectMember(user.id, user.role, projectId);
+            if (!isMember) {
+                return res.status(403).json({ message: 'Access denied: Only project members can create tasks' });
             }
 
             const { title, description, status, priority, assigneeId, isMilestone, dueDate, workType } = req.body;

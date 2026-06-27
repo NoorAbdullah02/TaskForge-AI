@@ -65,7 +65,7 @@ function Particles({ count = 120 }) {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i * 3]     = (Math.random() - 0.5) * 10;
+      pos[i * 3] = (Math.random() - 0.5) * 10;
       pos[i * 3 + 1] = (Math.random() - 0.5) * 10;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 6;
       const c = new THREE.Color();
@@ -94,7 +94,7 @@ function RegScene() {
     <>
       <ambientLight intensity={0.65} />
       <directionalLight position={[3, 7, 3]} intensity={0.85} />
-      <Orb position={[1.6, 1.8, 0]}   color="#8b5cf6" scale={2.2} speed={1.0} distort={0.4} />
+      <Orb position={[1.6, 1.8, 0]} color="#8b5cf6" scale={2.2} speed={1.0} distort={0.4} />
       <Orb position={[-1.9, -0.7, -1]} color="#10b981" scale={1.5} speed={1.6} distort={0.32} />
       <Orb position={[0.1, -2.3, 0.4]} color="#6366f1" scale={1.0} speed={2.0} distort={0.48} />
       <WireKnot />
@@ -104,56 +104,56 @@ function RegScene() {
 }
 
 /* ── Framer Motion variants ── */
-const formWrap  = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const formWrap = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const fieldItem = {
   hidden: { opacity: 0, y: 12 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } },
 };
 
 const FEATURES = [
-  { icon: Users,     label: 'Collaborative workspaces for your team' },
+  { icon: Users, label: 'Collaborative workspaces for your team' },
   { icon: GitBranch, label: 'Sprint planning and backlog management' },
-  { icon: Brain,     label: 'AI assistant for smarter workflows' },
+  { icon: Brain, label: 'AI assistant for smarter workflows' },
 ];
 
 /* ── Password strength helper ── */
 function getPasswordStrength(pwd) {
   if (!pwd) return { level: 0, text: '', color: '' };
   let s = 0;
-  if (pwd.length >= 8)         s++;
-  if (pwd.length >= 12)        s++;
-  if (/[A-Z]/.test(pwd))       s++;
-  if (/[0-9]/.test(pwd))       s++;
-  if (/[!@#$%^&*]/.test(pwd))  s++;
-  if (s <= 2) return { level: 1, text: 'Weak',   color: 'bg-red-500' };
-  if (s <= 3) return { level: 2, text: 'Fair',   color: 'bg-amber-500' };
-  if (s <= 4) return { level: 3, text: 'Good',   color: 'bg-blue-500' };
-  return       { level: 4, text: 'Strong', color: 'bg-emerald-500' };
+  if (pwd.length >= 8) s++;
+  if (pwd.length >= 12) s++;
+  if (/[A-Z]/.test(pwd)) s++;
+  if (/[0-9]/.test(pwd)) s++;
+  if (/[!@#$%^&*]/.test(pwd)) s++;
+  if (s <= 2) return { level: 1, text: 'Weak', color: 'bg-red-500' };
+  if (s <= 3) return { level: 2, text: 'Fair', color: 'bg-amber-500' };
+  if (s <= 4) return { level: 3, text: 'Good', color: 'bg-blue-500' };
+  return { level: 4, text: 'Strong', color: 'bg-emerald-500' };
 }
 
 /* ── Main component ── */
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
-  const navigate       = useNavigate();
+  const navigate = useNavigate();
 
-  const [firstTimeSetup, setFirstTimeSetup]         = useState(false);
-  const [activeTab, setActiveTab]                   = useState('create');
+  const [firstTimeSetup, setFirstTimeSetup] = useState(false);
+  const [activeTab, setActiveTab] = useState('create');
 
-  const [name, setName]                             = useState('');
-  const [email, setEmail]                           = useState('');
-  const [emailError, setEmailError]                 = useState('');
-  const [checkingEmail, setCheckingEmail]           = useState(false);
-  const [password, setPassword]                     = useState('');
-  const [confirmPassword, setConfirmPassword]       = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [workspaceName, setWorkspaceName]           = useState('');
-  const [workspaceSlug, setWorkspaceSlug]           = useState('');
-  const [inviteCode, setInviteCode]                 = useState('');
-  const [workspacePassword, setWorkspacePassword]   = useState('');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [workspaceSlug, setWorkspaceSlug] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [workspacePassword, setWorkspacePassword] = useState('');
 
-  const [showPassword, setShowPassword]             = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading]                   = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const panelRef = useRef(null);
 
@@ -169,7 +169,7 @@ const RegisterPage = () => {
       try {
         const data = await getSetupStatus();
         setFirstTimeSetup(data.firstTimeSetup);
-      } catch (_) {}
+      } catch (_) { }
     };
     check();
   }, []);
@@ -179,17 +179,17 @@ const RegisterPage = () => {
     if (!panelRef.current) return;
     const ctx = gsap.context(() => {
       gsap.timeline({ delay: 0.2 })
-        .from('.reg-brand',   { opacity: 0, y: 30,  duration: 0.8,  ease: 'power3.out' })
-        .from('.reg-heading', { opacity: 0, y: 22,  duration: 0.75, ease: 'power3.out' }, '-=0.4')
-        .from('.reg-sub',     { opacity: 0, y: 14,  duration: 0.6,  ease: 'power2.out' }, '-=0.35')
-        .from('.reg-feat',    { opacity: 0, x: -20, duration: 0.55, stagger: 0.1, ease: 'power2.out' }, '-=0.25');
+        .from('.reg-brand', { opacity: 0, y: 30, duration: 0.8, ease: 'power3.out' })
+        .from('.reg-heading', { opacity: 0, y: 22, duration: 0.75, ease: 'power3.out' }, '-=0.4')
+        .from('.reg-sub', { opacity: 0, y: 14, duration: 0.6, ease: 'power2.out' }, '-=0.35')
+        .from('.reg-feat', { opacity: 0, x: -20, duration: 0.55, stagger: 0.1, ease: 'power2.out' }, '-=0.25');
     }, panelRef);
     return () => ctx.revert();
   }, []);
 
-  const passwordsMatch    = password && confirmPassword && password === confirmPassword;
-  const passwordStrength  = getPasswordStrength(password);
-  const isEmailValid      = email && !emailError && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const passwordsMatch = password && confirmPassword && password === confirmPassword;
+  const passwordStrength = getPasswordStrength(password);
+  const isEmailValid = email && !emailError && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
@@ -213,7 +213,7 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (emailError)      { toast.error('Please fix the email error'); return; }
+    if (emailError) { toast.error('Please fix the email error'); return; }
     if (!passwordsMatch) { toast.error('Passwords do not match!'); return; }
     setIsLoading(true);
     try {
@@ -247,7 +247,7 @@ const RegisterPage = () => {
           inviteCode: inviteCode.trim(),
           workspacePassword: workspacePassword.trim() || undefined,
         });
-        toast.success(res.message || 'Join request submitted! Pending approval. ⏳');
+        toast.success(res.message || 'Workspace joined successfully! 🎉');
       }
       const registeredEmail = email;
       localStorage.setItem('registrationEmail', registeredEmail);
@@ -402,22 +402,20 @@ const RegisterPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('create')}
-                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                    activeTab === 'create'
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${activeTab === 'create'
                       ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-200'
                       : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                    }`}
                 >
                   Create New Workspace
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('join')}
-                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                    activeTab === 'join'
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${activeTab === 'join'
                       ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-200'
                       : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                    }`}
                 >
                   Join Existing Workspace
                 </button>
@@ -470,13 +468,12 @@ const RegisterPage = () => {
                   value={email}
                   onChange={handleEmailChange}
                   placeholder="you@example.com"
-                  className={`${inp} pl-11 pr-11 py-3.5 ${
-                    emailError
+                  className={`${inp} pl-11 pr-11 py-3.5 ${emailError
                       ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
                       : isEmailValid
                         ? 'border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-400'
                         : 'border-gray-200 focus:ring-violet-500/20 focus:border-violet-400'
-                  }`}
+                    }`}
                   required
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -533,13 +530,12 @@ const RegisterPage = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className={`${inp} pl-11 pr-10 py-3.5 ${
-                      confirmPassword
+                    className={`${inp} pl-11 pr-10 py-3.5 ${confirmPassword
                         ? passwordsMatch
                           ? 'border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-400'
                           : 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
                         : 'border-gray-200 focus:ring-violet-500/20 focus:border-violet-400'
-                    }`}
+                      }`}
                     required
                   />
                   <button
@@ -571,9 +567,8 @@ const RegisterPage = () => {
                     {[1, 2, 3, 4].map((idx) => (
                       <div
                         key={idx}
-                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                          idx <= passwordStrength.level ? passwordStrength.color : 'bg-gray-200'
-                        }`}
+                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${idx <= passwordStrength.level ? passwordStrength.color : 'bg-gray-200'
+                          }`}
                       />
                     ))}
                   </div>
@@ -705,7 +700,7 @@ const RegisterPage = () => {
                     ? 'Create Super Admin Account'
                     : activeTab === 'create'
                       ? 'Create Workspace'
-                      : 'Submit Membership Request'}
+                      : 'Join Workspace'}
               </Button>
             </motion.div>
           </motion.form>

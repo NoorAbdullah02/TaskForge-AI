@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { 
-    FileText, Download, Loader2, Calendar, Users, 
+import {
+    FileText, Download, Loader2, Calendar, Users,
     CheckSquare, Mail, Send, Sparkles, BarChart3
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,6 +18,8 @@ export default function ReportsPage() {
     const [projects, setProjects] = useState([]);
     const [teams, setTeams] = useState([]);
     const [users, setUsers] = useState([]);
+
+    const canLoadAdminUsers = ['admin', 'manager', 'owner', 'super_admin'].includes(authUser?.role);
 
     // Export Selection States
     const [attendanceUser, setAttendanceUser] = useState('all');
@@ -60,17 +62,23 @@ export default function ReportsPage() {
                 setTeams(teamsData);
                 if (teamsData.length > 0) setTeamSelected(teamsData[0].id.toString());
 
-                const usersData = await getAdminUsers();
-                setUsers(usersData);
+                if (canLoadAdminUsers) {
+                    const usersData = await getAdminUsers();
+                    setUsers(usersData);
+                } else {
+                    setUsers([]);
+                }
             } catch (error) {
                 console.error('Failed to load metadata:', error);
-                toast.error('Failed to load metadata');
+                if (canLoadAdminUsers) {
+                    toast.error('Failed to load metadata');
+                }
             } finally {
                 setLoading(false);
             }
         };
         loadMetadata();
-    }, []);
+    }, [canLoadAdminUsers]);
 
     // File Downloads Generator
     const downloadFile = (filename, content, type) => {
@@ -86,7 +94,7 @@ export default function ReportsPage() {
     // CSV Download Helper
     const downloadCSV = (filename, headers, rows) => {
         const csvContent = [
-            headers.join(','), 
+            headers.join(','),
             ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
         ].join('\n');
         downloadFile(filename, csvContent, 'text/csv;charset=utf-8;');
@@ -95,7 +103,7 @@ export default function ReportsPage() {
     // Excel (XLS XML) Download Helper
     const downloadExcel = (filename, headers, rows) => {
         let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Sheet1"><Table>`;
-        
+
         // Headers
         xml += '<Row>';
         headers.forEach(h => {
@@ -375,7 +383,7 @@ export default function ReportsPage() {
 
                 {/* Dashboard Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    
+
                     {/* Card 1: Attendance Log Export */}
                     <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between min-h-[400px]">
                         <div>
@@ -386,7 +394,7 @@ export default function ReportsPage() {
                                 <h2 className="text-sm font-bold text-ink">Attendance Log Export</h2>
                             </div>
                             <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Download check-in metrics, late percentages, and active operating days logs.</p>
-                            
+
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -585,7 +593,7 @@ export default function ReportsPage() {
                                 <h2 className="text-sm font-bold text-ink">Global Productivity</h2>
                             </div>
                             <p className="text-xs text-ink-soft font-sans leading-relaxed mb-6">Generates productivity efficiency logs by mapping completed project tasks inside the active workspace and emails it to directors.</p>
-                            
+
                             <div className="p-4 bg-surface-2 border border-line rounded-2xl flex items-center justify-center gap-2">
                                 <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
                                 <span className="text-xxs font-bold text-ink uppercase tracking-wide">Multi-Project Analysis</span>

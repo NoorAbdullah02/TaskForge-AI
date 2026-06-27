@@ -6,15 +6,15 @@ import {
 } from 'recharts';
 import {
   Users, Briefcase, CheckSquare, CalendarOff, TrendingUp, Activity,
-  Building2, RefreshCw, BarChart3, Clock, Layers, Bell, Check, X,
-  UserCheck, AlertCircle, ChevronRight, Settings, Crown, Shield,
+  Building2, RefreshCw, BarChart3, Clock, Layers, Check, X,
+  UserCheck, ChevronRight, Settings, Crown, Shield,
   Copy, Link,
 } from 'lucide-react';
 import AnimatedCounter from '../../Components/AnimatedCounter';
 import { ChartTooltip, CalendarHeatmap } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
-import { getPendingRequests, approveMember, bulkApproveMembers, getWorkspaceInfo } from '../../Services/workspaceApi';
+import { getWorkspaceInfo } from '../../Services/workspaceApi';
 import { socket } from '../../Services/socket';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -43,15 +43,10 @@ export default function OwnerDashboard({ user }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [pending, setPending] = useState([]);
   const [workspaceInfo, setWorkspaceInfo] = useState(null);
   const [copiedType, setCopiedType] = useState('');
   const [loading, setLoading] = useState(true);
-  const [pendingLoading, setPendingLoading] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [actionLoading, setActionLoading] = useState(null); // membershipId or 'bulk'
   const headerRef = useRef(null);
-  const wsId = authUser?.activeWorkspaceId;
 
   const handleCopy = (text, type) => {
     if (!text) return;
@@ -60,19 +55,6 @@ export default function OwnerDashboard({ user }) {
     toast.success(`${type} copied to clipboard! 📋`);
     setTimeout(() => setCopiedType(''), 3000);
   };
-
-  const fetchPending = useCallback(async () => {
-    if (!wsId) return;
-    setPendingLoading(true);
-    try {
-      const data = await getPendingRequests(wsId);
-      setPending(Array.isArray(data) ? data : []);
-    } catch {
-      // silently ignore — not critical
-    } finally {
-      setPendingLoading(false);
-    }
-  }, [wsId]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -90,55 +72,10 @@ export default function OwnerDashboard({ user }) {
     } finally {
       setLoading(false);
     }
-    fetchPending();
-  }, [fetchPending]);
+  }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Real-time join-request socket listener
-  useEffect(() => {
-    if (!socket) return;
-    const handleJoinAlert = () => {
-      fetchPending();
-      toast('New join request received!', { icon: '🔔' });
-    };
-    socket.on('join_request_alert', handleJoinAlert);
-    return () => socket.off('join_request_alert', handleJoinAlert);
-  }, [fetchPending]);
-
-  const handleApprove = async (membershipId, action) => {
-    setActionLoading(membershipId);
-    try {
-      await approveMember(wsId, membershipId, action);
-      toast.success(action === 'approve' ? 'Member approved! They can now log in.' : 'Request rejected.');
-      setPending(prev => prev.filter(r => r.membershipId !== membershipId));
-      setSelectedIds(prev => prev.filter(id => id !== membershipId));
-    } catch (err) {
-      toast.error(err?.response?.data?.message || `Failed to ${action}`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleBulkAction = async (action) => {
-    if (!selectedIds.length) return;
-    setActionLoading('bulk');
-    try {
-      await bulkApproveMembers(wsId, selectedIds, action);
-      toast.success(`${selectedIds.length} request(s) ${action}d.`);
-      setPending(prev => prev.filter(r => !selectedIds.includes(r.membershipId)));
-      setSelectedIds([]);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || `Bulk ${action} failed`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const toggleSelect = (id) =>
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const selectAll = () =>
-    setSelectedIds(prev => prev.length === pending.length ? [] : pending.map(r => r.membershipId));
 
   // ── Chart data ──────────────────────────────────────────────────────────────
   const projectsByStatus = Object.entries(stats?.projects?.byStatus || {})
@@ -157,7 +94,6 @@ export default function OwnerDashboard({ user }) {
 
   const recentActivity = (stats?.recentActivity || []).slice(0, 12);
 
-  const pendingCount = pending.length;
   const activeMembers = stats?.workspace?.activeMembers || 0;
 
   if (loading) return (
@@ -197,12 +133,6 @@ export default function OwnerDashboard({ user }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {pendingCount > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold animate-pulse">
-              <Bell className="h-3.5 w-3.5" />
-              {pendingCount} pending join request{pendingCount !== 1 ? 's' : ''}
-            </div>
-          )}
           <button
             onClick={() => navigate('/admin-settings')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 border border-line text-xs font-semibold text-ink-soft hover:text-ink transition-colors"
@@ -229,128 +159,7 @@ export default function OwnerDashboard({ user }) {
         >
           <GlassCard padding="p-0" className="border border-purple-500/20 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-line">
-              {/* Left Column: Pending Join Requests (7 cols) */}
-              <div className="lg:col-span-7 flex flex-col justify-between">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-violet-500/15">
-                      <UserCheck className="h-4 w-4 text-violet-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-ink">Pending Join Requests</h3>
-                      <p className="text-xs text-ink-faint">
-                        {pendingLoading ? 'Loading…' : `${pendingCount} user${pendingCount !== 1 ? 's' : ''} awaiting approval`}
-                      </p>
-                    </div>
-                  </div>
-                  {pendingCount > 0 && (
-                    <div className="flex items-center gap-2">
-                      {selectedIds.length > 0 && (
-                        <>
-                          <Button
-                            size="xs"
-                            variant="success"
-                            onClick={() => handleBulkAction('approve')}
-                            disabled={actionLoading === 'bulk'}
-                            isLoading={actionLoading === 'bulk'}
-                          >
-                            <Check className="h-3 w-3 mr-1" />
-                            Approve ({selectedIds.length})
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="danger"
-                            onClick={() => handleBulkAction('reject')}
-                            disabled={actionLoading === 'bulk'}
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Reject ({selectedIds.length})
-                          </Button>
-                        </>
-                      )}
-                      <button
-                        onClick={selectAll}
-                        className="text-xs text-brand hover:text-brand-strong font-semibold transition-colors"
-                      >
-                        {selectedIds.length === pendingCount ? 'Deselect all' : 'Select all'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Requests List or Empty State */}
-                <div className="divide-y divide-line max-h-64 overflow-y-auto flex-1">
-                  {pendingLoading ? (
-                    <div className="flex items-center justify-center py-10 text-ink-faint text-sm">
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" /> Loading requests…
-                    </div>
-                  ) : pendingCount === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
-                        <Check className="h-5 w-5 text-emerald-400" />
-                      </div>
-                      <h4 className="text-sm font-bold text-ink mb-1">All caught up!</h4>
-                      <p className="text-xs text-ink-faint max-w-xs">No pending workspace join requests to review at the moment.</p>
-                    </div>
-                  ) : (
-                    <AnimatePresence>
-                      {pending.map((req) => (
-                        <motion.div
-                          key={req.membershipId}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 8, height: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2 transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(req.membershipId)}
-                            onChange={() => toggleSelect(req.membershipId)}
-                            className="h-4 w-4 rounded border-line text-brand accent-brand cursor-pointer"
-                          />
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                            {(req.name || 'U').charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-ink truncate">{req.name}</p>
-                            <p className="text-xs text-ink-faint truncate">{req.email}</p>
-                          </div>
-                          <p className="text-[10px] text-ink-faint hidden sm:block shrink-0">
-                            {req.joinedAt ? timeAgo(req.joinedAt) : ''}
-                          </p>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              onClick={() => handleApprove(req.membershipId, 'approve')}
-                              disabled={!!actionLoading}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-                            >
-                              {actionLoading === req.membershipId ? (
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Check className="h-3 w-3" />
-                              )}
-                              <span className="hidden sm:inline">Approve</span>
-                            </button>
-                            <button
-                              onClick={() => handleApprove(req.membershipId, 'reject')}
-                              disabled={!!actionLoading}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                            >
-                              <X className="h-3 w-3" />
-                              <span className="hidden sm:inline">Reject</span>
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Column: Invite & Share Link (5 cols) */}
-              <div className="lg:col-span-5 p-5 bg-purple-500/[0.02] flex flex-col justify-between">
+              <div className="lg:col-span-12 p-5 bg-purple-500/[0.02] flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-3.5">
                     <div className="p-1.5 rounded-lg bg-purple-500/15">
@@ -358,11 +167,10 @@ export default function OwnerDashboard({ user }) {
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-ink">Invite Team Members</h3>
-                      <p className="text-xs text-ink-faint">Share link or code to add members</p>
+                      <p className="text-xs text-ink-faint">Share link or code to add members; invite-code joins are auto-approved.</p>
                     </div>
                   </div>
 
-                  {/* Invite Link Input & Copy */}
                   <div className="space-y-3">
                     <div>
                       <label className="block text-[10px] font-black text-ink-faint tracking-wider uppercase mb-1">Invite Link</label>
@@ -384,7 +192,6 @@ export default function OwnerDashboard({ user }) {
                       </div>
                     </div>
 
-                    {/* Invite Code & Manage button */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[10px] font-black text-ink-faint tracking-wider uppercase mb-1">Invite Code</label>
@@ -398,7 +205,7 @@ export default function OwnerDashboard({ user }) {
                           <button
                             onClick={() => handleCopy(workspaceInfo?.inviteCode, 'Code')}
                             disabled={!workspaceInfo?.inviteCode}
-                            className="px-2.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all cursor-pointer disabled:opacity-50 animate-in fade-in"
+                            className="px-2.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all cursor-pointer disabled:opacity-50"
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </button>
@@ -430,12 +237,11 @@ export default function OwnerDashboard({ user }) {
       {/* ── KPI Bar ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {[
-          { icon: Briefcase,   label: 'Active Projects',   value: stats?.projects?.active || 0,            color: 'text-violet-400',  bg: 'bg-violet-500/10',   border: 'border-violet-500/20' },
-          { icon: CheckSquare, label: 'Total Tasks',        value: stats?.tasks?.total || 0,                color: 'text-purple-400',  bg: 'bg-purple-500/10',   border: 'border-purple-500/20' },
-          { icon: Users,       label: 'Active Members',     value: activeMembers,                           color: 'text-blue-400',    bg: 'bg-blue-500/10',     border: 'border-blue-500/20' },
-          { icon: AlertCircle, label: 'Pending Requests',   value: pendingCount,                            color: 'text-amber-400',   bg: 'bg-amber-500/10',    border: 'border-amber-500/20' },
-          { icon: CalendarOff, label: 'Pending Leaves',     value: stats?.leaves?.pending || 0,             color: 'text-rose-400',    bg: 'bg-rose-500/10',     border: 'border-rose-500/20' },
-          { icon: Clock,       label: 'Attendance Rate',    value: stats?.attendance?.rate || 0, suffix:'%', color: 'text-emerald-400', bg: 'bg-emerald-500/10',  border: 'border-emerald-500/20' },
+          { icon: Briefcase, label: 'Active Projects', value: stats?.projects?.active || 0, color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
+          { icon: CheckSquare, label: 'Total Tasks', value: stats?.tasks?.total || 0, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+          { icon: Users, label: 'Active Members', value: activeMembers, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+          { icon: CalendarOff, label: 'Pending Leaves', value: stats?.leaves?.pending || 0, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
+          { icon: Clock, label: 'Attendance Rate', value: stats?.attendance?.rate || 0, suffix: '%', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
         ].map((s, i) => (
           <GlassCard
             key={i}
@@ -693,10 +499,10 @@ export default function OwnerDashboard({ user }) {
         <h3 className="text-sm font-bold text-ink mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Manage Members', icon: Users,     color: 'from-violet-500 to-purple-600', to: '/admin-settings' },
-            { label: 'View Projects',  icon: Briefcase, color: 'from-blue-500 to-indigo-600',   to: '/projects' },
+            { label: 'Manage Members', icon: Users, color: 'from-violet-500 to-purple-600', to: '/admin-settings' },
+            { label: 'View Projects', icon: Briefcase, color: 'from-blue-500 to-indigo-600', to: '/projects' },
             { label: 'Leave Requests', icon: CalendarOff, color: 'from-amber-500 to-orange-600', to: '/leaves' },
-            { label: 'Reports',        icon: BarChart3, color: 'from-emerald-500 to-teal-600',  to: '/reports' },
+            { label: 'Reports', icon: BarChart3, color: 'from-emerald-500 to-teal-600', to: '/reports' },
           ].map((a, i) => (
             <button
               key={i}

@@ -15,19 +15,19 @@ gsap.registerPlugin(ScrollTrigger);
 
 // ─── Palette ───────────────────────────────────────────────────────────────
 const P = {
-    bg:       '#ffffff',
-    bg2:      '#f8faff',
-    bg3:      '#f0f4ff',
-    border:   'rgba(99,102,241,0.12)',
-    ink:      '#0f172a',
-    inkSoft:  '#475569',
+    bg: '#ffffff',
+    bg2: '#f8faff',
+    bg3: '#f0f4ff',
+    border: 'rgba(99,102,241,0.12)',
+    ink: '#0f172a',
+    inkSoft: '#475569',
     inkFaint: '#94a3b8',
-    brand:    '#6366f1',
-    violet:   '#8b5cf6',
-    cyan:     '#06b6d4',
-    emerald:  '#10b981',
-    amber:    '#f59e0b',
-    rose:     '#f43f5e',
+    brand: '#6366f1',
+    violet: '#8b5cf6',
+    cyan: '#06b6d4',
+    emerald: '#10b981',
+    amber: '#f59e0b',
+    rose: '#f43f5e',
 };
 
 // ─── Three.js scene (light) ────────────────────────────────────────────────
@@ -70,7 +70,7 @@ function LightParticles({ count = 140 }) {
         const pos = new Float32Array(count * 3);
         const col = new Float32Array(count * 3);
         for (let i = 0; i < count; i++) {
-            pos[i * 3]     = (Math.random() - 0.5) * 22;
+            pos[i * 3] = (Math.random() - 0.5) * 22;
             pos[i * 3 + 1] = (Math.random() - 0.5) * 14;
             pos[i * 3 + 2] = (Math.random() - 0.5) * 8;
             const c = palette[Math.floor(Math.random() * palette.length)];
@@ -88,7 +88,7 @@ function LightParticles({ count = 140 }) {
         <points ref={points}>
             <bufferGeometry>
                 <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-                <bufferAttribute attach="attributes-color"    args={[colors, 3]} />
+                <bufferAttribute attach="attributes-color" args={[colors, 3]} />
             </bufferGeometry>
             <pointsMaterial size={0.04} vertexColors sizeAttenuation transparent opacity={0.55} />
         </points>
@@ -102,10 +102,10 @@ function HeroSceneLight() {
             <directionalLight position={[6, 8, 4]} intensity={1.5} color="#6366f1" />
             <directionalLight position={[-6, -4, -4]} intensity={0.8} color="#06b6d4" />
 
-            <LightOrb position={[4,  1.5, -3]} color="#6366f1" scale={1.4} speed={0.7} distort={0.5} />
-            <LightOrb position={[-4, -1,  -4]} color="#06b6d4" scale={1}   speed={1.1} distort={0.3} />
-            <LightOrb position={[1.5,-2.5,-2]} color="#8b5cf6" scale={0.7} speed={1.4} distort={0.6} />
-            <LightOrb position={[-2,  3,  -5]} color="#10b981" scale={0.8} speed={0.6} distort={0.4} />
+            <LightOrb position={[4, 1.5, -3]} color="#6366f1" scale={1.4} speed={0.7} distort={0.5} />
+            <LightOrb position={[-4, -1, -4]} color="#06b6d4" scale={1} speed={1.1} distort={0.3} />
+            <LightOrb position={[1.5, -2.5, -2]} color="#8b5cf6" scale={0.7} speed={1.4} distort={0.6} />
+            <LightOrb position={[-2, 3, -5]} color="#10b981" scale={0.8} speed={0.6} distort={0.4} />
 
             <Float speed={0.8} floatIntensity={0.4}>
                 <mesh position={[-5, 0.5, -6]} rotation={[0.3, 0.5, 0.2]}>
@@ -176,8 +176,8 @@ function TiltCard({ children, className = '' }) {
     const onMove = useCallback((e) => {
         const r = ref.current?.getBoundingClientRect();
         if (!r) return;
-        rotX.set(-((e.clientY - r.top)  / r.height - 0.5) * 14);
-        rotY.set( ((e.clientX - r.left) / r.width  - 0.5) * 14);
+        rotX.set(-((e.clientY - r.top) / r.height - 0.5) * 14);
+        rotY.set(((e.clientX - r.left) / r.width - 0.5) * 14);
     }, [rotX, rotY]);
     const onLeave = useCallback(() => { rotX.set(0); rotY.set(0); }, [rotX, rotY]);
     return (
@@ -212,51 +212,71 @@ const Pill = ({ icon: Icon, children, color = '#6366f1', bg = 'rgba(99,102,241,0
 // ─── Data ──────────────────────────────────────────────────────────────────
 
 const FEATURES = [
-    { icon: Brain,    title: 'Mistral AI Copilot',
-      desc: 'Generate sprint tasks, summarise meetings, predict deadlines, and detect team burnout — all via Mistral AI.',
-      from: '#6366f1', to: '#8b5cf6', badge: 'AI', glow: 'rgba(99,102,241,0.15)' },
-    { icon: Layers,   title: 'Kanban & Sprints',
-      desc: 'Drag-and-drop boards, sprint planning, epic tracking, and story points — a full Agile toolset in one place.',
-      from: '#3b82f6', to: '#06b6d4', badge: 'Core', glow: 'rgba(59,130,246,0.15)' },
-    { icon: BarChart3, title: 'Role-Based Dashboards',
-      desc: 'Live Recharts dashboards for every role — burndown, velocity, attendance heat maps, and radar charts.',
-      from: '#10b981', to: '#06b6d4', badge: 'Insights', glow: 'rgba(16,185,129,0.15)' },
-    { icon: Shield,   title: 'Enterprise Security',
-      desc: 'JWT + refresh tokens, 2FA via email OTP, workspace role hierarchy, owner-approval flow, and full audit logs.',
-      from: '#f43f5e', to: '#f97316', badge: 'Security', glow: 'rgba(244,63,94,0.15)' },
-    { icon: Bell,     title: 'Real-time Notifications',
-      desc: 'Socket.IO events, BullMQ mail queue, Brevo transactional email — every update reaches the right person.',
-      from: '#f59e0b', to: '#f97316', badge: 'Live', glow: 'rgba(245,158,11,0.15)' },
-    { icon: Users,    title: 'Team Management',
-      desc: 'Owner approval flow, PM assignment, bulk actions, leave requests, attendance tracking, and QR check-in.',
-      from: '#8b5cf6', to: '#6366f1', badge: 'Teams', glow: 'rgba(139,92,246,0.15)' },
+    {
+        icon: Brain, title: 'Mistral AI Copilot',
+        desc: 'Generate sprint tasks, summarise meetings, predict deadlines, and detect team burnout — all via Mistral AI.',
+        from: '#6366f1', to: '#8b5cf6', badge: 'AI', glow: 'rgba(99,102,241,0.15)'
+    },
+    {
+        icon: Layers, title: 'Kanban & Sprints',
+        desc: 'Drag-and-drop boards, sprint planning, epic tracking, and story points — a full Agile toolset in one place.',
+        from: '#3b82f6', to: '#06b6d4', badge: 'Core', glow: 'rgba(59,130,246,0.15)'
+    },
+    {
+        icon: BarChart3, title: 'Role-Based Dashboards',
+        desc: 'Live Recharts dashboards for every role — burndown, velocity, attendance heat maps, and radar charts.',
+        from: '#10b981', to: '#06b6d4', badge: 'Insights', glow: 'rgba(16,185,129,0.15)'
+    },
+    {
+        icon: Shield, title: 'Enterprise Security',
+        desc: 'JWT + refresh tokens, 2FA via email OTP, workspace role hierarchy, owner-approval flow, and full audit logs.',
+        from: '#f43f5e', to: '#f97316', badge: 'Security', glow: 'rgba(244,63,94,0.15)'
+    },
+    {
+        icon: Bell, title: 'Real-time Notifications',
+        desc: 'Socket.IO events, BullMQ mail queue, Brevo transactional email — every update reaches the right person.',
+        from: '#f59e0b', to: '#f97316', badge: 'Live', glow: 'rgba(245,158,11,0.15)'
+    },
+    {
+        icon: Users, title: 'Team Management',
+        desc: 'Owner approval flow, PM assignment, bulk actions, leave requests, attendance tracking, and QR check-in.',
+        from: '#8b5cf6', to: '#6366f1', badge: 'Teams', glow: 'rgba(139,92,246,0.15)'
+    },
 ];
 
 const STATS = [
-    { value: 10000, suffix: '+', label: 'Tasks Managed',  icon: CheckCircle, color: '#10b981' },
-    { value: 99.9,  suffix: '%', label: 'Uptime SLA',     icon: TrendingUp,  color: '#6366f1', decimals: 1 },
-    { value: 500,   suffix: '+', label: 'Active Teams',   icon: Users,       color: '#8b5cf6' },
-    { value: 48,    suffix: 'ms',label: 'Avg Response',   icon: Zap,         color: '#f59e0b' },
+    { value: 10000, suffix: '+', label: 'Tasks Managed', icon: CheckCircle, color: '#10b981' },
+    { value: 99.9, suffix: '%', label: 'Uptime SLA', icon: TrendingUp, color: '#6366f1', decimals: 1 },
+    { value: 500, suffix: '+', label: 'Active Teams', icon: Users, color: '#8b5cf6' },
+    { value: 48, suffix: 'ms', label: 'Avg Response', icon: Zap, color: '#f59e0b' },
 ];
 
 const TECH = [
-    { name: 'PostgreSQL',  icon: '🐘' }, { name: 'TypeScript', icon: '💎' },
-    { name: 'Mistral AI',  icon: '🤖' }, { name: 'React 19',   icon: '⚛️' },
-    { name: 'Drizzle ORM', icon: '🗄️' }, { name: 'Socket.IO',  icon: '⚡' },
-    { name: 'BullMQ',      icon: '📬' }, { name: 'Redis',       icon: '🔴' },
-    { name: 'ImageKit',    icon: '🖼️' }, { name: 'Brevo',       icon: '✉️' },
-    { name: 'Three.js',    icon: '🌐' }, { name: 'GSAP',        icon: '✨' },
+    { name: 'PostgreSQL', icon: '🐘' }, { name: 'TypeScript', icon: '💎' },
+    { name: 'Mistral AI', icon: '🤖' }, { name: 'React 19', icon: '⚛️' },
+    { name: 'Drizzle ORM', icon: '🗄️' }, { name: 'Socket.IO', icon: '⚡' },
+    { name: 'BullMQ', icon: '📬' }, { name: 'Redis', icon: '🔴' },
+    { name: 'ImageKit', icon: '🖼️' }, { name: 'Brevo', icon: '✉️' },
+    { name: 'Three.js', icon: '🌐' }, { name: 'GSAP', icon: '✨' },
 ];
 
 const TESTIMONIALS = [
-    { name: 'Sarah Chen',    role: 'Engineering Lead @ Nexus',  avatar: 'SC', from: '#6366f1', to: '#8b5cf6',
-      text: 'The AI task generator alone saved us 4 hours of sprint planning every week. Kanban board is buttery smooth.' },
-    { name: 'Marcus Ali',    role: 'Product Manager @ Veritas', avatar: 'MA', from: '#3b82f6', to: '#06b6d4',
-      text: 'Finally one tool for project management, attendance, and leave tracking. No more juggling five apps.' },
-    { name: 'Priya Sharma',  role: 'Full-Stack Dev @ Apex',     avatar: 'PS', from: '#10b981', to: '#06b6d4',
-      text: 'Clean TypeScript + Drizzle ORM codebase. Role-based dashboards are exactly what our team needed.' },
-    { name: 'James Okafor',  role: 'CTO @ BuildFlow',           avatar: 'JO', from: '#f43f5e', to: '#f97316',
-      text: 'The burnout-detection AI flagged an overloaded team member we had completely missed. Incredible product.' },
+    {
+        name: 'Sarah Chen', role: 'Engineering Lead @ Nexus', avatar: 'SC', from: '#6366f1', to: '#8b5cf6',
+        text: 'The AI task generator alone saved us 4 hours of sprint planning every week. Kanban board is buttery smooth.'
+    },
+    {
+        name: 'Marcus Ali', role: 'Product Manager @ Veritas', avatar: 'MA', from: '#3b82f6', to: '#06b6d4',
+        text: 'Finally one tool for project management, attendance, and leave tracking. No more juggling five apps.'
+    },
+    {
+        name: 'Priya Sharma', role: 'Full-Stack Dev @ Apex', avatar: 'PS', from: '#10b981', to: '#06b6d4',
+        text: 'Clean TypeScript + Drizzle ORM codebase. Role-based dashboards are exactly what our team needed.'
+    },
+    {
+        name: 'James Okafor', role: 'CTO @ BuildFlow', avatar: 'JO', from: '#f43f5e', to: '#f97316',
+        text: 'The burnout-detection AI flagged an overloaded team member we had completely missed. Incredible product.'
+    },
 ];
 
 const BENTO = [
@@ -287,7 +307,7 @@ const BENTO = [
         desc: 'Optimistic updates with instant server rollback on error.',
         preview: (
             <div className="flex gap-2 mt-3">
-                {['Todo','Doing','Done'].map((col, ci) => (
+                {['Todo', 'Doing', 'Done'].map((col, ci) => (
                     <div key={ci} className="flex-1 rounded-xl p-2"
                         style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.1)' }}>
                         <p className="text-[10px] font-bold mb-2" style={{ color: '#94a3b8' }}>{col}</p>
@@ -306,9 +326,9 @@ const BENTO = [
         desc: 'One-click check-in/out with QR code support and monthly reports.',
         preview: (
             <div className="flex items-end gap-1.5 h-16 mt-3">
-                {[55,78,92,68,95,88,91].map((h, i) => (
+                {[55, 78, 92, 68, 95, 88, 91].map((h, i) => (
                     <div key={i} className="flex-1 rounded-t"
-                        style={{ height: `${h}%`, background: `rgba(16,185,129,${0.25 + h/280})` }} />
+                        style={{ height: `${h}%`, background: `rgba(16,185,129,${0.25 + h / 280})` }} />
                 ))}
             </div>
         ),
@@ -320,10 +340,10 @@ const BENTO = [
         preview: (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                 {[
-                    { label: 'Active Projects', value: '12',   color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-                    { label: 'Total Tasks',     value: '248',  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-                    { label: 'Attendance',      value: '94%',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
-                    { label: 'Productivity',    value: '↑ 23%',color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+                    { label: 'Active Projects', value: '12', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+                    { label: 'Total Tasks', value: '248', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+                    { label: 'Attendance', value: '94%', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
+                    { label: 'Productivity', value: '↑ 23%', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
                 ].map((m, i) => (
                     <div key={i} className="rounded-xl p-3" style={{ background: m.bg }}>
                         <p className="text-[11px] mb-1" style={{ color: '#94a3b8' }}>{m.label}</p>
@@ -338,9 +358,9 @@ const BENTO = [
 // ─── Main ──────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-    const heroRef     = useRef(null);
+    const heroRef = useRef(null);
     const featuresRef = useRef(null);
-    const statsRef    = useRef(null);
+    const statsRef = useRef(null);
     const [activeTesti, setActiveTesti] = useState(0);
 
     // Auto-rotate testimonials
@@ -353,12 +373,12 @@ export default function LandingPage() {
     useEffect(() => {
         const ctx = gsap.context(() => {
             gsap.timeline({ delay: 0.15 })
-                .from('.lp-badge',   { opacity: 0, y: 22, duration: 0.7, ease: 'power3.out' })
-                .from('.lp-title',   { opacity: 0, y: 46, duration: 0.9, ease: 'power3.out' }, '-=0.35')
-                .from('.lp-sub',     { opacity: 0, y: 26, duration: 0.7, ease: 'power3.out' }, '-=0.4')
-                .from('.lp-btns',    { opacity: 0, y: 22, duration: 0.7, ease: 'power3.out' }, '-=0.35')
+                .from('.lp-badge', { opacity: 0, y: 22, duration: 0.7, ease: 'power3.out' })
+                .from('.lp-title', { opacity: 0, y: 46, duration: 0.9, ease: 'power3.out' }, '-=0.35')
+                .from('.lp-sub', { opacity: 0, y: 26, duration: 0.7, ease: 'power3.out' }, '-=0.4')
+                .from('.lp-btns', { opacity: 0, y: 22, duration: 0.7, ease: 'power3.out' }, '-=0.35')
                 .from('.lp-metrics', { opacity: 0, y: 18, duration: 0.6, ease: 'power3.out' }, '-=0.3')
-                .from('.lp-mockup',  { opacity: 0, scale: 0.93, duration: 1, ease: 'power2.out' }, '-=0.75');
+                .from('.lp-mockup', { opacity: 0, scale: 0.93, duration: 1, ease: 'power2.out' }, '-=0.75');
         }, heroRef);
         return () => ctx.revert();
     }, []);
@@ -490,9 +510,9 @@ export default function LandingPage() {
                             {/* Columns */}
                             <div className="p-4 grid grid-cols-3 gap-3">
                                 {[
-                                    { col: 'Backlog',     color: '#94a3b8', tasks: 3 },
+                                    { col: 'Backlog', color: '#94a3b8', tasks: 3 },
                                     { col: 'In Progress', color: '#6366f1', tasks: 2 },
-                                    { col: 'Done',        color: '#10b981', tasks: 4 },
+                                    { col: 'Done', color: '#10b981', tasks: 4 },
                                 ].map((k, i) => (
                                     <div key={i} className="rounded-xl p-3"
                                         style={{ background: P.bg2, border: `1px solid ${P.border}` }}>
@@ -822,9 +842,9 @@ export default function LandingPage() {
                             </p>
                         </div>
                         {[
-                            { heading: 'Product', links: ['Features','AI Workspace','Analytics','Integrations'] },
-                            { heading: 'Team',    links: ['About','Blog','Careers','Contact'] },
-                            { heading: 'Legal',   links: ['Privacy Policy','Terms of Service','Security','Status'] },
+                            { heading: 'Product', links: ['Features', 'AI Workspace', 'Analytics', 'Integrations'] },
+                            { heading: 'Team', links: ['About', 'Blog', 'Careers', 'Contact'] },
+                            { heading: 'Legal', links: ['Privacy Policy', 'Terms of Service', 'Security', 'Status'] },
                         ].map((col, i) => (
                             <div key={i}>
                                 <h4 className="text-xs font-bold uppercase tracking-widest mb-4 text-white/40">{col.heading}</h4>
@@ -838,7 +858,7 @@ export default function LandingPage() {
                     </div>
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8"
                         style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                        <p className="text-sm">© 2025 TaskForge AI. Built with ❤️ using React, Node.js &amp; Mistral AI.</p>
+                        <p className="text-sm">© 2026 TaskForge AI.   &amp; </p>
                         <div className="flex items-center gap-2 text-xs">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                             All systems operational

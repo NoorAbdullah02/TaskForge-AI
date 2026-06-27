@@ -4,6 +4,16 @@ import { connectSocket, disconnectSocket, joinWorkspace } from '../Services/sock
 
 const AuthContext = createContext();
 
+const normalizeUserRole = (role) => {
+    if (role === 'workspace_owner') return 'owner';
+    return role;
+};
+
+const normalizeUser = (user) => {
+    if (!user) return user;
+    return { ...user, role: normalizeUserRole(user.role) };
+};
+
 export const AuthProvider = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
@@ -15,15 +25,18 @@ export const AuthProvider = ({ children }) => {
         api.get('/users/me')
             .then((res) => {
                 if (!mounted) return;
-                if (res?.data?.user) {
-                    setUser(res.data.user);
+                const userData = res?.data?.user;
+                if (userData) {
+                    setUser(normalizeUser(userData));
                     setIsLoggedIn(true);
                 } else {
+                    setUser(null);
                     setIsLoggedIn(false);
                 }
             })
             .catch(() => {
                 if (!mounted) return;
+                setUser(null);
                 setIsLoggedIn(false);
             })
             .finally(() => {
@@ -35,7 +48,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = (userData) => {
-        setUser(userData);
+        setUser(normalizeUser(userData));
         setIsLoggedIn(true);
     };
 

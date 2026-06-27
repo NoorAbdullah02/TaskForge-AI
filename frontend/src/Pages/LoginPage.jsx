@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, ArrowRight, Shield, Zap, BarChart3 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, ArrowRight, Shield, Zap, BarChart3, Clock, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
@@ -45,7 +45,7 @@ function Particles({ count = 110 }) {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      pos[i * 3]     = (Math.random() - 0.5) * 9;
+      pos[i * 3] = (Math.random() - 0.5) * 9;
       pos[i * 3 + 1] = (Math.random() - 0.5) * 9;
       pos[i * 3 + 2] = (Math.random() - 0.5) * 5;
       const c = new THREE.Color();
@@ -83,29 +83,31 @@ function AuthScene() {
 }
 
 /* ── Framer Motion variants ── */
-const formWrap  = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
+const formWrap = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fieldItem = {
   hidden: { opacity: 0, y: 14 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 };
 
 const FEATURES = [
-  { icon: Zap,       label: 'AI-powered task automation' },
+  { icon: Zap, label: 'AI-powered task automation' },
   { icon: BarChart3, label: 'Real-time sprint analytics' },
-  { icon: Shield,    label: 'Enterprise-grade security' },
+  { icon: Shield, label: 'Enterprise-grade security' },
 ];
 
 /* ── Main component ── */
 const LoginPage = () => {
-  const [email, setEmail]                   = useState('');
-  const [password, setPassword]             = useState('');
-  const [showPassword, setShowPassword]     = useState(false);
-  const [isLoading, setIsLoading]           = useState(false);
-  const [rememberMe, setRememberMe]         = useState(false);
-  const [is2FaRequired, setIs2FaRequired]   = useState(false);
-  const [otpEmail, setOtpEmail]             = useState('');
-  const [otpCode, setOtpCode]               = useState('');
-  const [otpTimer, setOtpTimer]             = useState(300);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [is2FaRequired, setIs2FaRequired] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpTimer, setOtpTimer] = useState(300);
+  const [isPending, setIsPending] = useState(false);
+  const [pendingMsg, setPendingMsg] = useState('');
 
   const isEmailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const navigate = useNavigate();
@@ -121,15 +123,50 @@ const LoginPage = () => {
     return () => clearInterval(t);
   }, [is2FaRequired, otpTimer]);
 
+  /* Poll login every 5s when membership is pending — retry until approval */
+  useEffect(() => {
+    if (!isPending || !email || !password) return;
+    let mounted = true;
+    const poll = setInterval(async () => {
+      try {
+        const loginResult = await loginUser({ email: email.toLowerCase(), password });
+        if (loginResult?.message === '2FA_REQUIRED') {
+          return; // keep waiting until the user completes 2FA manually
+        }
+
+        const me = await api.get('/users/me');
+        if (mounted && me.data?.user) {
+          clearInterval(poll);
+          setIsPending(false);
+          setPendingMsg('');
+          login(me.data.user);
+          navigate('/');
+        }
+      } catch (err) {
+        const status = err?.response?.status;
+        const msg = String(err?.response?.data?.message || '').toLowerCase();
+        if (status === 403 && msg.includes('pending')) {
+          return; // still waiting for approval
+        }
+        console.error('Pending login polling failed:', err);
+      }
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearInterval(poll);
+    };
+  }, [isPending, email, password, login, navigate]);
+
   /* GSAP entrance for left panel */
   useEffect(() => {
     if (!panelRef.current) return;
     const ctx = gsap.context(() => {
       gsap.timeline({ delay: 0.25 })
-        .from('.login-brand',   { opacity: 0, y: 30,  duration: 0.8,  ease: 'power3.out' })
-        .from('.login-heading', { opacity: 0, y: 22,  duration: 0.75, ease: 'power3.out' }, '-=0.4')
-        .from('.login-sub',     { opacity: 0, y: 14,  duration: 0.6,  ease: 'power2.out' }, '-=0.35')
-        .from('.login-feat',    { opacity: 0, x: -20, duration: 0.55, stagger: 0.1, ease: 'power2.out' }, '-=0.25');
+        .from('.login-brand', { opacity: 0, y: 30, duration: 0.8, ease: 'power3.out' })
+        .from('.login-heading', { opacity: 0, y: 22, duration: 0.75, ease: 'power3.out' }, '-=0.4')
+        .from('.login-sub', { opacity: 0, y: 14, duration: 0.6, ease: 'power2.out' }, '-=0.35')
+        .from('.login-feat', { opacity: 0, x: -20, duration: 0.55, stagger: 0.1, ease: 'power2.out' }, '-=0.25');
     }, panelRef);
     return () => ctx.revert();
   }, []);
@@ -141,7 +178,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isEmailValid) { toast.error('Please enter a valid email address'); return; }
-    if (!password)     { toast.error('Please enter your password'); return; }
+    if (!password) { toast.error('Please enter your password'); return; }
     setIsLoading(true);
     try {
       const data = await loginUser({ email: email.toLowerCase(), password });
@@ -153,12 +190,28 @@ const LoginPage = () => {
         setIsLoading(false);
         return;
       }
-      try { const me = await api.get('/users/me'); if (me.data?.user) login(me.data.user); } catch (_) {}
-      toast.success(data.message || 'Welcome back! 🎉');
+      let meOk = false;
+      try {
+        const me = await api.get('/users/me');
+        if (me.data?.user) { login(me.data.user); meOk = true; }
+      } catch (meErr) {
+        const msg = meErr?.response?.data?.message || '';
+        if (meErr?.response?.status === 403 && msg.toLowerCase().includes('pending')) {
+          setPendingMsg(msg);
+          setIsPending(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+      if (!meOk && !isPending) {
+        toast.success(data.message || 'Welcome back! 🎉');
+      } else if (meOk) {
+        toast.success(data.message || 'Welcome back! 🎉');
+      }
       if (rememberMe) localStorage.setItem('rememberEmail', email);
       else localStorage.removeItem('rememberEmail');
       setEmail(''); setPassword(''); setRememberMe(false);
-      navigate('/');
+      if (meOk) navigate('/');
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Login failed. Please try again.');
     } finally {
@@ -173,12 +226,25 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const data = await verify2Fa({ email: otpEmail, otp: otpCode });
-      try { const me = await api.get('/users/me'); if (me.data?.user) login(me.data.user); } catch (_) {}
+      let meOk2 = false;
+      try {
+        const me = await api.get('/users/me');
+        if (me.data?.user) { login(me.data.user); meOk2 = true; }
+      } catch (meErr) {
+        const msg = meErr?.response?.data?.message || '';
+        if (meErr?.response?.status === 403 && msg.toLowerCase().includes('pending')) {
+          setPendingMsg(msg);
+          setIs2FaRequired(false);
+          setIsPending(true);
+          setIsLoading(false);
+          return;
+        }
+      }
       toast.success(data.message || 'Welcome back! 🎉');
       if (rememberMe) localStorage.setItem('rememberEmail', email);
       else localStorage.removeItem('rememberEmail');
       setEmail(''); setPassword(''); setOtpCode(''); setIs2FaRequired(false);
-      navigate('/');
+      if (meOk2) navigate('/');
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Verification failed. Please try again.');
     } finally {
@@ -318,7 +384,45 @@ const LoginPage = () => {
           </motion.div>
 
           <AnimatePresence mode="wait">
-            {is2FaRequired ? (
+            {isPending ? (
+              /* ── Pending-approval view ── */
+              <motion.div
+                key="pending"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="text-center py-4"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto mb-5">
+                  <Clock className="w-8 h-8 text-amber-500 animate-pulse" />
+                </div>
+                <h1 className="text-2xl font-extrabold text-gray-900 mb-2">Awaiting Approval</h1>
+                <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
+                  {pendingMsg || 'Your request to join the workspace is pending approval.'}
+                  {' '}The workspace owner will review your request shortly.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-sm text-indigo-600 font-medium mb-8">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Checking status automatically…</span>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-left mb-6">
+                  <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1.5">What happens next?</p>
+                  <ul className="space-y-1 text-sm text-amber-700/80">
+                    <li>• The workspace owner approves your request</li>
+                    <li>• You'll be redirected to the dashboard automatically</li>
+                    <li>• You'll also receive an email confirmation</li>
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPending(false)}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ← Back to Sign In
+                </button>
+              </motion.div>
+            ) : is2FaRequired ? (
               /* ── 2FA view ── */
               <motion.div
                 key="2fa"
@@ -481,18 +585,17 @@ const LoginPage = () => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={`${inp} ${
-                          email && !isEmailValid
-                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                            : isEmailValid
-                              ? 'border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-400'
-                              : 'border-gray-200 focus:ring-indigo-500/20 focus:border-indigo-400'
-                        }`}
+                        className={`${inp} ${email && !isEmailValid
+                          ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
+                          : isEmailValid
+                            ? 'border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-400'
+                            : 'border-gray-200 focus:ring-indigo-500/20 focus:border-indigo-400'
+                          }`}
                         placeholder="you@example.com"
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        {email && isEmailValid  && <CheckCircle className="w-4 h-4 text-emerald-500" />}
-                        {email && !isEmailValid && <XCircle     className="w-4 h-4 text-red-400" />}
+                        {email && isEmailValid && <CheckCircle className="w-4 h-4 text-emerald-500" />}
+                        {email && !isEmailValid && <XCircle className="w-4 h-4 text-red-400" />}
                       </div>
                     </div>
                   </motion.div>

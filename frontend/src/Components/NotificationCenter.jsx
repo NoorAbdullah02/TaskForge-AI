@@ -1,22 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Check, Trash2, Archive, Inbox, Bell, Settings, Search, CheckSquare, Mail, BellOff, ArrowRight } from 'lucide-react';
-import { 
-  getNotifications, 
-  markAsRead, 
-  markAllRead, 
-  archiveNotification, 
-  deleteNotification, 
-  clearAllNotifications, 
-  getNotificationPreferences, 
-  updateNotificationPreferences 
+import { X, Check, Trash2, Archive, Inbox, Bell, Search, CheckSquare, ArrowRight, UserCheck, UserX } from 'lucide-react';
+import {
+  getNotifications,
+  markAsRead,
+  markAllRead,
+  archiveNotification,
+  deleteNotification,
+  clearAllNotifications,
+  getNotificationPreferences,
+  updateNotificationPreferences
 } from '../Services/notificationApi';
+import { approveLeave, rejectLeave } from '../Services/leaveApi';
+import { approveMember } from '../Services/workspaceApi';
 import { socket } from '../Services/socket';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'preferences'
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'archived'
@@ -25,6 +28,11 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   const [loading, setLoading] = useState(false);
   const [prefSaving, setPrefSaving] = useState(false);
   const audioRef = useRef(null);
+
+  /* Inline action state — { [notifId]: 'approve' | 'reject' } while loading */
+  const [actionLoading, setActionLoading] = useState({});
+  /* Set of notif IDs that have been actioned (shows "Done" state) */
+  const [actedUpon, setActedUpon] = useState(new Set());
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -95,12 +103,12 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
     const handleNewNotification = (notif) => {
       // Prepend to list
       setNotifications((prev) => [notif, ...prev]);
-      
+
       // Play sound
       if (audioRef.current) {
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => { });
       }
-      
+
       // Show toast
       toast.success(
         <div className="flex flex-col gap-0.5">
@@ -183,6 +191,84 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
     }
   };
 
+  /* Navigate to a notification link — handles full URLs, same-origin URLs, and relative paths */
+  const handleDetailsClick = (e, link) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!link) return;
+
+    try {
+      const parsed = new URL(link, window.location.origin);
+      const isSameOrigin = parsed.origin === window.location.origin ||
+        (['localhost', '127.0.0.1'].includes(parsed.hostname) && ['localhost', '127.0.0.1'].includes(window.location.hostname));
+
+      if (isSameOrigin) {
+        onClose();
+        navigate(parsed.pathname + parsed.search + parsed.hash);
+      } else if (link.startsWith('http')) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      } else {
+        onClose();
+        navigate(link);
+      }
+    } catch (err) {
+      console.error('Failed to handle notification details link:', err);
+      onClose();
+      navigate('/dashboard');
+    }
+  };
+
+  const getActionKind = (notif) => {
+    if ((notif.type === 'leave.request' || notif.actionType === 'leave.request') && notif.entityId) return 'leave';
+    if ((notif.type === 'workspace.joinRequest' || notif.actionType === 'workspace.joinRequest') && notif.entityId) return 'member';
+    return null;
+  };
+
+  const handleLeaveAction = async (notif, action) => {
+    setActionLoading((prev) => ({ ...prev, [notif.id]: action }));
+    try {
+      if (action === 'approve') {
+        await approveLeave(notif.entityId);
+        toast.success('Leave request approved ✓');
+      } else {
+        await rejectLeave(notif.entityId);
+        toast.success('Leave request rejected');
+      }
+      setActedUpon((prev) => new Set([...prev, notif.id]));
+      /* Mark notification as read automatically */
+      if (!notif.isRead) await handleMarkAsRead(notif.id);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || `Failed to ${action} leave request`);
+    } finally {
+      setActionLoading((prev) => { const n = { ...prev }; delete n[notif.id]; return n; });
+    }
+  };
+
+  /* Approve or reject a workspace member join request */
+  const handleMemberAction = async (notif, action) => {
+    const params = new URLSearchParams((notif?.link || '').split('?')[1] || '');
+    const rawMembershipId = notif?.entityId ?? params.get('membershipId') ?? notif?.data?.membershipId ?? notif?.metadata?.membershipId;
+    const membershipId = rawMembershipId ? Number(rawMembershipId) : null;
+    const workspaceId = Number(params.get('workspaceId') || notif?.workspaceId || user?.activeWorkspaceId);
+
+    if (!workspaceId || !membershipId || Number.isNaN(membershipId)) {
+      toast.error('Unable to resolve the join request. Please refresh and try again.');
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, [notif.id]: action }));
+    try {
+      await approveMember(workspaceId, membershipId, action);
+      toast.success(action === 'approve' ? 'Member approved ✓' : 'Member request rejected');
+      setActedUpon((prev) => new Set([...prev, notif.id]));
+      if (!notif.isRead) await handleMarkAsRead(notif.id);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || `Failed to ${action} member request`);
+    } finally {
+      setActionLoading((prev) => { const n = { ...prev }; delete n[notif.id]; return n; });
+    }
+  };
+
   const handlePrefChange = (field, val) => {
     setPreferences((prev) => {
       if (!prev) return null;
@@ -208,21 +294,21 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   return (
     <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
       {/* Sound effect */}
-      <audio 
-        ref={audioRef} 
-        src="https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav" 
-        preload="auto" 
+      <audio
+        ref={audioRef}
+        src="https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav"
+        preload="auto"
       />
 
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Panel */}
       <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col z-10 border-l border-slate-100 overflow-hidden animate-in slide-in-from-right duration-300">
-        
+
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2">
@@ -234,7 +320,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Enterprise Alert Suite</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-1.5 hover:bg-slate-200/50 rounded-xl transition text-slate-400 hover:text-slate-600 cursor-pointer"
           >
@@ -246,11 +332,10 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
         <div className="flex px-6 pt-3 border-b border-slate-100 bg-slate-50/20">
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`pb-3 text-xs font-black uppercase tracking-wider relative cursor-pointer mr-6 transition-all ${
-              activeTab === 'notifications' 
-                ? 'text-blue-600 font-extrabold' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`pb-3 text-xs font-black uppercase tracking-wider relative cursor-pointer mr-6 transition-all ${activeTab === 'notifications'
+              ? 'text-blue-600 font-extrabold'
+              : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             Inbox
             {activeTab === 'notifications' && (
@@ -259,11 +344,10 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
           </button>
           <button
             onClick={() => setActiveTab('preferences')}
-            className={`pb-3 text-xs font-black uppercase tracking-wider relative cursor-pointer transition-all ${
-              activeTab === 'preferences' 
-                ? 'text-blue-600 font-extrabold' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`pb-3 text-xs font-black uppercase tracking-wider relative cursor-pointer transition-all ${activeTab === 'preferences'
+              ? 'text-blue-600 font-extrabold'
+              : 'text-slate-400 hover:text-slate-600'
+              }`}
           >
             Preferences
             {activeTab === 'preferences' && (
@@ -288,7 +372,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                 />
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 {searchQuery && (
-                  <button 
+                  <button
                     onClick={() => setSearchQuery('')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[10px] font-bold"
                   >
@@ -304,11 +388,10 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                     <button
                       key={f}
                       onClick={() => setFilter(f)}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition cursor-pointer ${
-                        filter === f
-                          ? 'bg-blue-50 text-blue-600 border-blue-200'
-                          : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-slate-600'
-                      }`}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition cursor-pointer ${filter === f
+                        ? 'bg-blue-50 text-blue-600 border-blue-200'
+                        : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50 hover:text-slate-600'
+                        }`}
                     >
                       {f}
                     </button>
@@ -354,32 +437,30 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                 </div>
               ) : (
                 notifications.map((notif) => (
-                  <div 
+                  <div
                     key={notif.id}
-                    className={`p-4 rounded-xl my-1 flex gap-3 transition-all relative group ${
-                      !notif.isRead 
-                        ? 'bg-blue-50/30 border-l-4 border-blue-500' 
-                        : 'bg-white hover:bg-slate-50/50'
-                    }`}
+                    className={`p-4 rounded-xl my-1 flex gap-3 transition-all relative group ${!notif.isRead
+                      ? 'bg-blue-50/30 border-l-4 border-blue-500'
+                      : 'bg-white hover:bg-slate-50/50'
+                      }`}
                   >
                     {/* Event Icon Decorator */}
                     <div className="flex-shrink-0 mt-0.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold uppercase ${
-                        notif.type?.startsWith('task') 
-                          ? 'bg-purple-50 text-purple-600'
-                          : notif.type?.startsWith('leave')
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold uppercase ${notif.type?.startsWith('task')
+                        ? 'bg-purple-50 text-purple-600'
+                        : notif.type?.startsWith('leave')
                           ? 'bg-amber-50 text-amber-600'
                           : notif.type?.startsWith('attendance')
-                          ? 'bg-rose-50 text-rose-600'
-                          : 'bg-blue-50 text-blue-600'
-                      }`}>
-                        {notif.type?.startsWith('task') 
-                          ? '📋' 
-                          : notif.type?.startsWith('leave') 
-                          ? '🌴' 
-                          : notif.type?.startsWith('attendance') 
-                          ? '🕒' 
-                          : '🔔'}
+                            ? 'bg-rose-50 text-rose-600'
+                            : 'bg-blue-50 text-blue-600'
+                        }`}>
+                        {notif.type?.startsWith('task')
+                          ? '📋'
+                          : notif.type?.startsWith('leave')
+                            ? '🌴'
+                            : notif.type?.startsWith('attendance')
+                              ? '🕒'
+                              : '🔔'}
                       </div>
                     </div>
 
@@ -391,7 +472,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1 break-words">
                         {notif.message}
                       </p>
-                      
+
                       <div className="flex items-center gap-3 mt-2 text-[8px] font-bold text-slate-400">
                         <span className="uppercase bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/50">
                           {notif.type}
@@ -402,25 +483,76 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       </div>
 
                       {notif.link && (
-                        notif.link.startsWith('http') ? (
-                          <a 
-                            href={notif.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
-                          >
-                            Details <ArrowRight className="w-2.5 h-2.5" />
-                          </a>
-                        ) : (
-                          <Link 
-                            to={notif.link}
-                            onClick={onClose}
-                            className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
-                          >
-                            Details <ArrowRight className="w-2.5 h-2.5" />
-                          </Link>
-                        )
+                        <button
+                          type="button"
+                          onClick={(e) => handleDetailsClick(e, notif.link)}
+                          className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          Details <ArrowRight className="w-2.5 h-2.5" />
+                        </button>
                       )}
+
+                      {/* ── Inline Approve / Reject buttons ── */}
+                      {(() => {
+                        const kind = getActionKind(notif);
+                        if (!kind) return null;
+
+                        /* Already acted on — show confirmation badge */
+                        if (actedUpon.has(notif.id)) {
+                          return (
+                            <div className="mt-2.5 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                              <Check className="w-3 h-3" />
+                              Action completed
+                            </div>
+                          );
+                        }
+
+                        const loadingAction = actionLoading[notif.id];
+                        const isApproving = loadingAction === 'approve';
+                        const isRejecting = loadingAction === 'reject';
+                        const isBusy = !!loadingAction;
+
+                        return (
+                          <div className="mt-2.5 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                kind === 'leave'
+                                  ? handleLeaveAction(notif, 'approve')
+                                  : handleMemberAction(notif, 'approve');
+                              }}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-bold hover:bg-emerald-100 active:scale-95 disabled:opacity-50 transition cursor-pointer"
+                            >
+                              {isApproving ? (
+                                <span className="w-2.5 h-2.5 border border-emerald-600 border-t-transparent rounded-full animate-spin inline-block" />
+                              ) : (
+                                <UserCheck className="w-2.5 h-2.5" />
+                              )}
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                kind === 'leave'
+                                  ? handleLeaveAction(notif, 'reject')
+                                  : handleMemberAction(notif, 'reject');
+                              }}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-red-600 text-[9px] font-bold hover:bg-red-100 active:scale-95 disabled:opacity-50 transition cursor-pointer"
+                            >
+                              {isRejecting ? (
+                                <span className="w-2.5 h-2.5 border border-red-500 border-t-transparent rounded-full animate-spin inline-block" />
+                              ) : (
+                                <UserX className="w-2.5 h-2.5" />
+                              )}
+                              Reject
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Action buttons (Absolute positioned inside group) */}
@@ -475,15 +607,15 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                 {/* Channel settings */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-4 shadow-sm">
                   <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-50 pb-2">Global Channels</h4>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xs font-extrabold text-slate-700 block">Email Alerts</span>
                       <span className="text-[9px] text-slate-400 leading-tight">Send digests and summaries to {user?.email}</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.emailEnabled}
                         onChange={(e) => handlePrefChange('emailEnabled', e.target.checked)}
@@ -498,8 +630,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400 leading-tight">Show real-time dashboard notifications</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.pushEnabled}
                         onChange={(e) => handlePrefChange('pushEnabled', e.target.checked)}
@@ -512,7 +644,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                 {/* Event toggles */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-4 shadow-sm">
                   <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-50 pb-2">Event Subscription</h4>
-                  
+
                   {/* Task assign */}
                   <div className="flex items-center justify-between">
                     <div>
@@ -520,8 +652,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Alert me when a task is assigned to me</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.taskAssign}
                         onChange={(e) => handlePrefChange('taskAssign', e.target.checked)}
@@ -537,8 +669,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Reminders when task deadlines approach</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.taskDeadline}
                         onChange={(e) => handlePrefChange('taskDeadline', e.target.checked)}
@@ -554,8 +686,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Alert me on comments to my tasks</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.taskComment}
                         onChange={(e) => handlePrefChange('taskComment', e.target.checked)}
@@ -571,8 +703,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Alerts on leave request submissions & reviews</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.leaveApproval}
                         onChange={(e) => handlePrefChange('leaveApproval', e.target.checked)}
@@ -588,8 +720,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Alert me about check-ins and late arrivals</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.attendanceAlert}
                         onChange={(e) => handlePrefChange('attendanceAlert', e.target.checked)}
@@ -605,8 +737,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Project setups, assignments, milestones</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.projectUpdate}
                         onChange={(e) => handlePrefChange('projectUpdate', e.target.checked)}
@@ -622,8 +754,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       <span className="text-[9px] text-slate-400">Receive productivity analysis digests</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={preferences.weeklyDigest}
                         onChange={(e) => handlePrefChange('weeklyDigest', e.target.checked)}

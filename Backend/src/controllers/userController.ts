@@ -115,9 +115,9 @@ export const loginUser = async (req: Request, res: Response) => {
             workspaceName: workspaces.name,
             workspaceSlug: workspaces.slug
         })
-        .from(workspaceMembers)
-        .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-        .where(eq(workspaceMembers.userId, check.id));
+            .from(workspaceMembers)
+            .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+            .where(eq(workspaceMembers.userId, check.id));
 
         if (check.role !== 'super_admin' && userMemberships.length === 0) {
             return res.status(403).json({ message: "You are not a member of any workspace." });
@@ -215,7 +215,11 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         const decodedUser = (req as any).user;
 
         if (!decodedUser) {
-            return res.status(401).json({ message: "Unauthorized" });
+            return res.status(200).json({
+                authenticated: false,
+                user: null,
+                message: "Not authenticated"
+            });
         }
 
         const user = await queries.findUserById(decodedUser.id);
@@ -234,13 +238,13 @@ export const getCurrentUser = async (req: Request, res: Response) => {
                 workspaceName: workspaces.name,
                 workspaceSlug: workspaces.slug
             })
-            .from(workspaceMembers)
-            .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-            .where(and(
-                eq(workspaceMembers.userId, user.id),
-                eq(workspaceMembers.status, 'active')
-            ))
-            .limit(1);
+                .from(workspaceMembers)
+                .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+                .where(and(
+                    eq(workspaceMembers.userId, user.id),
+                    eq(workspaceMembers.status, 'active')
+                ))
+                .limit(1);
 
             if (firstMembership) {
                 activeWorkspaceId = firstMembership.workspaceId;
@@ -250,13 +254,13 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         }
 
         const { password, ...safeUser } = user;
-        return res.status(200).json({ 
+        return res.status(200).json({
             user: {
                 ...safeUser,
                 activeWorkspaceId,
                 workspaceName,
                 workspaceSlug
-            } 
+            }
         });
     } catch (error) {
         console.error('Error in getCurrentUser:', error);
@@ -663,9 +667,9 @@ export const verify2FaUser = async (req: Request, res: Response) => {
             workspaceName: workspaces.name,
             workspaceSlug: workspaces.slug
         })
-        .from(workspaceMembers)
-        .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-        .where(eq(workspaceMembers.userId, user.id));
+            .from(workspaceMembers)
+            .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+            .where(eq(workspaceMembers.userId, user.id));
 
         const active2faMembership = userMemberships2fa.find(m => m.status === 'active');
         const current2faWorkspace = active2faMembership || { workspaceId: null, role: user.role, workspaceName: '', workspaceSlug: '' };

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../db/index';
-import { workspaces, workspaceMembers, users, activityLogs, projects, projectMembers } from '../db/schema';
+import { workspaces, workspaceMembers, users, activityLogs, projects, projectMembers, notifications } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import * as queries from '../db/queries';
@@ -52,7 +52,7 @@ export class WorkspaceController {
 
             // Hash password and create user
             const hashedPassword = await bcrypt.hash(password, 10);
-            const userRole = isFirstUser ? 'super_admin' : 'workspace_owner';
+            const userRole = isFirstUser ? 'super_admin' : 'owner';
 
             const [newUser] = await db.insert(users).values({
                 name,
@@ -156,18 +156,28 @@ export class WorkspaceController {
                 return res.status(400).json({ message: 'Incorrect Workspace Password' });
             }
 
-            // Check if user already exists
+            // Check if the user account already exists
             let user = await queries.getUserByEmail(email);
+            let pendingMembership = null;
+            let verificationSent = false;
+
             if (user) {
-                // If user exists, check if they are already a member or pending
                 const [membership] = await db.select().from(workspaceMembers).where(
                     and(
                         eq(workspaceMembers.workspaceId, workspace.id),
                         eq(workspaceMembers.userId, user.id)
                     )
                 );
+
                 if (membership) {
-                    return res.status(400).json({ message: `You have already requested or joined this workspace (Status: ${membership.status})` });
+                    if (membership.status === 'active') {
+                        return res.status(400).json({ message: 'You are already a member of this workspace.' });
+                    }
+                    if (membership.status === 'pending') {
+                        pendingMembership = membership;
+                    } else {
+                        return res.status(400).json({ message: `You have already requested or joined this workspace (Status: ${membership.status})` });
+                    }
                 }
 
                 if (!user.isEmailVerified) {
@@ -175,9 +185,9 @@ export class WorkspaceController {
                     if (!emailResult?.success) {
                         console.warn('Existing user verification email failed for join request:', emailResult?.error || emailResult?.message);
                     }
+                    verificationSent = true;
                 }
             } else {
-                // Create user
                 const hashedPassword = await bcrypt.hash(password, 10);
                 [user] = await db.insert(users).values({
                     name,
@@ -188,60 +198,39 @@ export class WorkspaceController {
                 }).returning();
 
                 await queries.sendNewVerificationEmail(user.id, user.email);
+                verificationSent = true;
             }
 
-            // Insert pending workspace membership
-            await db.insert(workspaceMembers).values({
-                workspaceId: workspace.id,
-                userId: user.id,
-                role: 'employee',
-                status: 'pending'
-            });
-
-            // Get owner details for notifications
-            const owner = await queries.findUserById(workspace.ownerId || 0);
+            let membershipRecord;
+            if (pendingMembership) {
+                membershipRecord = pendingMembership;
+                await db.update(workspaceMembers)
+                    .set({ status: 'active' })
+                    .where(eq(workspaceMembers.id, pendingMembership.id));
+            } else {
+                const [newMembership] = await db.insert(workspaceMembers).values({
+                    workspaceId: workspace.id,
+                    userId: user.id,
+                    role: 'employee',
+                    status: 'active'
+                }).returning({ id: workspaceMembers.id });
+                membershipRecord = newMembership;
+            }
 
             // Log activity
             await db.insert(activityLogs).values({
                 workspaceId: workspace.id,
                 userId: user.id,
-                action: 'JOIN_REQUEST_SUBMITTED',
+                action: 'JOINED_WORKSPACE',
                 entityType: 'workspace',
                 entityId: workspace.id,
-                details: `User ${name} submitted join request to workspace ${workspace.name}`,
+                details: `User ${name} joined workspace ${workspace.name}`,
                 ipAddress: (req as any).clientIp || req.ip || null
             });
 
-            if (owner) {
-                // 1. Unified Notification (saves to DB, emits real-time Socket.io, queues email)
-                await NotificationService.dispatch({
-                    event: 'workspace.joinRequest',
-                    userId: owner.id,
-                    workspaceId: workspace.id,
-                    entityType: 'workspace',
-                    entityId: workspace.id,
-                    title: 'New Join Request Pending',
-                    message: `${name} has requested to join your workspace "${workspace.name}".`,
-                    link: '/admin-settings?tab=invite',
-                    emailTemplate: 'workspaceJoinRequest',
-                    emailData: {
-                        requesterName: name,
-                        requesterEmail: email,
-                        workspaceName: workspace.name,
-                        link: `${env.FRONTEND_URL}/admin-settings?tab=invite`,
-                    },
-                });
-
-                // 2. Real-Time Socket.io Alert to Owner Room
-                socketService.broadcastToWorkspace(workspace.id, 'join_request_alert', {
-                    workspaceId: workspace.id,
-                    requesterName: name,
-                    requesterEmail: email
-                });
-            }
-
             return res.status(201).json({
-                message: 'Registration successful! Your request to join the workspace has been sent to the workspace owner for approval.'
+                message: 'Registration successful! You have joined the workspace successfully.',
+                verificationSent
             });
         } catch (error) {
             console.error('Error in joinWorkspace:', error);
@@ -298,11 +287,13 @@ export class WorkspaceController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-            const activeWorkspaceId = parseInt(req.headers['x-workspace-id'] as string, 10);
-            if (isNaN(activeWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
+            const requestedWorkspaceId = req.body.workspaceId ? parseInt(req.body.workspaceId, 10) : parseInt(req.headers['x-workspace-id'] as string, 10);
+            if (isNaN(requestedWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
 
+            const activeWorkspaceId = requestedWorkspaceId;
             const { membershipId, action } = req.body; // action: 'approve' or 'reject'
-            if (!membershipId || !action || (action !== 'approve' && action !== 'reject')) {
+            const parsedMembershipId = Number(membershipId);
+            if (!Number.isInteger(parsedMembershipId) || parsedMembershipId <= 0 || !action || (action !== 'approve' && action !== 'reject')) {
                 return res.status(400).json({ message: 'Invalid action parameters' });
             }
 
@@ -317,19 +308,35 @@ export class WorkspaceController {
                 return res.status(403).json({ message: 'Only workspace owners or admins can approve join requests' });
             }
 
-            // Find target membership
-            const [targetMembership] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.id, membershipId));
-            if (!targetMembership || targetMembership.workspaceId !== activeWorkspaceId) {
-                return res.status(404).json({ message: 'Join request not found' });
+            // Find target membership in the current workspace only
+            const [targetMembership] = await db.select().from(workspaceMembers).where(
+                and(
+                    eq(workspaceMembers.id, parsedMembershipId),
+                    eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                    eq(workspaceMembers.status, 'pending')
+                )
+            );
+            if (!targetMembership) {
+                return res.status(404).json({ message: 'Join request not found or already processed' });
             }
 
             const targetUser = await queries.findUserById(targetMembership.userId);
             const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, activeWorkspaceId));
 
             if (action === 'approve') {
-                await db.update(workspaceMembers).set({
+                const updatedMembership = await db.update(workspaceMembers).set({
                     status: 'active'
-                }).where(eq(workspaceMembers.id, membershipId));
+                }).where(
+                    and(
+                        eq(workspaceMembers.id, parsedMembershipId),
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.status, 'pending')
+                    )
+                ).returning({ id: workspaceMembers.id });
+
+                if (updatedMembership.length === 0) {
+                    return res.status(404).json({ message: 'Join request not found or already processed' });
+                }
 
                 // Log activity
                 await db.insert(activityLogs).values({
@@ -359,10 +366,29 @@ export class WorkspaceController {
                         },
                     });
                 }
+
+                await db.update(notifications).set({
+                    isArchived: true
+                }).where(
+                    and(
+                        eq(notifications.type, 'workspace.joinRequest'),
+                        eq(notifications.entityId, parsedMembershipId)
+                    )
+                );
             } else {
-                await db.update(workspaceMembers).set({
+                const updatedMembership = await db.update(workspaceMembers).set({
                     status: 'rejected'
-                }).where(eq(workspaceMembers.id, membershipId));
+                }).where(
+                    and(
+                        eq(workspaceMembers.id, parsedMembershipId),
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.status, 'pending')
+                    )
+                ).returning({ id: workspaceMembers.id });
+
+                if (updatedMembership.length === 0) {
+                    return res.status(404).json({ message: 'Join request not found or already processed' });
+                }
 
                 // Log activity
                 await db.insert(activityLogs).values({
@@ -390,6 +416,15 @@ export class WorkspaceController {
                         },
                     });
                 }
+
+                await db.update(notifications).set({
+                    isArchived: true
+                }).where(
+                    and(
+                        eq(notifications.type, 'workspace.joinRequest'),
+                        eq(notifications.entityId, parsedMembershipId)
+                    )
+                );
             }
 
             return res.status(200).json({ message: `User join request ${action}ed successfully.` });
@@ -405,11 +440,12 @@ export class WorkspaceController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-            const activeWorkspaceId = parseInt(req.headers['x-workspace-id'] as string, 10);
-            if (isNaN(activeWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
+            const requestedWorkspaceId = req.body.workspaceId ? parseInt(req.body.workspaceId, 10) : parseInt(req.headers['x-workspace-id'] as string, 10);
+            if (isNaN(requestedWorkspaceId)) return res.status(400).json({ message: 'Invalid or missing Workspace ID' });
 
+            const activeWorkspaceId = requestedWorkspaceId;
             const { membershipIds, action } = req.body; // action: 'approve' or 'reject'
-            if (!membershipIds || !Array.isArray(membershipIds) || !action || (action !== 'approve' && action !== 'reject')) {
+            if (!membershipIds || !Array.isArray(membershipIds) || membershipIds.length === 0 || !action || (action !== 'approve' && action !== 'reject')) {
                 return res.status(400).json({ message: 'Invalid bulk action parameters' });
             }
 
@@ -427,18 +463,39 @@ export class WorkspaceController {
             const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, activeWorkspaceId));
 
             for (const membershipId of membershipIds) {
-                // Find target membership
-                const [targetMembership] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.id, membershipId));
-                if (!targetMembership || targetMembership.workspaceId !== activeWorkspaceId) {
-                    continue; // Skip invalid request
+                const parsedMembershipId = Number(membershipId);
+                if (!Number.isInteger(parsedMembershipId) || parsedMembershipId <= 0) {
+                    continue;
+                }
+
+                // Find target membership in the current workspace only
+                const [targetMembership] = await db.select().from(workspaceMembers).where(
+                    and(
+                        eq(workspaceMembers.id, parsedMembershipId),
+                        eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                        eq(workspaceMembers.status, 'pending')
+                    )
+                );
+                if (!targetMembership) {
+                    continue; // Skip invalid or already processed request
                 }
 
                 const targetUser = await queries.findUserById(targetMembership.userId);
 
                 if (action === 'approve') {
-                    await db.update(workspaceMembers).set({
+                    const updatedMembership = await db.update(workspaceMembers).set({
                         status: 'active'
-                    }).where(eq(workspaceMembers.id, membershipId));
+                    }).where(
+                        and(
+                            eq(workspaceMembers.id, parsedMembershipId),
+                            eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                            eq(workspaceMembers.status, 'pending')
+                        )
+                    ).returning({ id: workspaceMembers.id });
+
+                    if (updatedMembership.length === 0) {
+                        continue;
+                    }
 
                     // Log activity
                     await db.insert(activityLogs).values({
@@ -469,9 +526,19 @@ export class WorkspaceController {
                         });
                     }
                 } else {
-                    await db.update(workspaceMembers).set({
+                    const updatedMembership = await db.update(workspaceMembers).set({
                         status: 'rejected'
-                    }).where(eq(workspaceMembers.id, membershipId));
+                    }).where(
+                        and(
+                            eq(workspaceMembers.id, parsedMembershipId),
+                            eq(workspaceMembers.workspaceId, activeWorkspaceId),
+                            eq(workspaceMembers.status, 'pending')
+                        )
+                    ).returning({ id: workspaceMembers.id });
+
+                    if (updatedMembership.length === 0) {
+                        continue;
+                    }
 
                     // Log activity
                     await db.insert(activityLogs).values({

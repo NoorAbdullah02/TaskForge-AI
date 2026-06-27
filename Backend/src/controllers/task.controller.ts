@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { subtasks, comments, attachments, users } from '../db/schema';
 import { imagekit } from '../lib/imagekit';
 import { EmailTriggerService } from '../services/emailTrigger.service';
-import { isProjectManager } from '../lib/projectAuth';
+import { isProjectManager, isProjectMember } from '../lib/projectAuth';
 import { socketService } from '../services/socket.service';
 import { ProjectIntelligenceService } from '../services/projectIntelligence.service';
 import { NotificationService } from '../services/notification.service';
@@ -64,7 +64,7 @@ export class TaskController {
         }
     }
 
-    // Create a new task (PM/Owner only)
+    // Create a new task (Any project member or workspace owner/admin)
     static async createTask(req: Request, res: Response) {
         try {
             const user = (req as any).user;
@@ -75,11 +75,12 @@ export class TaskController {
             if (!title || title.trim().length === 0) return res.status(400).json({ message: 'Title is required' });
 
             const parsedProjectId = parseInt(projectId, 10);
+            if (isNaN(parsedProjectId)) return res.status(400).json({ message: 'Invalid Project ID' });
 
-            // Security: Only PMs/Owners can create tasks
-            const isPM = await isProjectManager(user.id, user.role, parsedProjectId);
-            if (!isPM) {
-                return res.status(403).json({ message: 'Access denied: Only project managers or workspace owners can create tasks' });
+            // Security: Allow project members and workspace owners/admins to create tasks
+            const isMember = await isProjectMember(user.id, user.role, parsedProjectId);
+            if (!isMember) {
+                return res.status(403).json({ message: 'Access denied: Only project members can create tasks' });
             }
 
             const task = await TaskService.createTask({
@@ -184,7 +185,7 @@ export class TaskController {
 
             if (user.activeWorkspaceId) {
                 const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
-                
+
                 // If assignee changed, send unified notification
                 if (assigneeId !== undefined && assigneeId !== details.assigneeId && updated.assigneeId) {
                     await NotificationService.dispatch({
@@ -206,7 +207,7 @@ export class TaskController {
                         },
                     });
                 }
-                
+
                 // If status is changed to completed (done) and it is milestone
                 if (status === 'done' && details.status !== 'done' && updated.isMilestone) {
                     const ownerMember = projectDetails?.members?.find((m: any) => m.role === 'owner');
@@ -617,7 +618,7 @@ export class TaskController {
             }
 
             const updated = await TaskService.lockTask(taskId, user.id);
-            
+
             // Notify assignee
             if (task.assigneeId && task.assigneeId !== user.id) {
                 await NotificationService.dispatch({

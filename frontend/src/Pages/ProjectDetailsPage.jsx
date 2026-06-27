@@ -358,6 +358,7 @@ const ProjectDetailsPage = () => {
     const currentMember = project.members.find((m) => m.id === user.id);
     const isOwner = currentMember?.role === 'owner';
     const isManager = currentMember?.role === 'manager' || isOwner;
+    const isProjectMember = Boolean(currentMember);
 
     // Filter tasks
     const activeTasks = project.tasks.filter(t => !t.isMilestone);
@@ -388,11 +389,10 @@ const ProjectDetailsPage = () => {
                                     Role: {currentMember?.role.toUpperCase() || 'MEMBER'}
                                 </span>
                                 {successPrediction && (
-                                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1 border ${
-                                        successPrediction.risk_level === 'low' ? 'bg-green-50 text-green-700 border-green-200' :
+                                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1 border ${successPrediction.risk_level === 'low' ? 'bg-green-50 text-green-700 border-green-200' :
                                         successPrediction.risk_level === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                        'bg-red-50 text-red-700 border-red-200 animate-pulse'
-                                    }`}>
+                                            'bg-red-50 text-red-700 border-red-200 animate-pulse'
+                                        }`}>
                                         AI Success Rate: {successPrediction.success_probability}%
                                     </span>
                                 )}
@@ -454,11 +454,10 @@ const ProjectDetailsPage = () => {
                                             setActiveTab(tab.id);
                                         }
                                     }}
-                                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition whitespace-nowrap ${
-                                        activeTab === tab.id
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
-                                            : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
+                                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition whitespace-nowrap ${activeTab === tab.id
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                                        : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
                                 >
                                     <Icon className="w-4 h-4" />
                                     {tab.label}
@@ -536,100 +535,101 @@ const ProjectDetailsPage = () => {
                     {/* TASKS TAB (Board View) */}
                     {activeTab === 'tasks' && (
                         <div className="space-y-6">
-                            {/* Create Task Form */}
-                            <div className="bg-white rounded-3xl p-6 shadow border border-gray-100">
-                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <Plus className="w-5 h-5 text-blue-500" />
-                                    Add New Task or Milestone
-                                </h3>
-                                <form onSubmit={handleCreateTask} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="md:col-span-2 space-y-3">
-                                        <input
-                                            type="text"
-                                            value={taskTitle}
-                                            onChange={(e) => setTaskTitle(e.target.value)}
-                                            placeholder="Task title..."
-                                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-sm font-semibold"
-                                            required
-                                        />
-                                        <input
-                                            type="text"
-                                            value={taskDesc}
-                                            onChange={(e) => setTaskDesc(e.target.value)}
-                                            placeholder="Task description (optional)..."
-                                            className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-sm font-medium"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={taskWorkType}
-                                                onChange={(e) => setTaskWorkType(e.target.value)}
-                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
-                                            >
-                                                {project.workTypes ? project.workTypes.split(',').map((type) => (
-                                                    <option key={type} value={type}>
-                                                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                                                    </option>
-                                                )) : (
-                                                    <option value="task">Task</option>
-                                                )}
-                                            </select>
-
-                                            <select
-                                                value={taskPriority}
-                                                onChange={(e) => setTaskPriority(e.target.value)}
-                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
-                                            >
-                                                <option value="low">Low Priority</option>
-                                                <option value="medium">Medium Priority</option>
-                                                <option value="high">High Priority</option>
-                                                <option value="critical">Critical</option>
-                                            </select>
-
-                                            <select
-                                                value={taskAssignee}
-                                                onChange={(e) => setTaskAssignee(e.target.value)}
-                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
-                                            >
-                                                <option value="">Unassigned</option>
-                                                {project.members.map((m) => (
-                                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className="flex gap-2 items-center">
+                            {isProjectMember && (
+                                <div className="bg-white rounded-3xl p-6 shadow border border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <Plus className="w-5 h-5 text-blue-500" />
+                                        Add New Task or Milestone
+                                    </h3>
+                                    <form onSubmit={handleCreateTask} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="md:col-span-2 space-y-3">
                                             <input
-                                                type="date"
-                                                value={taskDueDate}
-                                                onChange={(e) => setTaskDueDate(e.target.value)}
-                                                className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                                type="text"
+                                                value={taskTitle}
+                                                onChange={(e) => setTaskTitle(e.target.value)}
+                                                placeholder="Task title..."
+                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-sm font-semibold"
+                                                required
                                             />
-                                            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 border-2 border-gray-300 rounded-xl px-3 py-2 text-sm font-bold text-gray-700">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={taskIsMilestone}
-                                                    onChange={(e) => setTaskIsMilestone(e.target.checked)}
-                                                    className="w-4 h-4 text-blue-600"
-                                                />
-                                                Milestone?
-                                            </label>
+                                            <input
+                                                type="text"
+                                                value={taskDesc}
+                                                onChange={(e) => setTaskDesc(e.target.value)}
+                                                placeholder="Task description (optional)..."
+                                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-sm font-medium"
+                                            />
                                         </div>
-                                    </div>
 
-                                    <div className="md:col-span-3 flex justify-end">
-                                        <button
-                                            type="submit"
-                                            disabled={isCreatingTask || !taskTitle.trim()}
-                                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow transition disabled:opacity-50"
-                                        >
-                                            Add Item
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                                        <div className="space-y-3">
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={taskWorkType}
+                                                    onChange={(e) => setTaskWorkType(e.target.value)}
+                                                    className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                                >
+                                                    {project.workTypes ? project.workTypes.split(',').map((type) => (
+                                                        <option key={type} value={type}>
+                                                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                                                        </option>
+                                                    )) : (
+                                                        <option value="task">Task</option>
+                                                    )}
+                                                </select>
+
+                                                <select
+                                                    value={taskPriority}
+                                                    onChange={(e) => setTaskPriority(e.target.value)}
+                                                    className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                                >
+                                                    <option value="low">Low Priority</option>
+                                                    <option value="medium">Medium Priority</option>
+                                                    <option value="high">High Priority</option>
+                                                    <option value="critical">Critical</option>
+                                                </select>
+
+                                                <select
+                                                    value={taskAssignee}
+                                                    onChange={(e) => setTaskAssignee(e.target.value)}
+                                                    className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                                >
+                                                    <option value="">Unassigned</option>
+                                                    {project.members.map((m) => (
+                                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="flex gap-2 items-center">
+                                                <input
+                                                    type="date"
+                                                    value={taskDueDate}
+                                                    onChange={(e) => setTaskDueDate(e.target.value)}
+                                                    className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-700 bg-white"
+                                                />
+                                                <label className="flex items-center gap-2 cursor-pointer bg-gray-50 border-2 border-gray-300 rounded-xl px-3 py-2 text-sm font-bold text-gray-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={taskIsMilestone}
+                                                        onChange={(e) => setTaskIsMilestone(e.target.checked)}
+                                                        className="w-4 h-4 text-blue-600"
+                                                    />
+                                                    Milestone?
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div className="md:col-span-3 flex justify-end">
+                                            <button
+                                                type="submit"
+                                                disabled={isCreatingTask || !taskTitle.trim()}
+                                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow transition disabled:opacity-50"
+                                            >
+                                                Add Item
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
 
                             {/* Kanban Columns */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -678,58 +678,58 @@ const ProjectDetailsPage = () => {
                                                                 </button>
                                                             </div>
 
-                                                        {t.description && (
-                                                            <p className="text-xs text-gray-500 font-medium">{t.description}</p>
-                                                        )}
+                                                            {t.description && (
+                                                                <p className="text-xs text-gray-500 font-medium">{t.description}</p>
+                                                            )}
 
-                                                        <div className="flex justify-between items-center pt-2 text-xs">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className={`px-2 py-0.5 rounded font-bold uppercase ${
-                                                                    t.priority === 'high' || t.priority === 'critical' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'
-                                                                }`}>
-                                                                    {t.priority}
-                                                                </span>
-                                                                {t.assigneeName && (
-                                                                    <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-1 border border-blue-100">
-                                                                        👤 {t.assigneeName}
+                                                            <div className="flex justify-between items-center pt-2 text-xs">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className={`px-2 py-0.5 rounded font-bold uppercase ${t.priority === 'high' || t.priority === 'critical' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'
+                                                                        }`}>
+                                                                        {t.priority}
+                                                                    </span>
+                                                                    {t.assigneeName && (
+                                                                        <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-1 border border-blue-100">
+                                                                            👤 {t.assigneeName}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {t.dueDate && (
+                                                                    <span className="text-gray-400 font-semibold">
+                                                                        Due: {new Date(t.dueDate).toLocaleDateString()}
                                                                     </span>
                                                                 )}
                                                             </div>
 
-                                                            {t.dueDate && (
-                                                                <span className="text-gray-400 font-semibold">
-                                                                    Due: {new Date(t.dueDate).toLocaleDateString()}
-                                                                </span>
-                                                            )}
+                                                            {/* Status Mover Dropdown */}
+                                                            <div className="pt-2 border-t border-gray-100 flex gap-2">
+                                                                {columnStatus !== 'todo' && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleUpdateTaskStatus(t.id, columnStatus === 'done' ? 'in-progress' : 'todo');
+                                                                        }}
+                                                                        className="flex-1 py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xxs rounded transition text-center"
+                                                                    >
+                                                                        ◀ Back
+                                                                    </button>
+                                                                )}
+                                                                {columnStatus !== 'done' && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleUpdateTaskStatus(t.id, columnStatus === 'todo' ? 'in-progress' : 'done');
+                                                                        }}
+                                                                        className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xxs rounded transition text-center"
+                                                                    >
+                                                                        Move Forward ▶
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
-
-                                                        {/* Status Mover Dropdown */}
-                                                        <div className="pt-2 border-t border-gray-100 flex gap-2">
-                                                            {columnStatus !== 'todo' && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleUpdateTaskStatus(t.id, columnStatus === 'done' ? 'in-progress' : 'todo');
-                                                                    }}
-                                                                    className="flex-1 py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xxs rounded transition text-center"
-                                                                >
-                                                                    ◀ Back
-                                                                </button>
-                                                            )}
-                                                            {columnStatus !== 'done' && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleUpdateTaskStatus(t.id, columnStatus === 'todo' ? 'in-progress' : 'done');
-                                                                    }}
-                                                                    className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xxs rounded transition text-center"
-                                                                >
-                                                                    Move Forward ▶
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )})}
+                                                    )
+                                                })}
                                                 {columnTasks.length === 0 && (
                                                     <p className="text-center text-gray-400 text-xs py-8 font-medium">Empty column</p>
                                                 )}
@@ -759,16 +759,14 @@ const ProjectDetailsPage = () => {
                                     {milestones.map((m) => (
                                         <div
                                             key={m.id}
-                                            className={`p-5 rounded-2xl border flex items-center justify-between gap-4 transition ${
-                                                m.status === 'done' ? 'bg-green-50/50 border-green-200' : 'bg-gray-50/50 border-gray-200'
-                                            }`}
+                                            className={`p-5 rounded-2xl border flex items-center justify-between gap-4 transition ${m.status === 'done' ? 'bg-green-50/50 border-green-200' : 'bg-gray-50/50 border-gray-200'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={() => handleUpdateTaskStatus(m.id, m.status === 'done' ? 'todo' : 'done')}
-                                                    className={`p-1.5 rounded-full transition ${
-                                                        m.status === 'done' ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-gray-400 hover:text-blue-600'
-                                                    }`}
+                                                    className={`p-1.5 rounded-full transition ${m.status === 'done' ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-gray-400 hover:text-blue-600'
+                                                        }`}
                                                 >
                                                     {m.status === 'done' ? <CheckCircle className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                                                 </button>
