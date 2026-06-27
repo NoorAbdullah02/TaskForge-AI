@@ -172,7 +172,6 @@ export default function OwnerDashboard({ user }) {
           ))}
         </div>
 
-        {/* ── Row 1: Project Status + Sprint Velocity ─────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           <GlassCard
             initial={{ opacity: 0, y: 22 }}

@@ -621,12 +621,30 @@ export const verify2FaUser = async (req: Request, res: Response) => {
         const session = await queries.createSession(sessionPayload as any);
         const sessionId = session[0]?.id;
 
+        // Look up active workspace membership for token context
+        const userMemberships2fa = await db.select({
+            workspaceId: workspaceMembers.workspaceId,
+            role: workspaceMembers.role,
+            status: workspaceMembers.status,
+            workspaceName: workspaces.name,
+            workspaceSlug: workspaces.slug
+        })
+        .from(workspaceMembers)
+        .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+        .where(eq(workspaceMembers.userId, user.id));
+
+        const active2faMembership = userMemberships2fa.find(m => m.status === 'active');
+        const current2faWorkspace = active2faMembership || { workspaceId: null, role: user.role, workspaceName: '', workspaceSlug: '' };
+
         const accessToken = queries.createAccessToken({
             id: user.id,
             name: user.name,
             email: user.email,
             isEmailVerified: user.isEmailVerified,
-            role: user.role,
+            role: user.role === 'super_admin' ? 'super_admin' : current2faWorkspace.role,
+            activeWorkspaceId: current2faWorkspace.workspaceId,
+            workspaceName: current2faWorkspace.workspaceName,
+            workspaceSlug: current2faWorkspace.workspaceSlug,
             position: user.position,
             phone: user.phone,
             departmentId: user.departmentId,

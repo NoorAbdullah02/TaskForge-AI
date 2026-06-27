@@ -1,6 +1,6 @@
 import { db } from '../db/index';
 import { eq, lt, sql, and } from 'drizzle-orm';
-import { users, sessionTable, verifyEmailTable, passwordResetTokenTable, departments } from "./schema";
+import { users, sessionTable, verifyEmailTable, passwordResetTokenTable, departments, workspaceMembers, workspaces } from "./schema";
 import type { newVerify, newSession, NewUser } from "./schema";
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
@@ -104,12 +104,30 @@ export const refressTokens = async (token: string) => {
         if (!user) {
             throw new Error('User not found');
         }
+
+        // Look up active workspace membership so the refreshed token retains workspace context
+        const memberships = await db.select({
+            workspaceId: workspaceMembers.workspaceId,
+            role: workspaceMembers.role,
+            status: workspaceMembers.status,
+            workspaceName: workspaces.name,
+            workspaceSlug: workspaces.slug
+        })
+        .from(workspaceMembers)
+        .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+        .where(eq(workspaceMembers.userId, user.id));
+
+        const activeMembership = memberships.find(m => m.status === 'active');
+
         const userInfo = {
             id: user.id,
             name: user.name,
             email: user.email,
             isEmailVerified: user.isEmailVerified,
-            role: user.role,
+            role: user.role === 'super_admin' ? 'super_admin' : (activeMembership?.role || user.role),
+            activeWorkspaceId: activeMembership?.workspaceId || null,
+            workspaceName: activeMembership?.workspaceName || '',
+            workspaceSlug: activeMembership?.workspaceSlug || '',
             position: user.position,
             phone: user.phone,
             departmentId: user.departmentId,
