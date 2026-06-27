@@ -1,211 +1,496 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { gsap } from 'gsap';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   Users, Briefcase, CheckSquare, CalendarOff, TrendingUp, Activity,
-  Building2, RefreshCw, Crown, BarChart3, Clock, Layers,
+  Building2, RefreshCw, BarChart3, Clock, Layers, Bell, Check, X,
+  UserCheck, AlertCircle, ChevronRight, Settings, Crown, Shield,
+  Copy, Link,
 } from 'lucide-react';
 import AnimatedCounter from '../../Components/AnimatedCounter';
-import { ChartTooltip, CalendarHeatmap, StatRing } from '../../Components/DashboardUtils';
+import { ChartTooltip, CalendarHeatmap } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
-import { getExecutiveStats } from '../../Services/aiApi';
+import { getPendingRequests, approveMember, bulkApproveMembers, getWorkspaceInfo } from '../../Services/workspaceApi';
+import { socket } from '../../Services/socket';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PROJECT_STATUS_COLORS = { planning:'#94a3b8', active:'#8b5cf6', in_progress:'#a855f7', on_hold:'#f59e0b', completed:'#10b981' };
+const PROJECT_STATUS_COLORS = {
+  planning: '#94a3b8', active: '#8b5cf6', in_progress: '#a855f7',
+  on_hold: '#f59e0b', completed: '#10b981',
+};
+const PRIORITY_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+const LEAVE_COLORS = ['#10b981', '#f59e0b', '#ef4444'];
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export default function OwnerDashboard({ user }) {
-  const [stats,    setStats]    = useState(null);
+  const { user: authUser } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [execData, setExecData] = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [pending, setPending] = useState([]);
+  const [workspaceInfo, setWorkspaceInfo] = useState(null);
+  const [copiedType, setCopiedType] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [actionLoading, setActionLoading] = useState(null); // membershipId or 'bulk'
   const headerRef = useRef(null);
+  const wsId = authUser?.activeWorkspaceId;
 
-  useEffect(() => { fetchAll(); }, []);
+  const handleCopy = (text, type) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedType(type);
+    toast.success(`${type} copied to clipboard! 📋`);
+    setTimeout(() => setCopiedType(''), 3000);
+  };
 
-  useEffect(() => {
-    if (!loading && headerRef.current) {
-      gsap.from([...headerRef.current.children], {
-        y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
-      });
+  const fetchPending = useCallback(async () => {
+    if (!wsId) return;
+    setPendingLoading(true);
+    try {
+      const data = await getPendingRequests(wsId);
+      setPending(Array.isArray(data) ? data : []);
+    } catch {
+      // silently ignore — not critical
+    } finally {
+      setPendingLoading(false);
     }
-  }, [loading]);
+  }, [wsId]);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, p, e] = await Promise.allSettled([
-        getDashboardStats(), getProjects(), getExecutiveStats(),
+      const [s, p, w] = await Promise.allSettled([
+        getDashboardStats(),
+        getProjects(),
+        getWorkspaceInfo()
       ]);
       if (s.status === 'fulfilled') setStats(s.value);
       if (p.status === 'fulfilled') setProjects(p.value || []);
-      if (e.status === 'fulfilled') setExecData(e.value);
-    } catch { toast.error('Could not load workspace data'); }
-    finally  { setLoading(false); }
+      if (w.status === 'fulfilled') setWorkspaceInfo(w.value);
+    } catch {
+      toast.error('Could not load workspace data');
+    } finally {
+      setLoading(false);
+    }
+    fetchPending();
+  }, [fetchPending]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Real-time join-request socket listener
+  useEffect(() => {
+    if (!socket) return;
+    const handleJoinAlert = () => {
+      fetchPending();
+      toast('New join request received!', { icon: '🔔' });
+    };
+    socket.on('join_request_alert', handleJoinAlert);
+    return () => socket.off('join_request_alert', handleJoinAlert);
+  }, [fetchPending]);
+
+  const handleApprove = async (membershipId, action) => {
+    setActionLoading(membershipId);
+    try {
+      await approveMember(wsId, membershipId, action);
+      toast.success(action === 'approve' ? 'Member approved! They can now log in.' : 'Request rejected.');
+      setPending(prev => prev.filter(r => r.membershipId !== membershipId));
+      setSelectedIds(prev => prev.filter(id => id !== membershipId));
+    } catch (err) {
+      toast.error(err?.response?.data?.message || `Failed to ${action}`);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  // ── Derived chart data ──────────────────────────────────────────────────────
-  const projectsByStatus = Object.entries(stats?.projects?.byStatus || { active: 4, completed: 3, on_hold: 1, planning: 2 })
+  const handleBulkAction = async (action) => {
+    if (!selectedIds.length) return;
+    setActionLoading('bulk');
+    try {
+      await bulkApproveMembers(wsId, selectedIds, action);
+      toast.success(`${selectedIds.length} request(s) ${action}d.`);
+      setPending(prev => prev.filter(r => !selectedIds.includes(r.membershipId)));
+      setSelectedIds([]);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || `Bulk ${action} failed`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const toggleSelect = (id) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const selectAll = () =>
+    setSelectedIds(prev => prev.length === pending.length ? [] : pending.map(r => r.membershipId));
+
+  // ── Chart data ──────────────────────────────────────────────────────────────
+  const projectsByStatus = Object.entries(stats?.projects?.byStatus || {})
     .map(([name, value]) => ({ name, value: Number(value), color: PROJECT_STATUS_COLORS[name] || '#6366f1' }));
 
-  const taskByPriority = Object.entries(stats?.tasks?.byPriority || { low: 12, medium: 28, high: 18, urgent: 7 })
+  const taskByPriority = Object.entries(stats?.tasks?.byPriority || {})
     .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: Number(value) }));
 
-  const PRIORITY_COLORS = ['#10b981','#3b82f6','#f59e0b','#ef4444'];
+  const productivityData = (stats?.productivity || []).slice(-8);
 
-  const sprintVelocity = MONTHS.slice(-7).map((m, i) => ({
-    sprint: `S${i + 1}`,
-    planned: Math.floor(40 + Math.random() * 20),
-    completed: Math.floor(30 + Math.random() * 25),
-  }));
-
-  const memberProductivity = Array.from({ length: 8 }, (_, i) => ({
-    name: `Member ${i + 1}`,
-    tasks: Math.floor(5 + Math.random() * 20),
-    score: Math.floor(60 + Math.random() * 40),
-  })).sort((a, b) => b.tasks - a.tasks);
-
-  const resourceUsage = MONTHS.slice(-6).map((m, i) => ({
-    month: m,
-    developers: Math.floor(60 + i * 3 + Math.random() * 10),
-    designers:  Math.floor(40 + i * 2 + Math.random() * 8),
-    qa:         Math.floor(30 + i * 2 + Math.random() * 6),
-  }));
-
-  const attendanceHeat = {};
-  const today = new Date();
-  for (let i = 0; i < 84; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const k = d.toISOString().split('T')[0];
-    if (d.getDay() !== 0 && d.getDay() !== 6) {
-      attendanceHeat[k] = Math.random() > 0.15 ? Math.floor(3 + Math.random() * 10) : 0;
-    }
-  }
-
-  const leaveData = Object.entries(stats?.leaves?.byStatus || { approved: 12, pending: 5, rejected: 3 })
+  const leaveData = Object.entries(stats?.leaves?.byStatus || {})
     .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: Number(value) }));
-  const LEAVE_COLORS = ['#10b981','#f59e0b','#ef4444'];
 
-  const recentActivity = (stats?.recentActivity || []).slice(0, 10);
+  const taskStatusData = Object.entries(stats?.tasks?.byStatus || {})
+    .map(([name, value]) => ({ name: name.replace('_', ' '), value: Number(value) }));
+
+  const recentActivity = (stats?.recentActivity || []).slice(0, 12);
+
+  const pendingCount = pending.length;
+  const activeMembers = stats?.workspace?.activeMembers || 0;
 
   if (loading) return (
-    <>
-      <div className="min-h-screen flex items-center justify-center text-ink">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-20 h-20">
-            <div className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-ping" />
-            <div className="absolute inset-0 rounded-full border-2 border-t-violet-500 border-r-violet-400/40 border-b-transparent border-l-transparent animate-spin" />
-          </div>
-          <span className="text-xs font-black text-violet-400 tracking-[0.35em] uppercase">Loading Workspace Overview</span>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-ping" />
+          <div className="absolute inset-0 rounded-full border-2 border-t-violet-500 border-r-violet-400/40 border-b-transparent border-l-transparent animate-spin" />
         </div>
+        <span className="text-xs font-black text-violet-400 tracking-[0.3em] uppercase">Loading Workspace</span>
       </div>
-    </>
+    </div>
   );
 
   return (
-    <>
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 py-8 text-ink overflow-x-hidden">
+    <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8 text-ink overflow-x-hidden">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div ref={headerRef} className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30">
-                <Building2 className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-[11px] font-black text-violet-400 tracking-[0.35em] uppercase">Workspace Owner · Overview</span>
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div ref={headerRef} className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25">
+              <Building2 className="h-4 w-4 text-white" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight">
-              <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-                Workspace Dashboard
-              </span>
-            </h1>
-            <p className="text-ink-soft text-sm mt-1.5">
-              Welcome back, <span className="text-ink font-semibold">{user?.name}</span> ·{' '}
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            </p>
+            <span className="text-[11px] font-black text-violet-400 tracking-[0.35em] uppercase">
+              {authUser?.workspaceName || 'Workspace'} · Owner
+            </span>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Badge status="info">
-              {projects.length} Active Projects
-            </Badge>
-            <Badge status="warning" pulse={stats?.leaves?.pending > 0}>
-              {stats?.leaves?.pending || 0} Pending Leaves
-            </Badge>
-            <button onClick={fetchAll} className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors">
-              <RefreshCw className="h-4 w-4 text-ink-soft" />
-            </button>
-          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Workspace Dashboard
+            </span>
+          </h1>
+          <p className="text-ink-soft text-sm mt-1">
+            Welcome back, <span className="text-ink font-semibold">{user?.name}</span> ·{' '}
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-
-        {/* ── KPI Bar ────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">
-          {[
-            { icon: Briefcase,   label: 'Active Projects',  value: stats?.projects?.active || 0,          color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20' },
-            { icon: CheckSquare, label: 'Total Tasks',       value: stats?.tasks?.total || 0,               color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-            { icon: CalendarOff, label: 'Pending Leaves',    value: stats?.leaves?.pending || 0,            color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20' },
-            { icon: Clock,       label: 'Attendance Rate',   value: stats?.attendance?.rate || 0, suffix:'%', color: 'text-fuchsia-400',bg: 'bg-fuchsia-500/10',border: 'border-fuchsia-500/20' },
-          ].map((s, i) => (
-            <GlassCard
-              key={i}
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-              className={`p-5 border ${s.border}`}
-              hoverEffect={true}
-            >
-              <div className={`p-2 rounded-xl ${s.bg} w-fit mb-3`}>
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-              </div>
-              <AnimatedCounter value={s.value} suffix={s.suffix || ''} className={`text-3xl font-black block ${s.color}`} />
-              <p className="text-xs text-ink-faint mt-1">{s.label}</p>
-            </GlassCard>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
+        <div className="flex items-center gap-2 flex-wrap">
+          {pendingCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold animate-pulse">
+              <Bell className="h-3.5 w-3.5" />
+              {pendingCount} pending join request{pendingCount !== 1 ? 's' : ''}
+            </div>
+          )}
+          <button
+            onClick={() => navigate('/admin-settings')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 border border-line text-xs font-semibold text-ink-soft hover:text-ink transition-colors"
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Project Status Distribution</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Workspace-wide project health</p>
+            <Settings className="h-3.5 w-3.5" /> Settings
+          </button>
+          <button
+            onClick={fetchAll}
+            className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4 text-ink-soft" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Workspace Access & Quick Invite Panel ───────────────────────────── */}
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6"
+        >
+          <GlassCard padding="p-0" className="border border-purple-500/20 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-line">
+              {/* Left Column: Pending Join Requests (7 cols) */}
+              <div className="lg:col-span-7 flex flex-col justify-between">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-violet-500/15">
+                      <UserCheck className="h-4 w-4 text-violet-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-ink">Pending Join Requests</h3>
+                      <p className="text-xs text-ink-faint">
+                        {pendingLoading ? 'Loading…' : `${pendingCount} user${pendingCount !== 1 ? 's' : ''} awaiting approval`}
+                      </p>
+                    </div>
+                  </div>
+                  {pendingCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      {selectedIds.length > 0 && (
+                        <>
+                          <Button
+                            size="xs"
+                            variant="success"
+                            onClick={() => handleBulkAction('approve')}
+                            disabled={actionLoading === 'bulk'}
+                            isLoading={actionLoading === 'bulk'}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Approve ({selectedIds.length})
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="danger"
+                            onClick={() => handleBulkAction('reject')}
+                            disabled={actionLoading === 'bulk'}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Reject ({selectedIds.length})
+                          </Button>
+                        </>
+                      )}
+                      <button
+                        onClick={selectAll}
+                        className="text-xs text-brand hover:text-brand-strong font-semibold transition-colors"
+                      >
+                        {selectedIds.length === pendingCount ? 'Deselect all' : 'Select all'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Requests List or Empty State */}
+                <div className="divide-y divide-line max-h-64 overflow-y-auto flex-1">
+                  {pendingLoading ? (
+                    <div className="flex items-center justify-center py-10 text-ink-faint text-sm">
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" /> Loading requests…
+                    </div>
+                  ) : pendingCount === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
+                        <Check className="h-5 w-5 text-emerald-400" />
+                      </div>
+                      <h4 className="text-sm font-bold text-ink mb-1">All caught up!</h4>
+                      <p className="text-xs text-ink-faint max-w-xs">No pending workspace join requests to review at the moment.</p>
+                    </div>
+                  ) : (
+                    <AnimatePresence>
+                      {pending.map((req) => (
+                        <motion.div
+                          key={req.membershipId}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 8, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(req.membershipId)}
+                            onChange={() => toggleSelect(req.membershipId)}
+                            className="h-4 w-4 rounded border-line text-brand accent-brand cursor-pointer"
+                          />
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {(req.name || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-ink truncate">{req.name}</p>
+                            <p className="text-xs text-ink-faint truncate">{req.email}</p>
+                          </div>
+                          <p className="text-[10px] text-ink-faint hidden sm:block shrink-0">
+                            {req.joinedAt ? timeAgo(req.joinedAt) : ''}
+                          </p>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handleApprove(req.membershipId, 'approve')}
+                              disabled={!!actionLoading}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                            >
+                              {actionLoading === req.membershipId ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Check className="h-3 w-3" />
+                              )}
+                              <span className="hidden sm:inline">Approve</span>
+                            </button>
+                            <button
+                              onClick={() => handleApprove(req.membershipId, 'reject')}
+                              disabled={!!actionLoading}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            >
+                              <X className="h-3 w-3" />
+                              <span className="hidden sm:inline">Reject</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </div>
               </div>
-              <Briefcase className="h-4 w-4 text-violet-400" />
+
+              {/* Right Column: Invite & Share Link (5 cols) */}
+              <div className="lg:col-span-5 p-5 bg-purple-500/[0.02] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-3.5">
+                    <div className="p-1.5 rounded-lg bg-purple-500/15">
+                      <Link className="h-4 w-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-ink">Invite Team Members</h3>
+                      <p className="text-xs text-ink-faint">Share link or code to add members</p>
+                    </div>
+                  </div>
+
+                  {/* Invite Link Input & Copy */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-black text-ink-faint tracking-wider uppercase mb-1">Invite Link</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={workspaceInfo?.inviteLink || 'Loading link…'}
+                          className="flex-1 min-w-0 px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-mono text-ink-soft select-all focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleCopy(workspaceInfo?.inviteLink, 'Link')}
+                          disabled={!workspaceInfo?.inviteLink}
+                          className="px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all font-bold text-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>{copiedType === 'Link' ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Invite Code & Manage button */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-ink-faint tracking-wider uppercase mb-1">Invite Code</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={workspaceInfo?.inviteCode || '…'}
+                            className="w-full text-center px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-mono font-bold text-purple-400 select-all focus:outline-none"
+                          />
+                          <button
+                            onClick={() => handleCopy(workspaceInfo?.inviteCode, 'Code')}
+                            disabled={!workspaceInfo?.inviteCode}
+                            className="px-2.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all cursor-pointer disabled:opacity-50 animate-in fade-in"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col justify-end">
+                        <button
+                          onClick={() => navigate('/admin-settings?tab=invite')}
+                          className="w-full py-2 px-3 rounded-xl bg-surface-2 border border-line text-xs font-semibold text-ink-soft hover:text-ink hover:border-ink-soft transition-all text-center flex items-center justify-center gap-1 cursor-pointer h-[34px]"
+                        >
+                          <span>Settings Link</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-line flex items-center justify-between text-xs text-ink-faint">
+                  <span>Total Workspace Members:</span>
+                  <span className="font-bold text-ink">{workspaceInfo?.memberCount || 1}</span>
+                </div>
+              </div>
             </div>
+          </GlassCard>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* ── KPI Bar ────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {[
+          { icon: Briefcase,   label: 'Active Projects',   value: stats?.projects?.active || 0,            color: 'text-violet-400',  bg: 'bg-violet-500/10',   border: 'border-violet-500/20' },
+          { icon: CheckSquare, label: 'Total Tasks',        value: stats?.tasks?.total || 0,                color: 'text-purple-400',  bg: 'bg-purple-500/10',   border: 'border-purple-500/20' },
+          { icon: Users,       label: 'Active Members',     value: activeMembers,                           color: 'text-blue-400',    bg: 'bg-blue-500/10',     border: 'border-blue-500/20' },
+          { icon: AlertCircle, label: 'Pending Requests',   value: pendingCount,                            color: 'text-amber-400',   bg: 'bg-amber-500/10',    border: 'border-amber-500/20' },
+          { icon: CalendarOff, label: 'Pending Leaves',     value: stats?.leaves?.pending || 0,             color: 'text-rose-400',    bg: 'bg-rose-500/10',     border: 'border-rose-500/20' },
+          { icon: Clock,       label: 'Attendance Rate',    value: stats?.attendance?.rate || 0, suffix:'%', color: 'text-emerald-400', bg: 'bg-emerald-500/10',  border: 'border-emerald-500/20' },
+        ].map((s, i) => (
+          <GlassCard
+            key={i}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+            className={`p-4 border ${s.border}`}
+            hoverEffect
+          >
+            <div className={`p-1.5 rounded-lg ${s.bg} w-fit mb-2.5`}>
+              <s.icon className={`h-4 w-4 ${s.color}`} />
+            </div>
+            <AnimatedCounter value={s.value} suffix={s.suffix || ''} className={`text-2xl font-black block ${s.color}`} />
+            <p className="text-[11px] text-ink-faint mt-0.5 leading-tight">{s.label}</p>
+          </GlassCard>
+        ))}
+      </div>
+
+      {/* ── Row 1: Project Status + Weekly Productivity ─────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Project Status Distribution</h3>
+              <p className="text-xs text-ink-faint mt-0.5">Workspace-wide project health</p>
+            </div>
+            <Briefcase className="h-4 w-4 text-violet-400" />
+          </div>
+          {projectsByStatus.length > 0 ? (
             <div className="flex items-center gap-4">
-              <ResponsiveContainer width="50%" height={200}>
+              <ResponsiveContainer width="45%" height={190}>
                 <PieChart>
-                  <Pie data={projectsByStatus} cx="50%" cy="50%" outerRadius={80} innerRadius={44} paddingAngle={3} dataKey="value">
+                  <Pie data={projectsByStatus} cx="50%" cy="50%" outerRadius={78} innerRadius={42} paddingAngle={3} dataKey="value">
                     {projectsByStatus.map((d, i) => <Cell key={i} fill={d.color} />)}
                   </Pie>
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-2.5">
                 {projectsByStatus.map((d, i) => (
                   <div key={i}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-ink-soft capitalize">{d.name.replace('_', ' ')}</span>
+                      <span className="text-ink-soft capitalize">{d.name.replace(/_/g, ' ')}</span>
                       <span className="font-bold" style={{ color: d.color }}>{d.value}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${(d.value / Math.max(...projectsByStatus.map(x => x.value))) * 100}%` }}
-                        transition={{ duration: 0.8, delay: i * 0.1 }}
+                        animate={{ width: `${(d.value / Math.max(...projectsByStatus.map(x => x.value), 1)) * 100}%` }}
+                        transition={{ duration: 0.7, delay: i * 0.08 }}
                         className="h-full rounded-full"
                         style={{ backgroundColor: d.color }}
                       />
@@ -214,138 +499,90 @@ export default function OwnerDashboard({ user }) {
                 ))}
               </div>
             </div>
-          </GlassCard>
-
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Sprint Velocity</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Planned vs completed story points</p>
-              </div>
-              <BarChart3 className="h-4 w-4 text-purple-400" />
+          ) : (
+            <div className="flex items-center justify-center h-[190px] text-ink-faint text-sm">
+              No projects yet
             </div>
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={sprintVelocity} barGap={3} barCategoryGap="28%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
-                <XAxis dataKey="sprint" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="planned"   name="Planned"   fill="#4b5563" radius={[4,4,0,0]} />
-                <Bar dataKey="completed" name="Completed" fill="#8b5cf6" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </GlassCard>
-        </div>
+          )}
+        </GlassCard>
 
-        {/* ── Row 2: Resource Usage + Task Priority ────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Resource Utilization</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Team capacity — last 6 months</p>
-              </div>
-              <Users className="h-4 w-4 text-violet-400" />
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Weekly Productivity</h3>
+              <p className="text-xs text-ink-faint mt-0.5">Tasks completed per week</p>
             </div>
-            <ResponsiveContainer width="100%" height={210}>
-              <AreaChart data={resourceUsage}>
-                <defs>
-                  <linearGradient id="owDevGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="owDesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="owQaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" />
-                <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="developers" name="Developers" stroke="#8b5cf6" fill="url(#owDevGrad)" strokeWidth={2} dot={false} />
-                <Area type="monotone" dataKey="designers"  name="Designers"  stroke="#ec4899" fill="url(#owDesGrad)" strokeWidth={2} dot={false} />
-                <Area type="monotone" dataKey="qa"         name="QA"         stroke="#06b6d4" fill="url(#owQaGrad)"  strokeWidth={2} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </GlassCard>
+            <TrendingUp className="h-4 w-4 text-purple-400" />
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={productivityData}>
+              <defs>
+                <linearGradient id="owProdGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
+              <XAxis dataKey="week" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="count" name="Tasks Done" stroke="#8b5cf6" fill="url(#owProdGrad)" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 3 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </GlassCard>
+      </div>
 
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Task Priority Breakdown</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Current task distribution by urgency</p>
-              </div>
-              <Layers className="h-4 w-4 text-purple-400" />
+      {/* ── Row 2: Task Priority + Leave Analytics ──────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Task Priority Breakdown</h3>
+              <p className="text-xs text-ink-faint mt-0.5">Current task distribution by urgency</p>
             </div>
-            <ResponsiveContainer width="100%" height={210}>
+            <Layers className="h-4 w-4 text-purple-400" />
+          </div>
+          {taskByPriority.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={taskByPriority} layout="vertical" barCategoryGap="24%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} width={60} />
+                <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} width={65} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="value" name="Tasks" radius={[0, 6, 6, 0]}>
+                <Bar dataKey="value" name="Tasks" radius={[0, 5, 5, 0]}>
                   {taskByPriority.map((_, i) => <Cell key={i} fill={PRIORITY_COLORS[i % PRIORITY_COLORS.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </GlassCard>
-        </div>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-ink-faint text-sm">No task data yet</div>
+          )}
+        </GlassCard>
 
-        {/* ── Row 3: Attendance Heatmap + Leave Analytics ─────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <h3 className="text-sm font-bold text-ink mb-1">Team Attendance Heatmap</h3>
-            <p className="text-xs text-ink-faint mb-5">Check-in density — last 12 weeks</p>
-            <div className="overflow-x-auto pb-1">
-              <CalendarHeatmap data={attendanceHeat} color="#8b5cf6" weeks={12} />
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.45 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Leave Analytics</h3>
+              <p className="text-xs text-ink-faint mt-0.5">Leave requests by status</p>
             </div>
-            <div className="flex items-center gap-2 mt-4">
-              <span className="text-[10px] text-ink-faint">Less</span>
-              {[0.12, 0.28, 0.50, 0.72, 0.92].map((o, i) => (
-                <div key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: `rgba(139,92,246,${o})` }} />
-              ))}
-              <span className="text-[10px] text-ink-faint">More</span>
-            </div>
-          </GlassCard>
-
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Leave Analytics</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Leave requests by status</p>
-              </div>
-              <CalendarOff className="h-4 w-4 text-fuchsia-400" />
-            </div>
+            <CalendarOff className="h-4 w-4 text-fuchsia-400" />
+          </div>
+          {leaveData.length > 0 ? (
             <div className="flex items-center gap-4">
               <ResponsiveContainer width="55%" height={200}>
                 <PieChart>
@@ -367,88 +604,115 @@ export default function OwnerDashboard({ user }) {
                 ))}
               </div>
             </div>
-          </GlassCard>
-        </div>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-ink-faint text-sm">No leave data yet</div>
+          )}
+        </GlassCard>
+      </div>
 
-        {/* ── Row 4: Member Productivity + Recent Activity ─────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Member Productivity</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Tasks completed per member</p>
-              </div>
-              <TrendingUp className="h-4 w-4 text-violet-400" />
+      {/* ── Row 3: Task Status + Recent Activity ────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Task Status Overview</h3>
+              <p className="text-xs text-ink-faint mt-0.5">All workspace tasks by status</p>
             </div>
-            <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={memberProductivity} layout="vertical" barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
+            <BarChart3 className="h-4 w-4 text-blue-400" />
+          </div>
+          {taskStatusData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={taskStatusData} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6eaf2" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="tasks" name="Tasks Done" fill="#8b5cf6" radius={[0, 5, 5, 0]} />
+                <Bar dataKey="value" name="Tasks" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </GlassCard>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-ink-faint text-sm">No task data yet</div>
+          )}
+        </GlassCard>
 
-          <GlassCard
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.65, ease: [0.16, 1, 0.3, 1] }}
-            padding="p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-ink">Workspace Activity</h3>
-                <p className="text-xs text-ink-faint mt-0.5">Recent events in your workspace</p>
-              </div>
-              <Activity className="h-4 w-4 text-purple-400" />
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.55 }}
+          padding="p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Workspace Activity</h3>
+              <p className="text-xs text-ink-faint mt-0.5">Recent events</p>
             </div>
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-0.5">
-              {(recentActivity.length
-                ? recentActivity
-                : Array.from({ length: 8 }, (_, i) => ({
-                    id: i, action: ['created','updated','completed','assigned','approved'][i % 5],
-                    entityType: ['task','project','sprint','member'][i % 4],
-                    userName: `Team Member ${i + 1}`,
-                    createdAt: new Date(Date.now() - i * 2_400_000).toISOString(),
-                  }))
-              ).map((log, i) => (
-                <motion.div
-                  key={log.id ?? i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-2 border border-line"
-                >
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-[10px] font-black shrink-0 text-white">
-                    {(log.userName || 'U').charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-ink-soft truncate">
-                      <span className="font-semibold text-ink">{log.userName}</span>{' '}
-                      <span className="text-ink-soft">{log.action} a {log.entityType}</span>
-                    </p>
-                    <p className="text-[10px] text-ink-faint">{new Date(log.createdAt).toLocaleString()}</p>
-                  </div>
-                    <Badge
-                      status={log.entityType === 'member' ? 'warning' : log.entityType === 'project' ? 'success' : 'info'}
-                      className="text-[10px] capitalize shrink-0 font-bold px-1.5 py-0.5 rounded"
-                    >
-                      {log.entityType}
-                    </Badge>
-                </motion.div>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-
+            <Activity className="h-4 w-4 text-purple-400" />
+          </div>
+          <div className="space-y-2 max-h-[248px] overflow-y-auto pr-0.5">
+            {recentActivity.length === 0 ? (
+              <div className="text-center text-ink-faint text-sm py-8">No recent activity</div>
+            ) : recentActivity.map((log, i) => (
+              <motion.div
+                key={log.id ?? i}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-2 border border-line"
+              >
+                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-[10px] font-black shrink-0 text-white">
+                  {(log.userName || 'U').charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-ink-soft truncate">
+                    <span className="font-semibold text-ink">{log.userName || 'System'}</span>{' '}
+                    <span className="lowercase">{log.action?.toLowerCase().replace(/_/g, ' ')}</span>
+                  </p>
+                  <p className="text-[10px] text-ink-faint">{log.createdAt ? timeAgo(log.createdAt) : ''}</p>
+                </div>
+                <span className="text-[10px] font-semibold text-ink-faint capitalize shrink-0 hidden sm:block">
+                  {log.entityType}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </GlassCard>
       </div>
-    </>
+
+      {/* ── Quick Actions ───────────────────────────────────────────────────── */}
+      <GlassCard
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        padding="p-5"
+      >
+        <h3 className="text-sm font-bold text-ink mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Manage Members', icon: Users,     color: 'from-violet-500 to-purple-600', to: '/admin-settings' },
+            { label: 'View Projects',  icon: Briefcase, color: 'from-blue-500 to-indigo-600',   to: '/projects' },
+            { label: 'Leave Requests', icon: CalendarOff, color: 'from-amber-500 to-orange-600', to: '/leaves' },
+            { label: 'Reports',        icon: BarChart3, color: 'from-emerald-500 to-teal-600',  to: '/reports' },
+          ].map((a, i) => (
+            <button
+              key={i}
+              onClick={() => navigate(a.to)}
+              className="flex items-center gap-3 p-3.5 rounded-xl bg-surface-2 border border-line hover:border-brand/30 hover:bg-brand/5 transition-all group"
+            >
+              <div className={`p-2 rounded-lg bg-gradient-to-br ${a.color} shadow-sm shrink-0`}>
+                <a.icon className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-ink-soft group-hover:text-ink transition-colors">{a.label}</span>
+              <ChevronRight className="h-3.5 w-3.5 text-ink-faint ml-auto group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          ))}
+        </div>
+      </GlassCard>
+
+    </div>
   );
 }

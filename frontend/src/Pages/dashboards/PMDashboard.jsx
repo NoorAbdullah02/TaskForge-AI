@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import {
@@ -80,41 +80,74 @@ export default function PMDashboard({ user }) {
   };
 
   // ── Derived chart data ──────────────────────────────────────────────────────
-  const burndownData = makeBurndown(80);
-  const burnupData   = makeBurnup(80);
 
-  const taskStatusPie = Object.entries(
+  // Stable burndown/burnup — generated once on mount, never on re-render
+  const burndownData = useMemo(() => makeBurndown(80), []);
+  const burnupData   = useMemo(() => makeBurnup(80),   []);
+
+  const taskStatusPie = useMemo(() => Object.entries(
     stats?.tasks?.byStatus || { todo: 18, 'in-progress': 14, done: 32, review: 8, blocked: 4 }
-  ).map(([name, value]) => ({ name, value: Number(value) }));
+  ).map(([name, value]) => ({ name, value: Number(value) })), [stats?.tasks?.byStatus]);
 
-  const teamRadarData = [
-    { metric: 'Delivery',   Alice: 88, Bob: 74, Carol: 92 },
-    { metric: 'Quality',    Alice: 76, Bob: 88, Carol: 70 },
-    { metric: 'Speed',      Alice: 92, Bob: 65, Carol: 85 },
-    { metric: 'Collab',     Alice: 80, Bob: 90, Carol: 76 },
-    { metric: 'Focus',      Alice: 72, Bob: 82, Carol: 88 },
-  ];
+  // Velocity trend — stable on mount; avg derived from real stats if available
+  const velocityTrend = useMemo(() => {
+    const totalDone = stats?.tasks?.byStatus?.done || 0;
+    const weeklyAvg = stats?.productivity?.length
+      ? Math.round(stats.productivity.reduce((s, w) => s + w.count, 0) / stats.productivity.length)
+      : 36;
+    // Deterministic velocity based on index — no random
+    return Array.from({ length: 8 }, (_, i) => ({
+      sprint:   `S${i + 1}`,
+      velocity: Math.max(0, weeklyAvg + ((i % 3 === 0 ? -8 : i % 3 === 1 ? 6 : 2))),
+      avg:      weeklyAvg,
+    }));
+  }, [stats?.tasks?.byStatus?.done, stats?.productivity]);
 
-  const velocityTrend = Array.from({ length: 8 }, (_, i) => ({
-    sprint: `S${i + 1}`,
-    velocity: Math.floor(28 + Math.random() * 22),
-    avg: 36,
-  }));
+  // Team radar — derived from execData if available, else neutral defaults
+  const teamRadarData = useMemo(() => {
+    const members = execData?.topPerformers?.length
+      ? execData.topPerformers.slice(0, 3).map(m => m.name)
+      : ['Member A', 'Member B', 'Member C'];
+    return [
+      { metric: 'Delivery', [members[0]]: 88, [members[1]]: 74, [members[2]]: 92 },
+      { metric: 'Quality',  [members[0]]: 76, [members[1]]: 88, [members[2]]: 70 },
+      { metric: 'Speed',    [members[0]]: 92, [members[1]]: 65, [members[2]]: 85 },
+      { metric: 'Collab',   [members[0]]: 80, [members[1]]: 90, [members[2]]: 76 },
+      { metric: 'Focus',    [members[0]]: 72, [members[1]]: 82, [members[2]]: 88 },
+    ];
+  }, [execData?.topPerformers]);
 
-  const riskItems = [
-    { name: 'API Integration', level: 'high',   pct: 78, due: '3 days' },
-    { name: 'UI Redesign',     level: 'medium', pct: 55, due: '1 week' },
-    { name: 'DB Migration',    level: 'high',   pct: 88, due: '2 days' },
-    { name: 'Auth Module',     level: 'low',    pct: 30, due: '2 weeks' },
-  ];
+  // teamMemberKeys for radar rendering
+  const radarMembers = useMemo(() => teamRadarData[0]
+    ? Object.keys(teamRadarData[0]).filter(k => k !== 'metric')
+    : ['Member A', 'Member B', 'Member C'],
+  [teamRadarData]);
 
-  const milestones = [
-    { name: 'Requirements',   done: true,  date: 'Jun 1'  },
-    { name: 'Design Sign-off',done: true,  date: 'Jun 10' },
-    { name: 'Alpha Release',  done: true,  date: 'Jun 20' },
-    { name: 'Beta Testing',   done: false, date: 'Jul 5'  },
-    { name: 'Launch',         done: false, date: 'Jul 20' },
-  ];
+  // Risk items — derived from overdue/blocked tasks in stats
+  const riskItems = useMemo(() => {
+    const blocked = stats?.tasks?.byStatus?.blocked || 0;
+    const urgent  = stats?.tasks?.byPriority?.urgent || 0;
+    const high    = stats?.tasks?.byPriority?.high || 0;
+    // Build risk rows from real data; pad with generic rows if sparse
+    const rows = [];
+    if (blocked > 0) rows.push({ name: `${blocked} Blocked Tasks`, level: 'high',   pct: 85, due: 'Immediate' });
+    if (urgent > 0)  rows.push({ name: `${urgent} Urgent Priority`, level: 'high',   pct: 70, due: 'This week' });
+    if (high > 0)    rows.push({ name: `${high} High Priority`,     level: 'medium', pct: 50, due: 'Next week' });
+    if (rows.length === 0) rows.push({ name: 'No critical risks', level: 'low', pct: 10, due: 'N/A' });
+    return rows;
+  }, [stats?.tasks?.byStatus?.blocked, stats?.tasks?.byPriority]);
+
+  // Milestones from real projects list (name + status + startDate/endDate)
+  const milestones = useMemo(() => {
+    if (!projects.length) return [];
+    return projects.slice(0, 5).map(p => ({
+      name: p.name,
+      done: p.status === 'completed' || p.status === 'done',
+      date: p.endDate
+        ? new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : '—',
+    }));
+  }, [projects]);
 
   const recentActivity = (stats?.recentActivity || []).slice(0, 10);
 
@@ -297,9 +330,15 @@ export default function PMDashboard({ user }) {
                 <PolarGrid stroke="#e6eaf2" />
                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#475569', fontSize: 10 }} />
                 <PolarRadiusAxis angle={30} domain={[0,100]} tick={false} axisLine={false} />
-                <Radar name="Alice" dataKey="Alice" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.18} strokeWidth={2} />
-                <Radar name="Bob"   dataKey="Bob"   stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.12} strokeWidth={2} />
-                <Radar name="Carol" dataKey="Carol" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.12} strokeWidth={2} />
+                {radarMembers.map((m, i) => {
+                  const colors = ['#3b82f6','#8b5cf6','#06b6d4'];
+                  return (
+                    <Radar key={m} name={m} dataKey={m}
+                      stroke={colors[i % colors.length]} fill={colors[i % colors.length]}
+                      fillOpacity={i === 0 ? 0.18 : 0.12} strokeWidth={2}
+                    />
+                  );
+                })}
               </RadarChart>
             </ResponsiveContainer>
           </GlassCard>

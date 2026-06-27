@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Building2, Calendar, ClipboardList, Settings, Plus, Edit2, Trash2,
     Search, ShieldAlert, Check, X, Clock, HelpCircle, Save, Loader2,
@@ -6,7 +6,7 @@ import {
     Share2, Copy, RefreshCw, Link
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
     getSystemSettings,
@@ -21,6 +21,7 @@ import {
 } from '../Services/adminApi';
 import { getWorkspaceInfo, regenerateInviteCode, getPendingRequests, approveMember, bulkApproveMembers, getWorkspaceMembers, inviteWorkspaceMembers } from '../Services/workspaceApi';
 import { getProjects, assignProjectManager } from '../Services/projectApi';
+import { socket } from '../Services/socket';
 
 
 const TIMEZONES = [
@@ -49,12 +50,20 @@ const DAYS_OF_WEEK = [
 export default function AdminSettingsPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab');
 
     const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
     const isManager = user?.role === 'manager';
 
     // Tabs
-    const [activeTab, setActiveTab] = useState('departments');
+    const [activeTab, setActiveTab] = useState(tabParam || 'departments');
+
+    useEffect(() => {
+        if (tabParam) {
+            setActiveTab(tabParam);
+        }
+    }, [tabParam]);
 
     // Loading States
     const [loading, setLoading] = useState(true);
@@ -208,19 +217,20 @@ export default function AdminSettingsPage() {
     };
 
     // Load Pending Join Requests
-    const loadPendingRequests = async () => {
-        if (!workspaceInfo?.id) return;
+    const loadPendingRequests = useCallback(async (wsId) => {
+        const id = wsId || workspaceInfo?.id;
+        if (!id) return;
         setLoadingRequests(true);
         try {
-            const data = await getPendingRequests(workspaceInfo.id);
-            setPendingRequests(data);
+            const data = await getPendingRequests(id);
+            setPendingRequests(Array.isArray(data) ? data : []);
             setSelectedRequests([]);
         } catch (err) {
             console.error('Failed to load pending requests:', err);
         } finally {
             setLoadingRequests(false);
         }
-    };
+    }, [workspaceInfo?.id]);
 
     const handleSendInvites = async () => {
         if (!workspaceInfo?.id) {
@@ -263,9 +273,20 @@ export default function AdminSettingsPage() {
 
     useEffect(() => {
         if (activeTab === 'invite' && workspaceInfo?.id) {
-            loadPendingRequests();
+            loadPendingRequests(workspaceInfo.id);
         }
-    }, [activeTab, workspaceInfo]);
+    }, [activeTab, workspaceInfo?.id]);
+
+    // Real-time socket listener — refresh pending requests when new join request arrives
+    useEffect(() => {
+        if (!socket) return;
+        const handleJoinAlert = () => {
+            loadPendingRequests(workspaceInfo?.id);
+            toast('New join request received!', { icon: '🔔' });
+        };
+        socket.on('join_request_alert', handleJoinAlert);
+        return () => socket.off('join_request_alert', handleJoinAlert);
+    }, [workspaceInfo?.id, loadPendingRequests]);
 
     const loadWorkspaceMembersAndProjects = async () => {
         setLoadingMembers(true);
@@ -311,25 +332,32 @@ export default function AdminSettingsPage() {
     // Handle Individual Action
     const handleApproveReject = async (membershipId, action) => {
         if (!workspaceInfo?.id) return;
-        const toastId = toast.loading(`Processing join request...`);
+        const toastId = toast.loading('Processing join request...');
         try {
             await approveMember(workspaceInfo.id, membershipId, action);
-            toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully`, { id: toastId });
-            loadPendingRequests();
+            toast.success(
+                action === 'approve'
+                    ? 'Member approved! They can now log in.'
+                    : 'Request rejected successfully.',
+                { id: toastId }
+            );
+            loadPendingRequests(workspaceInfo.id);
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || 'Action failed', { id: toastId });
         }
     };
 
-    // Handle Bulk Action
     const handleBulkApproveReject = async (action) => {
         if (!workspaceInfo?.id || selectedRequests.length === 0) return;
         const toastId = toast.loading(`Performing bulk ${action}...`);
         try {
             await bulkApproveMembers(workspaceInfo.id, selectedRequests, action);
-            toast.success(`Selected requests ${action === 'approve' ? 'approved' : 'rejected'} successfully`, { id: toastId });
-            loadPendingRequests();
+            toast.success(
+                `${selectedRequests.length} request(s) ${action === 'approve' ? 'approved' : 'rejected'} successfully.`,
+                { id: toastId }
+            );
+            loadPendingRequests(workspaceInfo.id);
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || 'Bulk action failed', { id: toastId });
@@ -1538,6 +1566,7 @@ export default function AdminSettingsPage() {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
                         )}
 
                         {activeTab === 'members' && (
@@ -1946,7 +1975,6 @@ export default function AdminSettingsPage() {
                             </div>
                         </div>
                     )}
-                </div>
             </div>
-                );
+        );
 }

@@ -223,9 +223,43 @@ export const getCurrentUser = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+        let activeWorkspaceId = decodedUser?.activeWorkspaceId;
+        let workspaceName = decodedUser?.workspaceName;
+        let workspaceSlug = decodedUser?.workspaceSlug;
+
+        // Fallback in case they are not in the decoded token (e.g. initial login, direct page boots)
+        if (!activeWorkspaceId) {
+            const [firstMembership] = await db.select({
+                workspaceId: workspaceMembers.workspaceId,
+                workspaceName: workspaces.name,
+                workspaceSlug: workspaces.slug
+            })
+            .from(workspaceMembers)
+            .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+            .where(and(
+                eq(workspaceMembers.userId, user.id),
+                eq(workspaceMembers.status, 'active')
+            ))
+            .limit(1);
+
+            if (firstMembership) {
+                activeWorkspaceId = firstMembership.workspaceId;
+                workspaceName = firstMembership.workspaceName;
+                workspaceSlug = firstMembership.workspaceSlug;
+            }
+        }
+
         const { password, ...safeUser } = user;
-        return res.status(200).json({ user: safeUser });
+        return res.status(200).json({ 
+            user: {
+                ...safeUser,
+                activeWorkspaceId,
+                workspaceName,
+                workspaceSlug
+            } 
+        });
     } catch (error) {
+        console.error('Error in getCurrentUser:', error);
         return res.status(500).json({ message: "Internal Server Error" });
     }
 }

@@ -12,6 +12,7 @@ import {
 } from '../Services/notificationApi';
 import { socket } from '../Services/socket';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
@@ -401,12 +402,24 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       </div>
 
                       {notif.link && (
-                        <a 
-                          href={notif.link}
-                          className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
-                        >
-                          Details <ArrowRight className="w-2.5 h-2.5" />
-                        </a>
+                        notif.link.startsWith('http') ? (
+                          <a 
+                            href={notif.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
+                          >
+                            Details <ArrowRight className="w-2.5 h-2.5" />
+                          </a>
+                        ) : (
+                          <Link 
+                            to={notif.link}
+                            onClick={onClose}
+                            className="inline-flex items-center gap-0.5 mt-2.5 text-[9px] font-black text-blue-600 hover:underline uppercase tracking-wider"
+                          >
+                            Details <ArrowRight className="w-2.5 h-2.5" />
+                          </Link>
+                        )
                       )}
                     </div>
 

@@ -60,7 +60,7 @@ export default function SprintPlanningPage() {
             const sprintsData = await getSprints(parseInt(selectedProjectId, 10));
             setSprints(sprintsData);
 
-            const tasksData = await getTasks(parseInt(selectedProjectId, 10));
+            const tasksData = await getTasks({ projectId: parseInt(selectedProjectId, 10) });
             setTasksList(tasksData);
 
             const usersData = await getAdminUsers();

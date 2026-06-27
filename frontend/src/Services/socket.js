@@ -56,10 +56,16 @@ export const connectSocket = (userId) => {
 
 /**
  * Join a workspace room for workspace-level real-time events.
+ * Defers emit until connected if socket is still connecting.
  */
 export const joinWorkspace = (workspaceId) => {
-    if (socket.connected && workspaceId) {
+    if (!workspaceId) return;
+    if (socket.connected) {
         socket.emit('joinWorkspace', workspaceId);
+    } else {
+        socket.once('connect', () => {
+            socket.emit('joinWorkspace', workspaceId);
+        });
     }
 };
 

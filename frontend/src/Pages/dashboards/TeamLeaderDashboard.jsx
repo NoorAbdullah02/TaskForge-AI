@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import {
@@ -48,50 +48,84 @@ export default function TeamLeaderDashboard({ user }) {
   };
 
   // ── Derived chart data ──────────────────────────────────────────────────────
-  const MEMBERS = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank'];
+  const RADAR_COLORS = ['#10b981','#06b6d4','#8b5cf6','#f59e0b','#ef4444','#ec4899'];
 
-  const taskByStatus = Object.entries(
+  // Use real active member count from stats if available; fallback to 4
+  const MEMBERS = useMemo(() => {
+    const count = Math.min(6, Math.max(2, stats?.workspace?.activeMembers || 4));
+    return Array.from({ length: count }, (_, i) => `Member ${i + 1}`);
+  }, [stats?.workspace?.activeMembers]);
+
+  const taskByStatus = useMemo(() => Object.entries(
     stats?.tasks?.byStatus || { todo: 12, 'in-progress': 9, done: 24, review: 6, blocked: 3 }
   ).map(([name, value]) => ({
     name: name.replace('-',' ').replace(/\b\w/g, c => c.toUpperCase()),
     value: Number(value),
     fill: STATUS_COLORS[name] || '#6366f1',
-  }));
+  })), [stats?.tasks?.byStatus]);
 
-  const memberTasks = MEMBERS.map(name => ({
+  // Stable deterministic task distribution (no random)
+  const memberTasks = useMemo(() => {
+    const totalDone = stats?.tasks?.byStatus?.done || 0;
+    const totalInProg = stats?.tasks?.byStatus?.['in-progress'] || 0;
+    const totalBlocked = stats?.tasks?.byStatus?.blocked || 0;
+    const n = MEMBERS.length || 1;
+    return MEMBERS.map((name, i) => ({
+      name,
+      done:    Math.floor(totalDone    / n) + (i < totalDone    % n ? 1 : 0),
+      inProg:  Math.floor(totalInProg  / n) + (i < totalInProg  % n ? 1 : 0),
+      blocked: Math.floor(totalBlocked / n) + (i < totalBlocked % n ? 1 : 0),
+    }));
+  }, [MEMBERS, stats?.tasks?.byStatus]);
+
+  // Stable radar — deterministic scores based on member index
+  const memberRadar = useMemo(() => {
+    const BASE = [80, 72, 88, 65, 76];
+    const OFFSETS = [
+      [8, -6, 4, -3, 12],
+      [-4, 16, -8, 10, -2],
+      [12, -10, 6, 8, -6],
+    ];
+    return ['Delivery','Quality','Speed','Collab','Focus'].map((metric, mi) => {
+      const row = { metric };
+      MEMBERS.forEach((m, i) => {
+        row[m] = Math.min(100, Math.max(40, BASE[mi] + (OFFSETS[i % OFFSETS.length]?.[mi] ?? 0)));
+      });
+      return row;
+    });
+  }, [MEMBERS]);
+
+  // Velocity trend — deterministic based on task counts
+  const sprintVelocity = useMemo(() => {
+    const weeklyAvg = stats?.productivity?.length
+      ? Math.round(stats.productivity.reduce((s, w) => s + w.count, 0) / stats.productivity.length)
+      : 24;
+    const pattern = [0, 4, -3, 6, -2, 5, -1, 3];
+    return Array.from({ length: 8 }, (_, i) => ({
+      sprint: `S${i + 1}`,
+      done:   Math.max(0, weeklyAvg + pattern[i]),
+      avg:    weeklyAvg,
+    }));
+  }, [stats?.productivity]);
+
+  // Attendance summary — deterministic from real attendance rate
+  const attendanceSummary = useMemo(() => {
+    const rate = stats?.attendance?.rate ?? 88;
+    const presentBase = Math.round((rate / 100) * 20);
+    return MEMBERS.map((name, i) => ({
+      name,
+      present: Math.max(0, presentBase - (i % 2)),
+      late:    i % 3 === 0 ? 2 : 1,
+      absent:  Math.max(0, 20 - presentBase - (i % 2 ? 2 : 1)),
+    }));
+  }, [MEMBERS, stats?.attendance?.rate]);
+
+  // Member scores — deterministic from index
+  const memberScores = useMemo(() => MEMBERS.map((name, i) => ({
     name,
-    done:     Math.floor(4 + Math.random() * 12),
-    inProg:   Math.floor(1 + Math.random() * 5),
-    blocked:  Math.floor(Math.random() * 2),
-  }));
-
-  const memberRadar = [
-    { metric: 'Delivery', ...Object.fromEntries(MEMBERS.map(m => [m, Math.floor(60 + Math.random() * 40)])) },
-    { metric: 'Quality',  ...Object.fromEntries(MEMBERS.map(m => [m, Math.floor(55 + Math.random() * 45)])) },
-    { metric: 'Speed',    ...Object.fromEntries(MEMBERS.map(m => [m, Math.floor(50 + Math.random() * 45)])) },
-    { metric: 'Collab',   ...Object.fromEntries(MEMBERS.map(m => [m, Math.floor(65 + Math.random() * 35)])) },
-    { metric: 'Focus',    ...Object.fromEntries(MEMBERS.map(m => [m, Math.floor(58 + Math.random() * 38)])) },
-  ];
-
-  const RADAR_COLORS = ['#10b981','#06b6d4','#8b5cf6','#f59e0b','#ef4444','#ec4899'];
-
-  const sprintVelocity = Array.from({ length: 8 }, (_, i) => ({
-    sprint: `S${i + 1}`,
-    done: Math.floor(18 + Math.random() * 16),
-    avg: 24,
-  }));
-
-  const attendanceSummary = MEMBERS.map(name => ({
-    name,
-    present: Math.floor(14 + Math.random() * 6),
-    late:    Math.floor(Math.random() * 4),
-    absent:  Math.floor(Math.random() * 3),
-  }));
-
-  const memberScores = MEMBERS.map((name, i) => ({
-    name, score: Math.floor(62 + Math.random() * 36),
-    color: RADAR_COLORS[i],
-  }));
+    score: 65 + (i * 7) % 33,
+    color: RADAR_COLORS[i % RADAR_COLORS.length],
+  })), [MEMBERS]);
 
   const totalTasks   = taskByStatus.reduce((s, t) => s + t.value, 0);
   const doneTasks    = taskByStatus.find(t => t.name === 'Done')?.value || 0;
@@ -244,7 +278,7 @@ export default function TeamLeaderDashboard({ user }) {
                 <XAxis dataKey="sprint" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <ReferenceLine y={24} stroke="#10b981" strokeDasharray="4 4" label={{ value: 'avg', fill: '#10b981', fontSize: 10 }} />
+                <ReferenceLine y={sprintVelocity[0]?.avg ?? 24} stroke="#10b981" strokeDasharray="4 4" label={{ value: 'avg', fill: '#10b981', fontSize: 10 }} />
                 <Bar dataKey="done" name="Tasks Done" fill="#10b981" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -1,17 +1,31 @@
 import { db } from '../db/index';
-import { eq, and, desc, gte, count, like } from 'drizzle-orm';
-import { projects, tasks, attendance, leaveRequests, activityLogs, users } from '../db/schema';
+import { eq, and, desc, gte, count, like, inArray } from 'drizzle-orm';
+import { projects, tasks, attendance, leaveRequests, activityLogs, users, workspaceMembers, projectMembers } from '../db/schema';
 
 export class DashboardService {
-    static async getStats(userId: number) {
+    static async getStats(userId: number, workspaceId?: number | null) {
         const now = new Date();
         const eightWeeksAgo = new Date(now);
         eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
 
-        // Current month prefix for attendance LIKE filter (e.g. "2026-06")
         const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-        // Run ALL stat queries concurrently — 8 sequential round trips → 1
+        // Workspace-scoped project IDs
+        let workspaceProjectIds: number[] = [];
+        let workspaceUserIds: number[] = [];
+        if (workspaceId) {
+            const wProjects = await db.select({ id: projects.id })
+                .from(projects)
+                .where(and(eq(projects.workspaceId, workspaceId), eq(projects.isArchived, false)));
+            workspaceProjectIds = wProjects.map(p => p.id);
+
+            // All active members in workspace (for leave stats)
+            const wMembers = await db.select({ userId: workspaceMembers.userId })
+                .from(workspaceMembers)
+                .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.status, 'active')));
+            workspaceUserIds = wMembers.map(m => m.userId);
+        }
+
         const [
             projectRows,
             taskStatusRows,
@@ -21,23 +35,37 @@ export class DashboardService {
             leaveTypeRows,
             completedTasks,
             recentActivity,
+            pendingMembersResult,
+            activeMembersResult,
         ] = await Promise.all([
-            // 1. Project stats by status
-            db.select({ status: projects.status, cnt: count() })
-                .from(projects)
-                .groupBy(projects.status),
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({ status: projects.status, cnt: count() })
+                    .from(projects)
+                    .where(and(eq(projects.workspaceId, workspaceId), eq(projects.isArchived, false)))
+                    .groupBy(projects.status)
+                : db.select({ status: projects.status, cnt: count() })
+                    .from(projects)
+                    .where(eq(projects.isArchived, false))
+                    .groupBy(projects.status),
 
-            // 2. Task stats by status
-            db.select({ status: tasks.status, cnt: count() })
-                .from(tasks)
-                .groupBy(tasks.status),
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({ status: tasks.status, cnt: count() })
+                    .from(tasks)
+                    .where(inArray(tasks.projectId, workspaceProjectIds))
+                    .groupBy(tasks.status)
+                : db.select({ status: tasks.status, cnt: count() })
+                    .from(tasks)
+                    .groupBy(tasks.status),
 
-            // 3. Task priority distribution
-            db.select({ priority: tasks.priority, cnt: count() })
-                .from(tasks)
-                .groupBy(tasks.priority),
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({ priority: tasks.priority, cnt: count() })
+                    .from(tasks)
+                    .where(inArray(tasks.projectId, workspaceProjectIds))
+                    .groupBy(tasks.priority)
+                : db.select({ priority: tasks.priority, cnt: count() })
+                    .from(tasks)
+                    .groupBy(tasks.priority),
 
-            // 4. Attendance — filter in DB by current month, NOT in memory
             db.select()
                 .from(attendance)
                 .where(and(
@@ -45,27 +73,34 @@ export class DashboardService {
                     like(attendance.date, `${monthStr}%`)
                 )),
 
-            // 5. Leave stats by status
             db.select({ status: leaveRequests.status, cnt: count() })
                 .from(leaveRequests)
-                .where(eq(leaveRequests.userId, userId))
+                .where(workspaceId && workspaceUserIds.length > 0
+                    ? inArray(leaveRequests.userId, workspaceUserIds)
+                    : eq(leaveRequests.userId, userId)
+                )
                 .groupBy(leaveRequests.status),
 
-            // 6. Leave stats by type
             db.select({ leaveType: leaveRequests.leaveType, cnt: count() })
                 .from(leaveRequests)
                 .where(eq(leaveRequests.userId, userId))
                 .groupBy(leaveRequests.leaveType),
 
-            // 7. Weekly productivity — tasks completed in last 8 weeks
-            db.select({ updatedAt: tasks.updatedAt })
-                .from(tasks)
-                .where(and(
-                    eq(tasks.status, 'done'),
-                    gte(tasks.updatedAt, eightWeeksAgo)
-                )),
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({ updatedAt: tasks.updatedAt })
+                    .from(tasks)
+                    .where(and(
+                        eq(tasks.status, 'done'),
+                        gte(tasks.updatedAt, eightWeeksAgo),
+                        inArray(tasks.projectId, workspaceProjectIds)
+                    ))
+                : db.select({ updatedAt: tasks.updatedAt })
+                    .from(tasks)
+                    .where(and(
+                        eq(tasks.status, 'done'),
+                        gte(tasks.updatedAt, eightWeeksAgo)
+                    )),
 
-            // 8. Recent activity logs with author name
             db.select({
                 id: activityLogs.id,
                 action: activityLogs.action,
@@ -77,11 +112,32 @@ export class DashboardService {
             })
             .from(activityLogs)
             .leftJoin(users, eq(activityLogs.userId, users.id))
+            .where(workspaceId ? eq(activityLogs.workspaceId, workspaceId) : undefined as any)
             .orderBy(desc(activityLogs.createdAt))
-            .limit(10),
+            .limit(20),
+
+            // Pending join requests count
+            workspaceId
+                ? db.select({ cnt: count() })
+                    .from(workspaceMembers)
+                    .where(and(
+                        eq(workspaceMembers.workspaceId, workspaceId),
+                        eq(workspaceMembers.status, 'pending')
+                    ))
+                : Promise.resolve([{ cnt: 0 }]),
+
+            // Active members count
+            workspaceId
+                ? db.select({ cnt: count() })
+                    .from(workspaceMembers)
+                    .where(and(
+                        eq(workspaceMembers.workspaceId, workspaceId),
+                        eq(workspaceMembers.status, 'active')
+                    ))
+                : Promise.resolve([{ cnt: 0 }]),
         ]);
 
-        // --- Process Project Stats ---
+        // --- Project Stats ---
         const projectStats: Record<string, number> = {};
         let totalProjects = 0;
         projectRows.forEach((r) => {
@@ -90,7 +146,7 @@ export class DashboardService {
         });
         const activeProjects = (projectStats['active'] || 0) + (projectStats['in_progress'] || 0);
 
-        // --- Process Task Stats ---
+        // --- Task Stats ---
         const taskStats: Record<string, number> = {};
         let totalTasks = 0;
         taskStatusRows.forEach((r) => {
@@ -103,12 +159,11 @@ export class DashboardService {
             priorityStats[r.priority] = Number(r.cnt);
         });
 
-        // --- Process Attendance (already month-filtered from DB) ---
+        // --- Attendance ---
         const presentCount = currentMonthAttendance.filter((r) => r.status === 'present').length;
         const lateCount = currentMonthAttendance.filter((r) => r.status === 'late').length;
         const totalAttendanceDays = currentMonthAttendance.length;
 
-        // Working days in current month (Mon–Fri)
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         let workingDays = 0;
         for (let d = 1; d <= daysInMonth; d++) {
@@ -120,7 +175,6 @@ export class DashboardService {
             ? Math.round(((presentCount + lateCount) / workingDays) * 100)
             : 0;
 
-        // Average check-in time
         let totalCheckInMinutes = 0;
         let checkInsWithTime = 0;
         currentMonthAttendance.forEach((r) => {
@@ -134,14 +188,14 @@ export class DashboardService {
             ? `${String(Math.floor(totalCheckInMinutes / checkInsWithTime / 60)).padStart(2, '0')}:${String(Math.floor((totalCheckInMinutes / checkInsWithTime) % 60)).padStart(2, '0')}`
             : 'N/A';
 
-        // --- Process Leave Stats ---
+        // --- Leave Stats ---
         const leaveByStatus: Record<string, number> = {};
         leaveStatusRows.forEach((r) => { leaveByStatus[r.status] = Number(r.cnt); });
 
         const leaveByType: Record<string, number> = {};
         leaveTypeRows.forEach((r) => { leaveByType[r.leaveType] = Number(r.cnt); });
 
-        // --- Process Weekly Productivity ---
+        // --- Weekly Productivity ---
         const weekMap = new Map<string, number>();
         completedTasks.forEach((t) => {
             const d = new Date(t.updatedAt);
@@ -161,7 +215,7 @@ export class DashboardService {
             const diff = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
             weekStart.setDate(diff);
             const key = weekStart.toISOString().split('T')[0];
-            const label = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             weeklyProductivity.push({ week: label, count: weekMap.get(key) || 0 });
         }
 
@@ -191,6 +245,11 @@ export class DashboardService {
             },
             productivity: weeklyProductivity,
             recentActivity,
+            workspace: {
+                pendingMembers: Number((pendingMembersResult as any[])[0]?.cnt || 0),
+                activeMembers: Number((activeMembersResult as any[])[0]?.cnt || 0),
+                projectCount: totalProjects,
+            },
         };
     }
 }

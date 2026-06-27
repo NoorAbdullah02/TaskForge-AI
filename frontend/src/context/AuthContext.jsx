@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../Services/api';
-import { connectSocket, disconnectSocket } from '../Services/socket';
+import { connectSocket, disconnectSocket, joinWorkspace } from '../Services/socket';
 
 const AuthContext = createContext();
 
@@ -44,14 +44,31 @@ export const AuthProvider = ({ children }) => {
         setIsLoggedIn(false);
     };
 
+    // Listen for session expiry fired by the axios interceptor
+    useEffect(() => {
+        const handleExpiry = () => {
+            setUser(null);
+            setIsLoggedIn(false);
+            disconnectSocket();
+            // Redirect to login without full reload
+            window.location.href = '/login';
+        };
+        window.addEventListener('auth:expired', handleExpiry);
+        return () => window.removeEventListener('auth:expired', handleExpiry);
+    }, []);
+
     // Synchronize global socket connection with auth state
     useEffect(() => {
         if (isLoggedIn && user?.id) {
             connectSocket(user.id);
+            // Join workspace room so owner receives real-time join-request alerts etc.
+            if (user.activeWorkspaceId) {
+                joinWorkspace(user.activeWorkspaceId);
+            }
         } else {
             disconnectSocket();
         }
-    }, [isLoggedIn, user?.id]);
+    }, [isLoggedIn, user?.id, user?.activeWorkspaceId]);
 
     const value = {
         isLoggedIn,

@@ -82,12 +82,21 @@ class SocketService {
                 }
             });
 
-            socket.on('join_workspace', (workspaceId: number) => {
-                 if (workspaceId) {
+            // Auto-join workspace room from JWT payload on connect
+            if (user.activeWorkspaceId) {
+                socket.join(`workspace_${user.activeWorkspaceId}`);
+                console.log(`💼 Auto-joined workspace_${user.activeWorkspaceId} for user ${userId}`);
+            }
+
+            // Accept both camelCase (frontend) and snake_case for compatibility
+            const handleJoinWorkspace = (workspaceId: number) => {
+                if (workspaceId) {
                     socket.join(`workspace_${workspaceId}`);
                     console.log(`💼 Socket ${socket.id} joined Workspace Room workspace_${workspaceId}`);
                 }
-            });
+            };
+            socket.on('joinWorkspace', handleJoinWorkspace);
+            socket.on('join_workspace', handleJoinWorkspace);
 
             socket.on('join_chat', (chatId: number) => {
                 if (chatId) {

@@ -63,10 +63,12 @@ export class WorkspaceController {
             }).returning();
 
             let newWorkspace = null;
+            let inviteCode = '';
+            let inviteLink = '';
             if (!isFirstUser) {
                 // Create workspace when this is not the initial super admin
-                const inviteCode = generateInviteCode();
-                const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
+                inviteCode = generateInviteCode();
+                inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
 
                 const [workspaceRecord] = await db.insert(workspaces).values({
                     name: workspaceName,
@@ -113,11 +115,13 @@ export class WorkspaceController {
                     entityId: newWorkspace!.id,
                     title: 'Workspace Created Successfully',
                     message: `Your workspace "${workspaceName}" was successfully set up.`,
-                    link: '/settings/general',
+                    link: '/admin-settings?tab=invite',
                     emailTemplate: 'workspaceCreated',
                     emailData: {
                         workspaceName: workspaceName,
-                        link: `${env.FRONTEND_URL}/settings/general`,
+                        link: `${env.FRONTEND_URL}/admin-settings`,
+                        inviteCode: inviteCode,
+                        inviteLink: inviteLink
                     },
                 });
             }
@@ -218,13 +222,13 @@ export class WorkspaceController {
                     entityId: workspace.id,
                     title: 'New Join Request Pending',
                     message: `${name} has requested to join your workspace "${workspace.name}".`,
-                    link: '/settings/members',
+                    link: '/admin-settings?tab=invite',
                     emailTemplate: 'workspaceJoinRequest',
                     emailData: {
                         requesterName: name,
                         requesterEmail: email,
                         workspaceName: workspace.name,
-                        link: `${env.FRONTEND_URL}/settings/members`,
+                        link: `${env.FRONTEND_URL}/admin-settings?tab=invite`,
                     },
                 });
 

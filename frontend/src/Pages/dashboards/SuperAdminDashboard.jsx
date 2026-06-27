@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import {
@@ -58,11 +58,12 @@ export default function SuperAdminDashboard({ user }) {
   const totalWs    = workspaces.length  || 8;
   const totalUsers = allUsers.length    || 120;
 
-  const platformGrowth = MONTHS.map((m, i) => ({
+  // Deterministic growth curve — no random (step sizes are consistent)
+  const platformGrowth = useMemo(() => MONTHS.map((m, i) => ({
     month: m,
-    workspaces: Math.max(1, totalWs - 11 + i + Math.floor(Math.random() * 2)),
-    users:      Math.max(1, totalUsers - 60 + i * 5 + Math.floor(Math.random() * 4)),
-  }));
+    workspaces: Math.max(1, totalWs - 11 + i),
+    users:      Math.max(1, totalUsers - 60 + i * 5),
+  })), [totalWs, totalUsers]);
 
   const aiFeatureData = [
     { name: 'Copilot',   requests: 324, success: 310 },
@@ -73,11 +74,12 @@ export default function SuperAdminDashboard({ user }) {
     { name: 'Burnout',   requests: 67,  success: 64  },
   ];
 
-  const emailTrendData = MONTHS.slice(-6).map((m, i) => ({
+  // Deterministic email trend — no random
+  const emailTrendData = useMemo(() => MONTHS.slice(-6).map((m, i) => ({
     month: m,
-    sent:   Math.floor(400 + i * 80 + Math.random() * 100),
-    opened: Math.floor(220 + i * 40 + Math.random() * 60),
-  }));
+    sent:   Math.floor(400 + i * 80),
+    opened: Math.floor(220 + i * 40),
+  })), []);
 
   const storagePie = [
     { name: 'Files',    value: 38, color: '#ef4444' },
@@ -453,7 +455,8 @@ export default function SuperAdminDashboard({ user }) {
                 ? workspaces
                 : Array.from({ length: 8 }, (_, i) => ({ id: i, name: `Workspace ${i + 1}` }))
               ).slice(0, 12).map((ws, i) => {
-                const h = Math.floor(55 + (Math.random() * 43));
+                // Deterministic score based on index — stable across renders
+                const h = ws.healthScore ?? (55 + ((i * 17) % 43));
                 const color = h >= 85 ? '#10b981' : h >= 65 ? '#f59e0b' : '#ef4444';
                 return (
                   <StatRing key={ws.id ?? i} value={h} color={color} label={`${h}`} subLabel={ws.name || `WS ${i + 1}`} size={60} />

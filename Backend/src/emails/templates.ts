@@ -560,13 +560,34 @@ export class EmailTemplates {
   static workspaceCreated(
     userName: string,
     workspaceName: string,
-    link: string
+    link: string,
+    inviteCode?: string,
+    inviteLink?: string
   ): string {
-    const body = `
+    let body = `
       <h2 class="greeting">Hi ${userName},</h2>
       <p class="text">Congratulations! Your enterprise workspace <span style="color: #ffffff; font-weight: 600;">${workspaceName}</span> has been successfully set up and is ready for use.</p>
       <p class="text">You are registered as the Workspace Owner. You can now invite your team members, configure departments, and establish your first project pipelines.</p>
-      
+    `;
+
+    if (inviteLink) {
+      body += `
+        <div class="card" style="border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(15, 23, 42, 0.4); margin-bottom: 20px;">
+          <h3 class="card-title" style="color: #60a5fa; margin-bottom: 12px; display: flex; items-center: center; gap: 8px;">👥 Share & Invite Your Team</h3>
+          <p class="text" style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px; margin-top: 0;">Share these details with others to let them join your workspace:</p>
+          <div class="info-row" style="margin-bottom: 8px;">
+            <span class="info-label" style="color: #94a3b8;">Invitation Code</span>
+            <span class="info-value" style="font-family: monospace; font-size: 14px; background: rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 6px; color: #fbbf24; font-weight: bold;">${inviteCode}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label" style="color: #94a3b8;">Direct Share URL</span>
+            <span class="info-value" style="word-break: break-all; font-size: 12px;"><a href="${inviteLink}" style="color: #3b82f6; text-decoration: underline; font-weight: 600;">${inviteLink}</a></span>
+          </div>
+        </div>
+      `;
+    }
+
+    body += `
       <div class="cta-wrapper">
         <a href="${link}" class="cta-button">Go to Workspace Console</a>
       </div>

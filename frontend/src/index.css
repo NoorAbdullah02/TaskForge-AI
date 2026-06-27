@@ -1,45 +1,43 @@
 @import "tailwindcss";
 
-/* ── Light-premium design tokens wired into Tailwind v4 ───────────────────── */
 @theme {
-  /* Brand */
+  /* Custom font sizes */
+  --font-size-xxs: 0.625rem;       /* 10px — used as text-xxs across the app */
+  --font-size-xxs--line-height: 1rem;
+
+  /* Custom colors used in components */
+  --color-blue-755: #1d78c1;        /* text-blue-755 in KanbanBoard */
+
   --color-brand: #2563eb;
   --color-brand-soft: #3b82f6;
   --color-brand-strong: #1d4ed8;
   --color-accent: #7c3aed;
   --color-accent-soft: #8b5cf6;
 
-  /* Surfaces (light premium) */
   --color-surface: #f6f8fc;        /* app background base */
   --color-surface-2: #eef2f9;      /* subtle secondary */
   --color-card: #ffffff;           /* card background */
   --color-line: #e6eaf2;           /* hairline borders */
 
-  /* Text */
   --color-ink: #0b1220;            /* primary text */
   --color-ink-soft: #4b5563;       /* secondary text */
   --color-ink-faint: #8a93a6;      /* tertiary text */
 
-  /* Semantic */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-info: #3b82f6;
 
-  /* Radii */
   --radius-card: 18px;
   --radius-xl2: 28px;
 
-  /* Shadows (soft, premium) */
   --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
   --shadow-float: 0 12px 40px rgba(16, 24, 40, 0.10);
   --shadow-glow: 0 8px 30px rgba(37, 99, 235, 0.18);
 
-  /* Motion */
   --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ── Global base ─────────────────────────────────────────────────────────── */
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -53,9 +51,7 @@ body {
     Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* ── Reusable utilities (single source of truth for glass + mesh) ─────────── */
 @layer utilities {
-  /* Premium light glass card */
   .glass {
     background-color: rgba(255, 255, 255, 0.72);
     border: 1px solid rgba(230, 234, 242, 0.9);
@@ -71,7 +67,6 @@ body {
     box-shadow: var(--shadow-float);
   }
 
-  /* Animated gradient mesh background (light) */
   .bg-mesh-light {
     background-color: var(--color-surface);
     background-image:
@@ -81,7 +76,6 @@ body {
       radial-gradient(at 12% 82%, rgba(59, 130, 246, 0.08) 0px, transparent 45%);
   }
 
-  /* Subtle grid overlay */
   .bg-grid-light {
     background-image:
       linear-gradient(to right, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
@@ -99,11 +93,61 @@ body {
   }
 }
 
-/* Gentle blob drift used by the light background */
+@keyframes slide-up {
+  from { transform: translate(-50%, 24px); opacity: 0; }
+  to   { transform: translate(-50%, 0);   opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@layer utilities {
+  /* Animation classes used across the codebase */
+  .animate-slide-up  { animation: slide-up  0.25s ease-out both; }
+  .animate-fade-in   { animation: fade-in   0.2s  ease-out both; }
+  .animate-fade-up   { animation: fade-up   0.25s ease-out both; }
+  .animate-scale-in  { animation: scale-in  0.2s  ease-out both; }
+  .animate-spin-slow { animation: spin-slow 2s linear infinite; }
+
+  /* Non-standard border/text colours used throughout the codebase */
+  .border-blue-105    { border-color: #dbeafe; }
+  .border-blue-150    { border-color: #bfdbfe; }
+  .border-gray-150    { border-color: #f0f0f0; }
+  .border-gray-155    { border-color: #ebebeb; }
+  .border-emerald-105 { border-color: #d1fae5; }
+  .border-amber-150   { border-color: #fde68a; }
+  .border-indigo-105  { border-color: #e0e7ff; }
+  .text-blue-655      { color: #1d6fb5; }
+  .hover\:text-blue-655:hover { color: #1d6fb5; }
+  .text-gray-855      { color: #1f2937; }  /* between gray-800 and gray-900 */
+}
+
 @keyframes blob-drift {
   0%   { transform: translate(0, 0) scale(1); }
   50%  { transform: translate(18px, -16px) scale(1.06); }
   100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes tf-shimmer {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {

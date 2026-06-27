@@ -205,7 +205,7 @@ export class NotificationService {
               html = EmailTemplates.workspaceReminder(userName, data.workspaceName, data.inactiveDays, data.link);
               break;
             case 'workspaceCreated':
-              html = EmailTemplates.workspaceCreated(userName, data.workspaceName, data.link);
+              html = EmailTemplates.workspaceCreated(userName, data.workspaceName, data.link, data.inviteCode, data.inviteLink);
               break;
             case 'workspaceJoinRequest':
               html = EmailTemplates.workspaceJoinRequest(userName, data.requesterName, data.requesterEmail, data.workspaceName, data.link);

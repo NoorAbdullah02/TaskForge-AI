@@ -125,7 +125,7 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
         <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
             <div className="bg-white/95 rounded-3xl shadow-2xl p-6 md:p-8 max-w-xl w-full border border-gray-100 relative overflow-hidden backdrop-blur-md">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-655 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+                    <h2 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
                         <CheckSquare className="w-7 h-7 text-blue-600 animate-pulse" />
                         {task ? 'Edit Task' : 'Create Task'}
                     </h2>

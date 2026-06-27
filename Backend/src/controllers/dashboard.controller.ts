@@ -7,7 +7,8 @@ export class DashboardController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-            const stats = await DashboardService.getStats(user.id);
+            const workspaceId = user.activeWorkspaceId ? Number(user.activeWorkspaceId) : null;
+            const stats = await DashboardService.getStats(user.id, workspaceId);
             return res.status(200).json(stats);
         } catch (error) {
             console.error('Error in DashboardController.getStats:', error);

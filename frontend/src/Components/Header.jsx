@@ -69,7 +69,8 @@ const Header = () => {
         if (isLoggedIn) {
             getUserWorkspaces()
                 .then(data => {
-                    setWorkspaces(data || []);
+                    const extracted = (data || []).map(item => item.workspace).filter(Boolean);
+                    setWorkspaces(extracted);
                 })
                 .catch(err => {
                     console.error('Failed to fetch workspaces:', err);
