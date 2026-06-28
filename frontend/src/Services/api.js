@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const isDev = import.meta.env.DEV;
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || (isDev ? 'http://localhost:4000/api' : '/api');
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api',
+    baseURL: apiBaseURL,
     withCredentials: true, // send and receive cookies (httpOnly token)
 });
 

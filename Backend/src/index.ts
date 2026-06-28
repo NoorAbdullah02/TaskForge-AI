@@ -60,15 +60,16 @@ app.use(helmet({
     }
 }));
 
+const allowedOrigins = [env.FRONTEND_URL, env.BACKEND_URL].filter(Boolean);
 app.use(cors({
     origin: (origin, callback) => {
         // Allow if no origin (server-to-server / same-origin) or in development allow all origins
         if (!origin) return callback(null, true);
         if (env.NODE_ENV === 'production') {
-            if (origin === env.FRONTEND_URL || origin === env.BACKEND_URL) return callback(null, true);
+            if (allowedOrigins.includes(origin)) return callback(null, true);
+            if (!env.FRONTEND_URL && !env.BACKEND_URL) return callback(null, true);
             return callback(new Error('Not allowed by CORS'));
         }
-        // in development allow all (use withCredentials for cookies)
         return callback(null, true);
     },
     credentials: true,
@@ -116,18 +117,18 @@ app.use("/api/notifications", notificationRoute);
 
 
 
-/// For frontrend and backend in one link
 
 if (env.NODE_ENV === 'production') {
     const __dirname = path.resolve();
 
-    // server static folder run
-
     app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-    app.get("/{*any}", (req, res) => {
-        res.sendFile(path.join(__dirname, "../frontend/dist/index.html"))
-    })
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' || req.originalUrl.startsWith('/api')) {
+            return next();
+        }
+        res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+    });
 }
 
 

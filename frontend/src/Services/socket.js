@@ -1,8 +1,11 @@
 import { io } from 'socket.io-client';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-// Extract host (e.g., http://localhost:4000)
-const SOCKET_URL = API_BASE.replace('/api', '');
+const isDev = import.meta.env.DEV;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (isDev ? 'http://localhost:4000/api' : '/api');
+// Extract host (e.g., http://localhost:4000) or use current origin in production
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
+    : (isDev ? 'http://localhost:4000' : undefined);
 
 // Singleton socket — withCredentials sends httpOnly access token cookie automatically
 export const socket = io(SOCKET_URL, {
