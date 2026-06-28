@@ -18,6 +18,7 @@ import { getProjects } from '../../Services/projectApi';
 import { getExecutiveStats } from '../../Services/aiApi';
 import toast from 'react-hot-toast';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
+import PendingReviewPanel from '../../Components/PendingReviewPanel';
 
 const TASK_COLORS  = ['#94a3b8','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
 const RISK_COLORS  = { low: '#10b981', medium: '#f59e0b', high: '#ef4444' };
@@ -200,6 +201,12 @@ export default function PMDashboard({ user }) {
             </button>
           </div>
         </div>
+
+        <PendingReviewPanel
+            reviewQueue={stats?.tasks?.reviewQueue || []}
+            pendingReview={stats?.tasks?.pendingReview || 0}
+            onActionDone={fetchAll}
+        />
 
         {/* ── KPI Bar ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-7">

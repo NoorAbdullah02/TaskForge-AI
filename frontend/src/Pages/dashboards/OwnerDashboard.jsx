@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
+import PendingReviewPanel from '../../Components/PendingReviewPanel';
 
 const PROJECT_STATUS_COLORS = {
   planning: '#94a3b8', active: '#8b5cf6', in_progress: '#a855f7',
@@ -147,6 +148,12 @@ export default function OwnerDashboard({ user }) {
           </button>
         </div>
       </div>
+
+      <PendingReviewPanel
+        reviewQueue={stats?.tasks?.reviewQueue || []}
+        pendingReview={stats?.tasks?.pendingReview || 0}
+        onActionDone={fetchAll}
+      />
 
       {/* ── Workspace Access & Quick Invite Panel ───────────────────────────── */}
       <AnimatePresence>

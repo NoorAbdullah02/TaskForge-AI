@@ -8,6 +8,7 @@ import { imagekit } from '../lib/imagekit';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { socketService } from '../services/socket.service';
 import { isProjectManager, isProjectMember } from '../lib/projectAuth';
+import { isReviewStatus, normalizeIncomingStatus } from '../lib/taskStatus';
 import { NotificationService } from '../services/notification.service';
 
 
@@ -313,19 +314,26 @@ export class ProjectController {
                 return res.status(403).json({ message: 'Access denied: Only project members can create tasks' });
             }
 
+            const isPM = await isProjectManager(user.id, user.role, projectId);
+
             const { title, description, status, priority, assigneeId, isMilestone, dueDate, workType } = req.body;
             if (!title || title.trim().length === 0) {
                 return res.status(400).json({ message: 'Task title is required' });
+            }
+
+            const parsedAssigneeId = assigneeId ? parseInt(assigneeId, 10) : null;
+            if (!isPM && parsedAssigneeId && parsedAssigneeId !== user.id) {
+                return res.status(403).json({ message: 'Access denied: Only project managers can assign tasks to others' });
             }
 
             const task = await ProjectService.createTaskOrMilestone({
                 projectId,
                 title: title.trim(),
                 description,
-                status: status || 'todo',
+                status: normalizeIncomingStatus(status) || 'todo',
                 priority: priority || 'medium',
                 workType: workType || 'task',
-                assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
+                assigneeId: isPM ? parsedAssigneeId : (parsedAssigneeId === user.id ? user.id : null),
                 isMilestone: !!isMilestone,
                 dueDate: dueDate ? new Date(dueDate) : null,
             });
@@ -383,6 +391,7 @@ export class ProjectController {
             }
 
             const { title, description, status, priority, assigneeId, isMilestone, dueDate } = req.body;
+            const normalizedStatus = normalizeIncomingStatus(status);
 
             let updateData: any = {};
             if (isPM) {
@@ -390,7 +399,7 @@ export class ProjectController {
                 updateData = {
                     title: title ? title.trim() : undefined,
                     description,
-                    status,
+                    status: normalizedStatus,
                     priority,
                     assigneeId: assigneeId !== undefined ? (assigneeId ? parseInt(assigneeId, 10) : null) : undefined,
                     isMilestone: isMilestone !== undefined ? !!isMilestone : undefined,
@@ -398,16 +407,14 @@ export class ProjectController {
                 };
             } else {
                 // Regular employees can ONLY update the status
-                if (status !== undefined) {
-                    // Cannot transition out of review/done/approved/rejected without PM approval
-                    if (task.status === 'in_review' || task.status === 'review' || task.status === 'approved' || task.status === 'done' || task.status === 'rejected') {
+                if (normalizedStatus !== undefined) {
+                    if (isReviewStatus(task.status) || task.status === 'approved' || task.status === 'done' || task.status === 'rejected') {
                         return res.status(403).json({ message: 'Access denied: Only project managers can transition tasks from this status' });
                     }
-                    // Cannot set status to approved, rejected, or done directly
-                    if (status === 'approved' || status === 'rejected' || status === 'done') {
-                        return res.status(403).json({ message: 'Access denied: Only project managers can approve/complete tasks' });
+                    if (normalizedStatus === 'approved' || normalizedStatus === 'rejected' || normalizedStatus === 'done') {
+                        return res.status(403).json({ message: 'Access denied: Submit tasks for review instead of marking them complete' });
                     }
-                    updateData.status = status;
+                    updateData.status = normalizedStatus;
                 } else {
                     return res.status(403).json({ message: 'Access denied: Employees can only update task status' });
                 }
@@ -415,8 +422,37 @@ export class ProjectController {
 
             const updated = await ProjectService.updateTaskOrMilestone(taskId, updateData);
 
+            // Notify reviewers when employee submits for review
+            if (
+                normalizedStatus &&
+                isReviewStatus(normalizedStatus) &&
+                !isReviewStatus(task.status) &&
+                user.activeWorkspaceId
+            ) {
+                const details = await ProjectService.getProjectDetails(task.projectId);
+                const reviewerIds = new Set<number>();
+                details?.members?.forEach((member: any) => {
+                    if (['owner', 'manager', 'project_manager'].includes(member.role)) {
+                        reviewerIds.add(member.id);
+                    }
+                });
+                for (const reviewerId of reviewerIds) {
+                    await NotificationService.dispatch({
+                        event: 'task.assigned',
+                        userId: reviewerId,
+                        workspaceId: user.activeWorkspaceId,
+                        entityType: 'task',
+                        entityId: task.id,
+                        title: 'Task Ready for Review',
+                        message: `${user.name} submitted "${task.title}" for review in project "${details?.name || 'Unknown'}".`,
+                        link: `/tasks/${task.id}`,
+                        skipEmail: true,
+                    });
+                }
+            }
+
             // Notify if status changed
-            if (status && status !== task.status) {
+            if (normalizedStatus && normalizedStatus !== task.status) {
                 // Send notification to PM/Workspace Owner
                 const details = await ProjectService.getProjectDetails(task.projectId);
                 const ownerOrManager = details?.members?.find(m => m.role === 'owner' || m.role === 'manager');
@@ -428,7 +464,7 @@ export class ProjectController {
                         entityType: 'task',
                         entityId: task.id,
                         title: 'Task Status Updated',
-                        message: `Task "${task.title}" status was updated to "${status}" by ${user.name}.`,
+                        message: `Task "${task.title}" status was updated to "${normalizedStatus}" by ${user.name}.`,
                         link: `/tasks/${task.id}`,
                         skipEmail: true,
                     });

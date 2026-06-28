@@ -20,11 +20,26 @@ async function logAdminAction(req: Request, action: string, entityType: string, 
     }
 }
 
+const DEFAULT_SYSTEM_SETTINGS = {
+    orgName: 'TaskForge AI',
+    orgLogo: null as string | null,
+    timeZone: 'UTC',
+    officeStart: '09:00',
+    officeEnd: '17:00',
+    workingDays: '1,2,3,4,5',
+    holidays: JSON.stringify([
+        { name: "New Year's Day", date: '2026-01-01' },
+        { name: 'Independence Day', date: '2026-07-04' },
+        { name: 'Christmas Day', date: '2026-12-25' },
+    ]),
+    leavePolicy: JSON.stringify({ sick: 14, casual: 10, annual: 15 }),
+};
+
 export const getSystemSettings = async (req: Request, res: Response) => {
     try {
-        const [settings] = await db.select().from(systemSettings).limit(1);
+        let [settings] = await db.select().from(systemSettings).limit(1);
         if (!settings) {
-            return res.status(404).json({ message: "Settings not found" });
+            [settings] = await db.insert(systemSettings).values(DEFAULT_SYSTEM_SETTINGS).returning();
         }
         return res.status(200).json(settings);
     } catch (error) {
@@ -36,13 +51,14 @@ export const getSystemSettings = async (req: Request, res: Response) => {
 export const updateSystemSettings = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: "Access denied: Admins only" });
+        const canManageSettings = user && ['admin', 'owner', 'super_admin'].includes(user.role);
+        if (!canManageSettings) {
+            return res.status(403).json({ message: "Access denied: Admins and owners only" });
         }
 
-        const [settings] = await db.select().from(systemSettings).limit(1);
+        let [settings] = await db.select().from(systemSettings).limit(1);
         if (!settings) {
-            return res.status(404).json({ message: "Settings not found" });
+            [settings] = await db.insert(systemSettings).values(DEFAULT_SYSTEM_SETTINGS).returning();
         }
 
         const { orgName, orgLogo, timeZone, officeStart, officeEnd, workingDays, holidays, leavePolicy } = req.body;
@@ -106,8 +122,8 @@ export const getAdminDepartments = async (req: Request, res: Response) => {
 export const createDepartment = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: "Access denied: Admins only" });
+        if (!user || !['admin', 'owner', 'super_admin'].includes(user.role)) {
+            return res.status(403).json({ message: "Access denied: Admins and owners only" });
         }
 
         const { name, description, managerId } = req.body;
@@ -138,8 +154,8 @@ export const createDepartment = async (req: Request, res: Response) => {
 export const updateDepartment = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: "Access denied: Admins only" });
+        if (!user || !['admin', 'owner', 'super_admin'].includes(user.role)) {
+            return res.status(403).json({ message: "Access denied: Admins and owners only" });
         }
 
         const id = parseInt(req.params.id, 10);
@@ -182,8 +198,8 @@ export const updateDepartment = async (req: Request, res: Response) => {
 export const deleteDepartment = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: "Access denied: Admins only" });
+        if (!user || !['admin', 'owner', 'super_admin'].includes(user.role)) {
+            return res.status(403).json({ message: "Access denied: Admins and owners only" });
         }
 
         const id = parseInt(req.params.id, 10);
@@ -209,10 +225,6 @@ export const deleteDepartment = async (req: Request, res: Response) => {
 export const getAdminUsers = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
-
         const results = await db.select({
             id: users.id,
             name: users.name,
@@ -246,8 +258,8 @@ export const getAdminUsers = async (req: Request, res: Response) => {
 export const updateUserRoleDept = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: "Access denied: Admins only" });
+        if (!user || !['admin', 'owner', 'super_admin'].includes(user.role)) {
+            return res.status(403).json({ message: "Access denied: Admins and owners only" });
         }
 
         const id = parseInt(req.params.id, 10);
@@ -283,10 +295,6 @@ export const updateUserRoleDept = async (req: Request, res: Response) => {
 export const getAuditLogs = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user;
-        if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-            return res.status(403).json({ message: "Access denied" });
-        }
-
         const results = await db.select({
             id: activityLogs.id,
             userId: activityLogs.userId,

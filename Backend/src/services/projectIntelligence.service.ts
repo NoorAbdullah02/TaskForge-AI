@@ -702,7 +702,7 @@ export class ProjectIntelligenceService {
 
         // Attendance Impact Analysis
         // Compute active members attendance rate and match with overdue task ratios
-        const membersList = await db.select({ id: users.id }).from(projectMembers).where(eq(projectMembers.projectId, projectId));
+        const membersList = await db.select({ id: projectMembers.userId }).from(projectMembers).where(eq(projectMembers.projectId, projectId));
         let totalAttendanceRate = 0;
         let membersCount = 0;
 

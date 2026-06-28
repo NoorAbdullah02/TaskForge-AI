@@ -4,7 +4,7 @@ const normalizeTask = (task) => {
     if (!task) return task;
     let status = task.status;
     if (status === 'approved') status = 'done';
-    if (status === 'rejected') status = 'todo';
+    if (status === 'rejected') status = 'in-progress';
     if (status === 'in_review') status = 'review';
     if (status === 'in_progress') status = 'in-progress';
     return { ...task, status };

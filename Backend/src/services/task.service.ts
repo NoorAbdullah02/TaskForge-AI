@@ -231,31 +231,46 @@ export class TaskService {
         return deleted;
     }
 
-    // Approve task (PM/Owner only)
+    // Approve task (PM/Owner only) — marks task completed
     static async approveTask(taskId: number, userId?: number) {
+        const [current] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+        const previousStatus = current?.status || 'review';
+
         const [task] = await db.update(tasks)
             .set({
-                status: 'approved',
+                status: 'done',
                 updatedAt: new Date()
             })
             .where(eq(tasks.id, taskId))
             .returning();
 
-        await TaskService.logChange(taskId, userId || null, 'status_change', 'status', 'in_review', 'approved');
+        await TaskService.logChange(taskId, userId || null, 'status_change', 'status', previousStatus, 'done');
         return task;
     }
 
-    // Reject task (PM/Owner only)
-    static async rejectTask(taskId: number, userId?: number) {
+    // Reject task (PM/Owner only) — send back to assignee for rework
+    static async rejectTask(taskId: number, userId?: number, reason?: string) {
+        const [current] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+        const previousStatus = current?.status || 'review';
+
         const [task] = await db.update(tasks)
             .set({
-                status: 'rejected',
+                status: 'in-progress',
                 updatedAt: new Date()
             })
             .where(eq(tasks.id, taskId))
             .returning();
 
-        await TaskService.logChange(taskId, userId || null, 'status_change', 'status', 'in_review', 'rejected');
+        if (reason && userId) {
+            await db.insert(comments).values({
+                taskId,
+                userId,
+                content: `Review feedback: ${reason}`,
+                createdAt: new Date(),
+            });
+        }
+
+        await TaskService.logChange(taskId, userId || null, 'status_change', 'status', previousStatus, 'in-progress');
         return task;
     }
 

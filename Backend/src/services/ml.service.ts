@@ -61,6 +61,54 @@ export interface ResourceRecommendationPayload {
 }
 
 export class MLService {
+    private static isServiceUnavailable(error: unknown): boolean {
+        if (!(error instanceof Error)) return false;
+        const message = error.message.toLowerCase();
+        const cause = (error as NodeJS.ErrnoException).cause as NodeJS.ErrnoException | undefined;
+        return message.includes('fetch failed')
+            || cause?.code === 'ECONNREFUSED'
+            || message.includes('econnrefused');
+    }
+
+    private static heuristicProjectSuccess(payload: ProjectSuccessPayload) {
+        const progress = Math.min(1, Math.max(0, payload.current_progress));
+        const timeRatio = payload.days_total > 0
+            ? Math.min(1, payload.days_remaining / payload.days_total)
+            : 0.5;
+        const successProbability = Math.min(0.95, Math.max(0.1, 0.35 + progress * 0.45 + timeRatio * 0.2 - payload.priority_high_ratio * 0.15));
+        const delayProbability = Math.min(0.9, Math.max(0.05, 1 - successProbability));
+        const riskLevel: 'low' | 'medium' | 'high' =
+            delayProbability >= 0.55 ? 'high' : delayProbability >= 0.3 ? 'medium' : 'low';
+
+        return {
+            success_probability: Number(successProbability.toFixed(2)),
+            delay_probability: Number(delayProbability.toFixed(2)),
+            risk_level: riskLevel,
+            source: 'heuristic' as const,
+        };
+    }
+
+    private static heuristicDeadline(payload: DeadlinePredictionPayload) {
+        const completionRatio = payload.task_count > 0
+            ? payload.completed_count / payload.task_count
+            : 0;
+        const remainingRatio = Math.max(0.1, 1 - completionRatio);
+        const predictedDaysNeeded = Math.max(
+            1,
+            Math.round(payload.days_remaining * remainingRatio + payload.task_count * 0.15)
+        );
+        const predictedDate = new Date(Date.now() + predictedDaysNeeded * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0];
+
+        return {
+            predicted_days_needed: predictedDaysNeeded,
+            predicted_date: predictedDate,
+            confidence_score: 0.55,
+            source: 'heuristic' as const,
+        };
+    }
+
     private static async makeRequest<T>(endpoint: string, payload: any): Promise<T> {
         try {
             const url = `${ML_SERVICE_URL}/api/predict${endpoint}`;
@@ -89,19 +137,35 @@ export class MLService {
     }
 
     static async predictProjectSuccess(payload: ProjectSuccessPayload) {
-        return this.makeRequest<{
-            success_probability: number;
-            delay_probability: number;
-            risk_level: 'low' | 'medium' | 'high';
-        }>('/project-success', payload);
+        try {
+            return await this.makeRequest<{
+                success_probability: number;
+                delay_probability: number;
+                risk_level: 'low' | 'medium' | 'high';
+            }>('/project-success', payload);
+        } catch (error) {
+            if (this.isServiceUnavailable(error)) {
+                console.warn('ML service unavailable — using heuristic project success prediction');
+                return this.heuristicProjectSuccess(payload);
+            }
+            throw error;
+        }
     }
 
     static async predictDeadline(payload: DeadlinePredictionPayload) {
-        return this.makeRequest<{
-            predicted_days_needed: number;
-            predicted_date: string;
-            confidence_score: number;
-        }>('/deadline', payload);
+        try {
+            return await this.makeRequest<{
+                predicted_days_needed: number;
+                predicted_date: string;
+                confidence_score: number;
+            }>('/deadline', payload);
+        } catch (error) {
+            if (this.isServiceUnavailable(error)) {
+                console.warn('ML service unavailable — using heuristic deadline prediction');
+                return this.heuristicDeadline(payload);
+            }
+            throw error;
+        }
     }
 
     static async predictProductivity(payload: ProductivityPredictionPayload) {

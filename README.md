@@ -7,7 +7,6 @@ TaskForge AI is an enterprise-ready task and team intelligence platform built to
 This repository includes a full-stack product with:
 - Backend API and business logic in `Backend/` using Express, TypeScript, Drizzle ORM, PostgreSQL, Redis, and BullMQ.
 - Frontend web application in `frontend/` built with React 19, Vite, Tailwind CSS, React Router, and Zustand.
-- Machine learning service in `ml-service/` for prediction models and productivity analytics.
 
 ## Key Features
 
@@ -24,7 +23,6 @@ This repository includes a full-stack product with:
 
 - `/Backend` - Express backend, TypeScript code, routes, controllers, services, Drizzle ORM schema, and workers
 - `/frontend` - React app, UI pages, components, services, and design system
-- `/ml-service` - Python ML service, model training scripts, prediction endpoints, and serialized models
 
 ## Tech Stack
 

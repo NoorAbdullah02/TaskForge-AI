@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Building2, Calendar, ClipboardList, Settings, Plus, Edit2, Trash2,
     Search, ShieldAlert, Check, X, Clock, HelpCircle, Save, Loader2,
@@ -19,17 +19,22 @@ import {
     updateUserRoleDept,
     getAuditLogs
 } from '../Services/adminApi';
-import { getWorkspaceInfo, regenerateInviteCode, getWorkspaceMembers, inviteWorkspaceMembers } from '../Services/workspaceApi';
+import { getWorkspaceInfo, regenerateInviteCode, getPendingRequests, approveMember, bulkApproveMembers, getWorkspaceMembers, inviteWorkspaceMembers } from '../Services/workspaceApi';
 import { getProjects, assignProjectManager } from '../Services/projectApi';
-                                )}
-{ value: 'America/Chicago', label: 'Central Time (CST/CDT)' },
-{ value: 'America/Denver', label: 'Mountain Time (MST/MDT)' },
-{ value: 'America/Los_Angeles', label: 'Pacific Time (PST/PDT)' },
-{ value: 'Europe/London', label: 'London (GMT/BST)' },
-{ value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
-{ value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
-{ value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
-{ value: 'Australia/Sydney', label: 'Sydney Standard Time (AEST/AEDT)' }
+import { socket } from '../Services/socket';
+
+
+const TIMEZONES = [
+    { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
+    { value: 'America/New_York', label: 'Eastern Time (EST/EDT)' },
+    { value: 'America/Chicago', label: 'Central Time (CST/CDT)' },
+    { value: 'America/Denver', label: 'Mountain Time (MST/MDT)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PST/PDT)' },
+    { value: 'Europe/London', label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+    { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
+    { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
+    { value: 'Australia/Sydney', label: 'Sydney Standard Time (AEST/AEDT)' }
 ];
 
 const DAYS_OF_WEEK = [
@@ -73,6 +78,11 @@ export default function AdminSettingsPage() {
     const [inviteNote, setInviteNote] = useState('');
     const [sendingInvites, setSendingInvites] = useState(false);
     const [inviteResultMessage, setInviteResultMessage] = useState('');
+
+    // Pending requests states
+    const [pendingRequests, setPendingRequests] = useState([]);
+    const [selectedRequests, setSelectedRequests] = useState([]);
+    const [loadingRequests, setLoadingRequests] = useState(false);
 
     // Data States
     const [settings, setSettings] = useState({
@@ -123,34 +133,45 @@ export default function AdminSettingsPage() {
     const loadAllData = async () => {
         setLoading(true);
         try {
-            const settingsData = await getSystemSettings();
-
-            // Parse JSON fields
-            const holidays = settingsData.holidays ? (typeof settingsData.holidays === 'string' ? JSON.parse(settingsData.holidays) : settingsData.holidays) : [];
-            const leavePolicy = settingsData.leavePolicy ? (typeof settingsData.leavePolicy === 'string' ? JSON.parse(settingsData.leavePolicy) : settingsData.leavePolicy) : { sick: 14, casual: 10, annual: 15 };
-
-            setSettings({
-                ...settingsData,
-                holidays,
-                leavePolicy
+            const settingsPromise = getSystemSettings().catch((error) => {
+                console.error('Error loading admin settings:', error);
+                return null;
+            });
+            const deptsPromise = getAdminDepartments().catch((error) => {
+                console.error('Error loading departments:', error);
+                return [];
             });
 
-            const deptsData = await getAdminDepartments();
-            setDepartments(deptsData);
+            const [settingsData, deptsData] = await Promise.all([settingsPromise, deptsPromise]);
+
+            if (settingsData) {
+                const holidays = settingsData.holidays ? (typeof settingsData.holidays === 'string' ? JSON.parse(settingsData.holidays) : settingsData.holidays) : [];
+                const leavePolicy = settingsData.leavePolicy ? (typeof settingsData.leavePolicy === 'string' ? JSON.parse(settingsData.leavePolicy) : settingsData.leavePolicy) : { sick: 14, casual: 10, annual: 15 };
+
+                setSettings({
+                    ...settingsData,
+                    holidays,
+                    leavePolicy
+                });
+            } else {
+                toast.error('Could not load system settings. Some tabs may be limited.');
+            }
+
+            setDepartments(Array.isArray(deptsData) ? deptsData : []);
 
             if (isAdmin || isManager) {
-                const usersData = await getAdminUsers();
-                setUsers(usersData);
-
-                const logsData = await getAuditLogs();
-                setAuditLogs(logsData);
-
-                // Fetch Workspace Info (invite link & code)
-                try {
-                    const info = await getWorkspaceInfo();
-                    setWorkspaceInfo(info);
-                } catch (err) {
+                const usersPromise = getAdminUsers().catch(() => []);
+                const logsPromise = getAuditLogs().catch(() => []);
+                const workspacePromise = getWorkspaceInfo().catch((err) => {
                     console.error('Failed to load workspace info:', err);
+                    return null;
+                });
+
+                const [usersData, logsData, info] = await Promise.all([usersPromise, logsPromise, workspacePromise]);
+                setUsers(Array.isArray(usersData) ? usersData : []);
+                setAuditLogs(Array.isArray(logsData) ? logsData : []);
+                if (info) {
+                    setWorkspaceInfo(info);
                 }
             }
         } catch (error) {
@@ -207,6 +228,20 @@ export default function AdminSettingsPage() {
     };
 
     // Load Pending Join Requests
+    const loadPendingRequests = useCallback(async (wsId) => {
+        const id = wsId || workspaceInfo?.id;
+        if (!id) return;
+        setLoadingRequests(true);
+        try {
+            const data = await getPendingRequests(id);
+            setPendingRequests(Array.isArray(data) ? data : []);
+            setSelectedRequests([]);
+        } catch (err) {
+            console.error('Failed to load pending requests:', err);
+        } finally {
+            setLoadingRequests(false);
+        }
+    }, [workspaceInfo?.id]);
 
     const handleSendInvites = async () => {
         if (!workspaceInfo?.id) {
@@ -247,6 +282,22 @@ export default function AdminSettingsPage() {
         }
     };
 
+    useEffect(() => {
+        if (activeTab === 'invite' && workspaceInfo?.id) {
+            loadPendingRequests(workspaceInfo.id);
+        }
+    }, [activeTab, workspaceInfo?.id]);
+
+    // Real-time socket listener — refresh pending requests when new join request arrives
+    useEffect(() => {
+        if (!socket) return;
+        const handleJoinAlert = () => {
+            loadPendingRequests(workspaceInfo?.id);
+            toast('New join request received!', { icon: '🔔' });
+        };
+        socket.on('join_request_alert', handleJoinAlert);
+        return () => socket.off('join_request_alert', handleJoinAlert);
+    }, [workspaceInfo?.id, loadPendingRequests]);
 
     const loadWorkspaceMembersAndProjects = async () => {
         setLoadingMembers(true);
@@ -290,6 +341,39 @@ export default function AdminSettingsPage() {
 
 
     // Handle Individual Action
+    const handleApproveReject = async (membershipId, action) => {
+        if (!workspaceInfo?.id) return;
+        const toastId = toast.loading('Processing join request...');
+        try {
+            await approveMember(workspaceInfo.id, membershipId, action);
+            toast.success(
+                action === 'approve'
+                    ? 'Member approved! They can now log in.'
+                    : 'Request rejected successfully.',
+                { id: toastId }
+            );
+            loadPendingRequests(workspaceInfo.id);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Action failed', { id: toastId });
+        }
+    };
+
+    const handleBulkApproveReject = async (action) => {
+        if (!workspaceInfo?.id || selectedRequests.length === 0) return;
+        const toastId = toast.loading(`Performing bulk ${action}...`);
+        try {
+            await bulkApproveMembers(workspaceInfo.id, selectedRequests, action);
+            toast.success(
+                `${selectedRequests.length} request(s) ${action === 'approve' ? 'approved' : 'rejected'} successfully.`,
+                { id: toastId }
+            );
+            loadPendingRequests(workspaceInfo.id);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'Bulk action failed', { id: toastId });
+        }
+    };
 
 
     // Handle settings updates (Time, days, name, leave policy)
@@ -1306,422 +1390,602 @@ export default function AdminSettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="border-t border-gray-100 pt-6 mt-6">
-                                    <div className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-6">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <ShieldAlert className="w-5 h-5 text-emerald-600" />
-                                            <h3 className="text-lg font-bold text-gray-800">Invite Code Auto-Approval</h3>
-                                        </div>
-                                        <p className="text-sm text-gray-500 leading-relaxed">
-                                            Members joining via the workspace invite code or shared link are added immediately to the workspace. There is no pending approval queue for this workflow.
+                                <div className="border-t border-gray-100 pt-6 mt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                    <div className="max-w-md">
+                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                            <ShieldAlert className="w-4 h-4 text-amber-500" />
+                                            Regenerate Invitation Credentials
+                                        </h3>
+                                        <p className="text-xs text-gray-400 font-medium mt-1 leading-relaxed">
+                                            Warning: Regenerating will instantly invalidate the current invite code and link. Any users attempting to join using the old credentials will fail to register.
                                         </p>
                                     </div>
+                                    <button
+                                        onClick={handleRegenerateInvite}
+                                        disabled={regenerating || !workspaceInfo?.id}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-400 text-xs font-bold rounded-2xl shadow-md transition-all shrink-0 hover:scale-[1.02]"
+                                    >
+                                        {regenerating ? (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                Regenerating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                Regenerate Invite Code
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
+
+                                {/* Pending join requests list */}
+                                <div className="grid gap-6 md:grid-cols-[1fr_420px]">
+                                    <div className="space-y-6">
+                                        <div className="rounded-3xl border border-blue-100/80 bg-slate-50/70 p-6">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Share2 className="w-5 h-5 text-blue-600" />
+                                                <h3 className="text-lg font-bold text-gray-800">Invite workspace members by email</h3>
+                                            </div>
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Enter one or more email addresses separated by commas, semicolons, or new lines. Each recipient will receive a workspace invitation email with your workspace join link.
+                                            </p>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Email addresses</label>
+                                                    <textarea
+                                                        rows={4}
+                                                        value={inviteEmails}
+                                                        onChange={(e) => setInviteEmails(e.target.value)}
+                                                        placeholder="team.member@example.com, hr@example.com"
+                                                        className="w-full rounded-2xl border border-gray-200 p-4 text-sm focus:border-blue-500 focus:ring-blue-500/20 outline-none bg-white text-gray-800"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Optional note</label>
+                                                    <textarea
+                                                        rows={2}
+                                                        value={inviteNote}
+                                                        onChange={(e) => setInviteNote(e.target.value)}
+                                                        placeholder="Add a short message to your invite"
+                                                        className="w-full rounded-2xl border border-gray-200 p-4 text-sm focus:border-blue-500 focus:ring-blue-500/20 outline-none bg-white text-gray-800"
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={handleSendInvites}
+                                                    disabled={sendingInvites || !inviteEmails.trim()}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                                                >
+                                                    {sendingInvites ? 'Sending invites...' : 'Send workspace invitations'}
+                                                </button>
+                                                {inviteResultMessage && (
+                                                    <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-sm text-blue-700">
+                                                        {inviteResultMessage}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-gray-100 pt-6 mt-8">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                                        <UserCheck className="w-4 h-4 text-blue-600" />
+                                                        Pending Join Requests
+                                                    </h3>
+                                                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                                                        Select pending members to approve or reject their access requests to join this workspace.
+                                                    </p>
+                                                </div>
+                                                {selectedRequests.length > 0 && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleBulkApproveReject('approve')}
+                                                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
+                                                        >
+                                                            Approve Selected ({selectedRequests.length})
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleBulkApproveReject('reject')}
+                                                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
+                                                        >
+                                                            Reject Selected ({selectedRequests.length})
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {loadingRequests ? (
+                                                <div className="py-12 flex items-center justify-center">
+                                                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+                                                    <table className="min-w-full divide-y divide-gray-100 text-xs">
+                                                        <thead className="bg-gray-50/50">
+                                                            <tr>
+                                                                <th className="w-12 px-6 py-3.5 text-left">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={pendingRequests.length > 0 && selectedRequests.length === pendingRequests.length}
+                                                                        onChange={(e) => {
+                                                                            if (e.target.checked) {
+                                                                                setSelectedRequests(pendingRequests.map(r => r.membershipId));
+                                                                            } else {
+                                                                                setSelectedRequests([]);
+                                                                            }
+                                                                        }}
+                                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                    />
+                                                                </th>
+                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
+                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Email Address</th>
+                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Requested Date</th>
+                                                                <th className="px-6 py-3.5 text-right font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-100 font-medium text-gray-700">
+                                                            {pendingRequests.map((req) => (
+                                                                <tr key={req.membershipId} className="hover:bg-blue-50/30 transition-colors">
+                                                                    <td className="px-6 py-4">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={selectedRequests.includes(req.membershipId)}
+                                                                            onChange={(e) => {
+                                                                                if (e.target.checked) {
+                                                                                    setSelectedRequests([...selectedRequests, req.membershipId]);
+                                                                                } else {
+                                                                                    setSelectedRequests(selectedRequests.filter(id => id !== req.membershipId));
+                                                                                }
+                                                                            }}
+                                                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                        />
+                                                                    </td>
+                                                                    <td className="px-6 py-4 font-bold text-gray-800">{req.name}</td>
+                                                                    <td className="px-6 py-4 text-gray-500">{req.email}</td>
+                                                                    <td className="px-6 py-4 text-gray-400">{new Date(req.joinedAt).toLocaleString()}</td>
+                                                                    <td className="px-6 py-4 text-right flex justify-end gap-1.5">
+                                                                        <button
+                                                                            onClick={() => handleApproveReject(req.membershipId, 'approve')}
+                                                                            className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-xl transition cursor-pointer"
+                                                                            title="Approve request"
+                                                                        >
+                                                                            <Check className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleApproveReject(req.membershipId, 'reject')}
+                                                                            className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition cursor-pointer"
+                                                                            title="Reject request"
+                                                                        >
+                                                                            <X className="w-4 h-4" />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+
+                                                            {pendingRequests.length === 0 && (
+                                                                <tr>
+                                                                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic font-medium">
+                                                                        No pending join requests active currently.
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
-                                {activeTab === 'members' && (
-                                    <div className="bg-white/80 backdrop-blur-xl border border-blue-100 rounded-3xl p-6 shadow-xl shadow-blue-100/30">
-                                        <div className="flex justify-between items-center mb-6">
-                                            <div>
-                                                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                                    <Users className="text-blue-600 w-5 h-5" />
-                                                    Workspace Members
-                                                </h2>
-                                                <p className="text-xs text-gray-500 font-medium">Manage members, appoint project managers, and oversee roles.</p>
-                                            </div>
-                                        </div>
-
-                                        {loadingMembers ? (
-                                            <div className="py-12 text-center">
-                                                <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-2" />
-                                                <p className="text-gray-500 font-semibold">Loading members...</p>
-                                            </div>
-                                        ) : workspaceMembersList.length === 0 ? (
-                                            <div className="py-12 text-center text-gray-500 font-medium animate-fade-in">
-                                                No active workspace members found.
-                                            </div>
-                                        ) : (
-                                            <div className="overflow-x-auto rounded-2xl border border-gray-100">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-blue-50/40 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                                            <th className="py-3 px-4">Name</th>
-                                                            <th className="py-3 px-4">Email</th>
-                                                            <th className="py-3 px-4">Workspace Role</th>
-                                                            <th className="py-3 px-4 text-right pr-6">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-50 text-sm font-semibold text-gray-700">
-                                                        {workspaceMembersList.map(member => (
-                                                            <tr key={member.id} className="hover:bg-blue-50/20 transition-colors">
-                                                                <td className="py-4 px-4 flex items-center gap-3">
-                                                                    {member.avatarUrl ? (
-                                                                        <img src={member.avatarUrl} alt={member.name} className="w-9 h-9 rounded-full object-cover border border-gray-100" />
-                                                                    ) : (
-                                                                        <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-xs">
-                                                                            {member.name.charAt(0).toUpperCase()}
-                                                                        </div>
-                                                                    )}
-                                                                    <div>
-                                                                        <p className="font-extrabold text-gray-800">{member.name}</p>
-                                                                        {member.position && <p className="text-xs text-gray-500 font-medium">{member.position}</p>}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="py-4 px-4 text-gray-500">{member.email}</td>
-                                                                <td className="py-4 px-4">
-                                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold border uppercase ${member.role === 'owner' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
-                                                                        member.role === 'admin' ? 'bg-red-50 border-red-200 text-red-700' :
-                                                                            member.role === 'manager' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                                                                                'bg-gray-50 border-gray-200 text-gray-700'
-                                                                        }`}>
-                                                                        {member.role}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-4 px-4 text-right pr-6">
-                                                                    {member.id !== user?.id && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setSelectedUserForPm(member);
-                                                                                setIsAssignPmModalOpen(true);
-                                                                            }}
-                                                                            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow text-xs flex items-center gap-1.5 ml-auto cursor-pointer"
-                                                                        >
-                                                                            <UserCheck className="w-4 h-4" />
-                                                                            Assign PM
-                                                                        </button>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* ASSIGN PROJECT MANAGER MODAL */}
-                                {isAssignPmModalOpen && (
-                                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-sm animate-fade-in">
-                                        <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
+                        {activeTab === 'members' && (
+                                        <div className="bg-white/80 backdrop-blur-xl border border-blue-100 rounded-3xl p-6 shadow-xl shadow-blue-100/30">
                                             <div className="flex justify-between items-center mb-6">
-                                                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                                    <UserCheck className="text-blue-600 w-6 h-6" />
-                                                    Assign Project Manager
-                                                </h3>
-                                                <button
-                                                    onClick={() => setIsAssignPmModalOpen(false)}
-                                                    className="p-2 hover:bg-gray-100 rounded-full transition cursor-pointer"
-                                                >
-                                                    <X className="w-5 h-5 text-gray-500" />
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-4 mb-6">
-                                                <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                                                    <p className="text-sm font-semibold text-gray-700">Appointee:</p>
-                                                    <p className="text-base font-extrabold text-blue-800">{selectedUserForPm?.name}</p>
-                                                    <p className="text-xs text-gray-500 font-medium">{selectedUserForPm?.email}</p>
-                                                </div>
-
                                                 <div>
-                                                    <label className="block text-sm font-bold text-gray-700 mb-2">Select Project</label>
-                                                    <select
-                                                        value={selectedProjectIdForPm}
-                                                        onChange={(e) => setSelectedProjectIdForPm(e.target.value)}
-                                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 cursor-pointer"
-                                                    >
-                                                        <option value="">-- Choose a project --</option>
-                                                        {projectsList.map(proj => (
-                                                            <option key={proj.id} value={proj.id}>{proj.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                                        <Users className="text-blue-600 w-5 h-5" />
+                                                        Workspace Members
+                                                    </h2>
+                                                    <p className="text-xs text-gray-500 font-medium">Manage members, appoint project managers, and oversee roles.</p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end gap-3">
-                                                <button
-                                                    onClick={() => setIsAssignPmModalOpen(false)}
-                                                    className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
-                                                    disabled={assigningPm}
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={handleAssignPmSave}
-                                                    className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition shadow flex items-center gap-2 cursor-pointer"
-                                                    disabled={assigningPm || !selectedProjectIdForPm}
-                                                >
-                                                    {assigningPm ? (
-                                                        <>
-                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                            Saving...
-                                                        </>
-                                                    ) : 'Save'}
-                                                </button>
+                                            {loadingMembers ? (
+                                                <div className="py-12 text-center">
+                                                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-2" />
+                                                    <p className="text-gray-500 font-semibold">Loading members...</p>
+                                                </div>
+                                            ) : workspaceMembersList.length === 0 ? (
+                                                <div className="py-12 text-center text-gray-500 font-medium animate-fade-in">
+                                                    No active workspace members found.
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-x-auto rounded-2xl border border-gray-100">
+                                                    <table className="w-full text-left border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-blue-50/40 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                                <th className="py-3 px-4">Name</th>
+                                                                <th className="py-3 px-4">Email</th>
+                                                                <th className="py-3 px-4">Workspace Role</th>
+                                                                <th className="py-3 px-4 text-right pr-6">Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-50 text-sm font-semibold text-gray-700">
+                                                            {workspaceMembersList.map(member => (
+                                                                <tr key={member.id} className="hover:bg-blue-50/20 transition-colors">
+                                                                    <td className="py-4 px-4 flex items-center gap-3">
+                                                                        {member.avatarUrl ? (
+                                                                            <img src={member.avatarUrl} alt={member.name} className="w-9 h-9 rounded-full object-cover border border-gray-100" />
+                                                                        ) : (
+                                                                            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-xs">
+                                                                                {member.name.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                        )}
+                                                                        <div>
+                                                                            <p className="font-extrabold text-gray-800">{member.name}</p>
+                                                                            {member.position && <p className="text-xs text-gray-500 font-medium">{member.position}</p>}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-4 px-4 text-gray-500">{member.email}</td>
+                                                                    <td className="py-4 px-4">
+                                                                        <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold border uppercase ${member.role === 'owner' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                                                            member.role === 'admin' ? 'bg-red-50 border-red-200 text-red-700' :
+                                                                                member.role === 'manager' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                                                                    'bg-gray-50 border-gray-200 text-gray-700'
+                                                                            }`}>
+                                                                            {member.role}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-4 px-4 text-right pr-6">
+                                                                        {member.id !== user?.id && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setSelectedUserForPm(member);
+                                                                                    setIsAssignPmModalOpen(true);
+                                                                                }}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow text-xs flex items-center gap-1.5 ml-auto cursor-pointer"
+                                                                            >
+                                                                                <UserCheck className="w-4 h-4" />
+                                                                                Assign PM
+                                                                            </button>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ASSIGN PROJECT MANAGER MODAL */}
+                                    {isAssignPmModalOpen && (
+                                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-sm animate-fade-in">
+                                            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                                        <UserCheck className="text-blue-600 w-6 h-6" />
+                                                        Assign Project Manager
+                                                    </h3>
+                                                    <button
+                                                        onClick={() => setIsAssignPmModalOpen(false)}
+                                                        className="p-2 hover:bg-gray-100 rounded-full transition cursor-pointer"
+                                                    >
+                                                        <X className="w-5 h-5 text-gray-500" />
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-4 mb-6">
+                                                    <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                                                        <p className="text-sm font-semibold text-gray-700">Appointee:</p>
+                                                        <p className="text-base font-extrabold text-blue-800">{selectedUserForPm?.name}</p>
+                                                        <p className="text-xs text-gray-500 font-medium">{selectedUserForPm?.email}</p>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-gray-700 mb-2">Select Project</label>
+                                                        <select
+                                                            value={selectedProjectIdForPm}
+                                                            onChange={(e) => setSelectedProjectIdForPm(e.target.value)}
+                                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-gray-700 cursor-pointer"
+                                                        >
+                                                            <option value="">-- Choose a project --</option>
+                                                            {projectsList.map(proj => (
+                                                                <option key={proj.id} value={proj.id}>{proj.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-end gap-3">
+                                                    <button
+                                                        onClick={() => setIsAssignPmModalOpen(false)}
+                                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition cursor-pointer"
+                                                        disabled={assigningPm}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={handleAssignPmSave}
+                                                        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition shadow flex items-center gap-2 cursor-pointer"
+                                                        disabled={assigningPm || !selectedProjectIdForPm}
+                                                    >
+                                                        {assigningPm ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                                Saving...
+                                                            </>
+                                                        ) : 'Save'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
+
+                                </div>
                             </div>
+            </div>
 
-                {/* CREATE/EDIT DEPARTMENT DIALOG MODAL */}
-                        {deptModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
-                                <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95">
-                                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-                                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                            <Building2 className="text-blue-600 w-5 h-5" />
-                                            {currentDept ? 'Edit Department' : 'Create Department'}
-                                        </h3>
-                                        <button
-                                            onClick={() => setDeptModalOpen(false)}
-                                            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
+                    {/* CREATE/EDIT DEPARTMENT DIALOG MODAL */}
+                    {deptModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
+                            <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95">
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <Building2 className="text-blue-600 w-5 h-5" />
+                                        {currentDept ? 'Edit Department' : 'Create Department'}
+                                    </h3>
+                                    <button
+                                        onClick={() => setDeptModalOpen(false)}
+                                        className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleDeptSubmit} className="mt-4 space-y-4">
+                                    {/* Dept Name */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Department Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={deptForm.name}
+                                            onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                                            placeholder="e.g. Engineering, Human Resources"
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 font-semibold"
+                                        />
+                                    </div>
+
+                                    {/* Dept Description */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Description</label>
+                                        <textarea
+                                            value={deptForm.description}
+                                            onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
+                                            placeholder="Describe the responsibilities of this department"
+                                            rows={3}
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800"
+                                        />
+                                    </div>
+
+                                    {/* Manager Assignment */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assign Department Manager</label>
+                                        <select
+                                            value={deptForm.managerId}
+                                            onChange={(e) => setDeptForm({ ...deptForm, managerId: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-700 font-semibold"
                                         >
-                                            <X className="w-5 h-5" />
+                                            <option value="">No Manager Assigned</option>
+                                            {users.map((u) => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Submit & Cancel */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDeptModalOpen(false)}
+                                            className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={submittingDept}
+                                            className="flex items-center gap-1.5 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                        >
+                                            {submittingDept ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    Saving...
+                                                </>
+                                            ) : (
+                                                'Save Department'
+                                            )}
                                         </button>
                                     </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
 
-                                    <form onSubmit={handleDeptSubmit} className="mt-4 space-y-4">
-                                        {/* Dept Name */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Department Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={deptForm.name}
-                                                onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                                                placeholder="e.g. Engineering, Human Resources"
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 font-semibold"
-                                            />
-                                        </div>
+                    {/* ADD HOLIDAY DIALOG MODAL */}
+                    {holidayModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
+                            <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95">
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <Calendar className="text-blue-600 w-5 h-5" />
+                                        Add Organization Holiday
+                                    </h3>
+                                    <button
+                                        onClick={() => setHolidayModalOpen(false)}
+                                        className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
 
-                                        {/* Dept Description */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Description</label>
-                                            <textarea
-                                                value={deptForm.description}
-                                                onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
-                                                placeholder="Describe the responsibilities of this department"
-                                                rows={3}
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800"
-                                            />
-                                        </div>
+                                <form onSubmit={handleAddHoliday} className="mt-4 space-y-4">
+                                    {/* Holiday Name */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Holiday Title</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={holidayForm.name}
+                                            onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
+                                            placeholder="e.g. Independence Day, Christmas Holiday"
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
+                                        />
+                                    </div>
 
-                                        {/* Manager Assignment */}
+                                    {/* Holiday Date */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Date</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={holidayForm.date}
+                                            onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
+                                        />
+                                    </div>
+
+                                    {/* Submit & Cancel */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => setHolidayModalOpen(false)}
+                                            className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer"
+                                        >
+                                            Add to Schedule
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* EDIT EMPLOYEE ASSIGNMENTS MODAL */}
+                    {editingUser && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
+                            <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95">
+                                <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                            <UserCheck className="text-blue-600 w-5 h-5" />
+                                            Edit Employee Assignment
+                                        </h3>
+                                        <p className="text-xs text-gray-400 font-medium">Target user: {editingUser.name} ({editingUser.email})</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setEditingUser(null)}
+                                        className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleUserUpdateSubmit} className="mt-4 space-y-4">
+
+                                    {/* Position */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Job Title / Position</label>
+                                        <input
+                                            type="text"
+                                            value={userForm.position}
+                                            onChange={(e) => setUserForm({ ...userForm, position: e.target.value })}
+                                            placeholder="e.g. Senior Software Engineer"
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Role Selection */}
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assign Department Manager</label>
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Access Role</label>
                                             <select
-                                                value={deptForm.managerId}
-                                                onChange={(e) => setDeptForm({ ...deptForm, managerId: e.target.value })}
+                                                value={userForm.role}
+                                                onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                                                 className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-700 font-semibold"
                                             >
-                                                <option value="">No Manager Assigned</option>
-                                                {users.map((u) => (
-                                                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                                ))}
+                                                <option value="employee">Employee</option>
+                                                <option value="manager">Manager</option>
+                                                <option value="admin">Administrator</option>
                                             </select>
                                         </div>
 
-                                        {/* Submit & Cancel */}
-                                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-                                            <button
-                                                type="button"
-                                                onClick={() => setDeptModalOpen(false)}
-                                                className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
+                                        {/* Department selection */}
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Department</label>
+                                            <select
+                                                value={userForm.departmentId}
+                                                onChange={(e) => setUserForm({ ...userForm, departmentId: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-700 font-semibold"
                                             >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={submittingDept}
-                                                className="flex items-center gap-1.5 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                {submittingDept ? (
-                                                    <>
-                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                        Saving...
-                                                    </>
-                                                ) : (
-                                                    'Save Department'
-                                                )}
-                                            </button>
+                                                <option value="">Not Assigned</option>
+                                                {departments.map((d) => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ADD HOLIDAY DIALOG MODAL */}
-                        {holidayModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
-                                <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95">
-                                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-                                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                            <Calendar className="text-blue-600 w-5 h-5" />
-                                            Add Organization Holiday
-                                        </h3>
-                                        <button
-                                            onClick={() => setHolidayModalOpen(false)}
-                                            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
-                                        >
-                                            <X className="w-5 h-5" />
-                                        </button>
                                     </div>
 
-                                    <form onSubmit={handleAddHoliday} className="mt-4 space-y-4">
-                                        {/* Holiday Name */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Holiday Title</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={holidayForm.name}
-                                                onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
-                                                placeholder="e.g. Independence Day, Christmas Holiday"
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
-                                            />
-                                        </div>
+                                    {/* Contact Phone */}
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Contact Phone</label>
+                                        <input
+                                            type="text"
+                                            value={userForm.phone}
+                                            onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                                            placeholder="e.g. +1 555-0199"
+                                            className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800"
+                                        />
+                                    </div>
 
-                                        {/* Holiday Date */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Date</label>
-                                            <input
-                                                type="date"
-                                                required
-                                                value={holidayForm.date}
-                                                onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
-                                            />
-                                        </div>
-
-                                        {/* Submit & Cancel */}
-                                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-                                            <button
-                                                type="button"
-                                                onClick={() => setHolidayModalOpen(false)}
-                                                className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer"
-                                            >
-                                                Add to Schedule
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* EDIT EMPLOYEE ASSIGNMENTS MODAL */}
-                        {editingUser && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
-                                <div className="bg-white rounded-3xl border border-blue-100 shadow-2xl p-6 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95">
-                                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
-                                        <div>
-                                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                                <UserCheck className="text-blue-600 w-5 h-5" />
-                                                Edit Employee Assignment
-                                            </h3>
-                                            <p className="text-xs text-gray-400 font-medium">Target user: {editingUser.name} ({editingUser.email})</p>
-                                        </div>
+                                    {/* Submit & Cancel */}
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
                                         <button
+                                            type="button"
                                             onClick={() => setEditingUser(null)}
-                                            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition"
+                                            className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
                                         >
-                                            <X className="w-5 h-5" />
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={userUpdatingId !== null}
+                                            className="flex items-center gap-1.5 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                        >
+                                            {userUpdatingId !== null ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    Updating...
+                                                </>
+                                            ) : (
+                                                'Save Changes'
+                                            )}
                                         </button>
                                     </div>
-
-                                    <form onSubmit={handleUserUpdateSubmit} className="mt-4 space-y-4">
-
-                                        {/* Position */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Job Title / Position</label>
-                                            <input
-                                                type="text"
-                                                value={userForm.position}
-                                                onChange={(e) => setUserForm({ ...userForm, position: e.target.value })}
-                                                placeholder="e.g. Senior Software Engineer"
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {/* Role Selection */}
-                                            <div className="space-y-1">
-                                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Access Role</label>
-                                                <select
-                                                    value={userForm.role}
-                                                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                                                    className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-700 font-semibold"
-                                                >
-                                                    <option value="employee">Employee</option>
-                                                    <option value="manager">Manager</option>
-                                                    <option value="admin">Administrator</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Department selection */}
-                                            <div className="space-y-1">
-                                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Department</label>
-                                                <select
-                                                    value={userForm.departmentId}
-                                                    onChange={(e) => setUserForm({ ...userForm, departmentId: e.target.value })}
-                                                    className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-700 font-semibold"
-                                                >
-                                                    <option value="">Not Assigned</option>
-                                                    {departments.map((d) => (
-                                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Contact Phone */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Contact Phone</label>
-                                            <input
-                                                type="text"
-                                                value={userForm.phone}
-                                                onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                                                placeholder="e.g. +1 555-0199"
-                                                className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800"
-                                            />
-                                        </div>
-
-                                        {/* Submit & Cancel */}
-                                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditingUser(null)}
-                                                className="px-5 py-2.5 border border-gray-200 text-gray-500 text-xs font-bold rounded-2xl hover:bg-gray-50 transition cursor-pointer"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                disabled={userUpdatingId !== null}
-                                                className="flex items-center gap-1.5 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold rounded-2xl hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                {userUpdatingId !== null ? (
-                                                    <>
-                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                        Updating...
-                                                    </>
-                                                ) : (
-                                                    'Save Changes'
-                                                )}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
+                                </form>
                             </div>
-                        )}
-                    </div>
-                    );
+                        </div>
+                    )}
+            </div>
+        );
 }

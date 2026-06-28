@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { X, CheckSquare, Loader, Calendar, AlignLeft, User, AlertCircle, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import { getProjects, getProjectDetails } from '../Services/projectApi';
 import { createTask, updateTask } from '../Services/taskApi';
 
 const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
+    const { user } = useAuth();
     const [projectsList, setProjectsList] = useState([]);
     const [membersList, setMembersList] = useState([]);
     const [projectId, setProjectId] = useState('');
@@ -76,6 +78,10 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
 
     if (!isOpen) return null;
 
+    const currentMember = membersList.find((m) => m.id === user?.id);
+    const canManageTask = ['owner', 'admin', 'super_admin', 'manager'].includes(user?.role)
+        || ['owner', 'manager', 'project_manager'].includes(currentMember?.role);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -95,10 +101,10 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
                 projectId: parseInt(projectId, 10),
                 title: title.trim(),
                 description: description.trim() || undefined,
-                status,
+                status: canManageTask ? status : (status === 'done' ? 'review' : status),
                 priority,
-                assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
-                isMilestone,
+                assigneeId: canManageTask && assigneeId ? parseInt(assigneeId, 10) : null,
+                isMilestone: canManageTask ? isMilestone : false,
                 dueDate: dueDate || undefined,
             };
 
@@ -197,8 +203,14 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
                                 <option value="backlog">Backlog</option>
                                 <option value="todo">To Do</option>
                                 <option value="in-progress">In Progress</option>
-                                <option value="review">In Review</option>
-                                <option value="done">Completed</option>
+                                {canManageTask ? (
+                                    <>
+                                        <option value="review">In Review</option>
+                                        <option value="done">Completed</option>
+                                    </>
+                                ) : (
+                                    <option value="review">Submit for Review</option>
+                                )}
                             </select>
                         </div>
 
@@ -224,14 +236,17 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
                             <select
                                 value={assigneeId}
                                 onChange={(e) => setAssigneeId(e.target.value)}
-                                disabled={fetchingMembers}
-                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-gray-700 bg-white"
+                                disabled={fetchingMembers || !canManageTask}
+                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-gray-700 bg-white disabled:opacity-60"
                             >
-                                <option value="">Unassigned</option>
-                                {membersList.map((m) => (
+                                <option value="">{canManageTask ? 'Unassigned' : 'Assigned by project manager'}</option>
+                                {canManageTask && membersList.map((m) => (
                                     <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
                             </select>
+                            {!canManageTask && (
+                                <p className="text-[11px] text-gray-500 font-semibold mt-1">Only project managers can assign tasks.</p>
+                            )}
                         </div>
 
                         <div>

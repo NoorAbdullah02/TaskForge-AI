@@ -1,6 +1,7 @@
 import { db } from '../db/index';
-import { eq, and, desc, gte, count, like, inArray } from 'drizzle-orm';
-import { projects, tasks, attendance, leaveRequests, activityLogs, users, workspaceMembers, projectMembers } from '../db/schema';
+import { eq, and, desc, gte, count, like, inArray, or } from 'drizzle-orm';
+import { projects, tasks, attendance, leaveRequests, activityLogs, users, workspaceMembers } from '../db/schema';
+import { mergeStatusCounts } from '../lib/taskStatus';
 
 export class DashboardService {
     static async getStats(userId: number, workspaceId?: number | null) {
@@ -37,6 +38,8 @@ export class DashboardService {
             recentActivity,
             pendingMembersResult,
             activeMembersResult,
+            pendingReviewCountResult,
+            reviewQueueRows,
         ] = await Promise.all([
             workspaceId && workspaceProjectIds.length > 0
                 ? db.select({ status: projects.status, cnt: count() })
@@ -90,14 +93,14 @@ export class DashboardService {
                 ? db.select({ updatedAt: tasks.updatedAt })
                     .from(tasks)
                     .where(and(
-                        eq(tasks.status, 'done'),
+                        or(eq(tasks.status, 'done'), eq(tasks.status, 'approved')),
                         gte(tasks.updatedAt, eightWeeksAgo),
                         inArray(tasks.projectId, workspaceProjectIds)
                     ))
                 : db.select({ updatedAt: tasks.updatedAt })
                     .from(tasks)
                     .where(and(
-                        eq(tasks.status, 'done'),
+                        or(eq(tasks.status, 'done'), eq(tasks.status, 'approved')),
                         gte(tasks.updatedAt, eightWeeksAgo)
                     )),
 
@@ -135,6 +138,66 @@ export class DashboardService {
                         eq(workspaceMembers.status, 'active')
                     ))
                 : Promise.resolve([{ cnt: 0 }]),
+
+            // Pending review count
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({ cnt: count() })
+                    .from(tasks)
+                    .where(and(
+                        inArray(tasks.projectId, workspaceProjectIds),
+                        or(eq(tasks.status, 'review'), eq(tasks.status, 'in_review')),
+                        eq(tasks.isArchived, false)
+                    ))
+                : db.select({ cnt: count() })
+                    .from(tasks)
+                    .where(and(
+                        or(eq(tasks.status, 'review'), eq(tasks.status, 'in_review')),
+                        eq(tasks.isArchived, false)
+                    )),
+
+            // Review queue list
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({
+                    id: tasks.id,
+                    title: tasks.title,
+                    status: tasks.status,
+                    priority: tasks.priority,
+                    projectId: tasks.projectId,
+                    projectName: projects.name,
+                    assigneeId: tasks.assigneeId,
+                    assigneeName: users.name,
+                    updatedAt: tasks.updatedAt,
+                })
+                    .from(tasks)
+                    .innerJoin(projects, eq(tasks.projectId, projects.id))
+                    .leftJoin(users, eq(tasks.assigneeId, users.id))
+                    .where(and(
+                        inArray(tasks.projectId, workspaceProjectIds),
+                        or(eq(tasks.status, 'review'), eq(tasks.status, 'in_review')),
+                        eq(tasks.isArchived, false)
+                    ))
+                    .orderBy(desc(tasks.updatedAt))
+                    .limit(12)
+                : db.select({
+                    id: tasks.id,
+                    title: tasks.title,
+                    status: tasks.status,
+                    priority: tasks.priority,
+                    projectId: tasks.projectId,
+                    projectName: projects.name,
+                    assigneeId: tasks.assigneeId,
+                    assigneeName: users.name,
+                    updatedAt: tasks.updatedAt,
+                })
+                    .from(tasks)
+                    .innerJoin(projects, eq(tasks.projectId, projects.id))
+                    .leftJoin(users, eq(tasks.assigneeId, users.id))
+                    .where(and(
+                        or(eq(tasks.status, 'review'), eq(tasks.status, 'in_review')),
+                        eq(tasks.isArchived, false)
+                    ))
+                    .orderBy(desc(tasks.updatedAt))
+                    .limit(12),
         ]);
 
         // --- Project Stats ---
@@ -153,6 +216,9 @@ export class DashboardService {
             taskStats[r.status] = Number(r.cnt);
             totalTasks += Number(r.cnt);
         });
+
+        const normalizedTaskStats = mergeStatusCounts(taskStats);
+        const pendingReview = Number((pendingReviewCountResult as any[])[0]?.cnt || 0);
 
         const priorityStats: Record<string, number> = {};
         priorityRows.forEach((r) => {
@@ -227,8 +293,20 @@ export class DashboardService {
             },
             tasks: {
                 total: totalTasks,
-                byStatus: taskStats,
+                byStatus: normalizedTaskStats,
                 byPriority: priorityStats,
+                pendingReview,
+                reviewQueue: reviewQueueRows.map((row) => ({
+                    id: row.id,
+                    title: row.title,
+                    status: row.status === 'in_review' ? 'review' : row.status,
+                    priority: row.priority,
+                    projectId: row.projectId,
+                    projectName: row.projectName,
+                    assigneeId: row.assigneeId,
+                    assigneeName: row.assigneeName || 'Unassigned',
+                    updatedAt: row.updatedAt,
+                })),
             },
             attendance: {
                 rate: attendanceRate,

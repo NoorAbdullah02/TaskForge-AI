@@ -484,7 +484,7 @@ FRONTEND (frontend/package.json):
   npm run preview
     - Previews built frontend locally
 
-ML SERVICE (ml-service/):
+ML SERVICE (ml-service/) [optional for AI prediction features]:
   python run.py
     - Starts FastAPI server
     - Default: http://127.0.0.1:8000
@@ -497,7 +497,7 @@ ML SERVICE (ml-service/):
 API ENDPOINTS & CONNECTIONS
 ================================================================================
 
-ML SERVICE CONNECTION:
+ML SERVICE CONNECTION (optional for AI endpoints):
 
 Backend to ML Service:
   Location: Backend/src/services/ml.service.ts (Line 3)

@@ -19,21 +19,26 @@ const router = Router();
 router.use(checkValiditi);
 router.use(requireAuth);
 
-// System settings routes
-router.get('/settings', requireRole(['admin']), getSystemSettings);
-router.put('/settings', requireRole(['admin']), updateSystemSettings);
+// System settings routes — owners/admins manage; managers can view
+const settingsViewRoles = ['admin', 'owner', 'super_admin', 'manager'];
+const settingsManageRoles = ['admin', 'owner', 'super_admin'];
+const adminViewRoles = ['admin', 'owner', 'super_admin', 'manager'];
+const adminManageRoles = ['admin', 'owner', 'super_admin'];
+
+router.get('/settings', requireRole(settingsViewRoles), getSystemSettings);
+router.put('/settings', requireRole(settingsManageRoles), updateSystemSettings);
 
 // Department management routes
-router.get('/departments', requireRole(['admin', 'manager']), getAdminDepartments);
-router.post('/departments', requireRole(['admin']), createDepartment);
-router.put('/departments/:id', requireRole(['admin']), updateDepartment);
-router.delete('/departments/:id', requireRole(['admin']), deleteDepartment);
+router.get('/departments', requireRole(adminViewRoles), getAdminDepartments);
+router.post('/departments', requireRole(adminManageRoles), createDepartment);
+router.put('/departments/:id', requireRole(adminManageRoles), updateDepartment);
+router.delete('/departments/:id', requireRole(adminManageRoles), deleteDepartment);
 
 // User management routes
-router.get('/users', requireRole(['admin', 'manager']), getAdminUsers);
-router.put('/users/:id', requireRole(['admin']), updateUserRoleDept);
+router.get('/users', requireRole(adminViewRoles), getAdminUsers);
+router.put('/users/:id', requireRole(adminManageRoles), updateUserRoleDept);
 
 // Audit logs routes
-router.get('/audit-logs', requireRole(['admin', 'manager']), getAuditLogs);
+router.get('/audit-logs', requireRole(adminViewRoles), getAuditLogs);
 
 export default router;

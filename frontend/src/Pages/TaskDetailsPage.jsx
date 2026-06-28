@@ -589,9 +589,12 @@ const TaskDetailsPage = () => {
 
     // ─── Permissions ───────────────────────────────────────────────────────
     const currentMember = project?.members?.find(m => m.id === user?.id);
-    const isOwner = project?.members?.find(m => m.id === user?.id && m.role === 'owner') || user?.role === 'owner' || user?.role === 'super_admin';
-    const isPM    = (project && (currentMember?.role === 'manager' || isOwner)) || user?.role === 'super_admin' || user?.role === 'owner';
+    const isOwner = project?.members?.find(m => m.id === user?.id && m.role === 'owner') || user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'admin';
+    const isPM = isOwner
+        || user?.role === 'manager'
+        || (project && ['manager', 'project_manager', 'owner'].includes(currentMember?.role));
     const isAssignee = task?.assigneeId === user?.id;
+    const isReviewStatus = task?.status === 'review' || task?.status === 'in_review';
 
     // ─── Handlers ──────────────────────────────────────────────────────────
     const handleStatusChange = async (newStatus) => {
@@ -673,6 +676,10 @@ const TaskDetailsPage = () => {
     };
 
     const handleAssignMember = async (userId) => {
+        if (!isPM) {
+            toast.error('Only project managers can assign tasks');
+            return;
+        }
         try { await updateTask(id, { assigneeId: userId }); toast.success('Assignee updated'); setIsRecommenderOpen(false); fetchDetails(); }
         catch { toast.error('Failed to update assignee'); }
     };
@@ -829,7 +836,7 @@ const TaskDetailsPage = () => {
 
                             {/* Action Buttons */}
                             <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-gray-100">
-                                {isPM && task.status === 'review' && (
+                                {isPM && isReviewStatus && (
                                     <>
                                         <button onClick={handleApproveTask}
                                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition shadow-sm">
@@ -1128,14 +1135,20 @@ const TaskDetailsPage = () => {
                                             <select
                                                 value={task.status}
                                                 onChange={e => handleStatusChange(e.target.value)}
-                                                disabled={task.isLocked || (!isPM && (task.assigneeId !== user?.id || task.status === 'review' || task.status === 'done'))}
+                                                disabled={task.isLocked || (!isPM && (task.assigneeId !== user?.id || isReviewStatus || task.status === 'done'))}
                                                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed"
                                             >
                                                 <option value="backlog">Backlog</option>
                                                 <option value="todo">To Do</option>
                                                 <option value="in-progress">In Progress</option>
-                                                <option value="review">In Review</option>
-                                                <option value="done">Completed</option>
+                                                {isPM ? (
+                                                    <>
+                                                        <option value="review">In Review</option>
+                                                        <option value="done">Completed</option>
+                                                    </>
+                                                ) : (
+                                                    <option value="review">Submit for Review</option>
+                                                )}
                                             </select>
                                             {task.isLocked && <p className="text-[10px] text-red-500 font-bold mt-1">🔒 Task is locked — contact PM to unlock</p>}
                                         </div>
@@ -1144,11 +1157,13 @@ const TaskDetailsPage = () => {
                                         <div>
                                             <div className="flex justify-between items-center mb-2">
                                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Assignee</label>
-                                                <button onClick={handleRecommendAssignee} disabled={recommending}
-                                                    className="text-[10px] font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition disabled:opacity-50">
-                                                    {recommending ? <Loader className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
-                                                    AI Recommend
-                                                </button>
+                                                {isPM && (
+                                                    <button onClick={handleRecommendAssignee} disabled={recommending}
+                                                        className="text-[10px] font-extrabold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition disabled:opacity-50">
+                                                        {recommending ? <Loader className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
+                                                        AI Recommend
+                                                    </button>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
                                                 <div className="w-8 h-8 bg-indigo-600 text-white text-sm font-black rounded-full flex items-center justify-center">

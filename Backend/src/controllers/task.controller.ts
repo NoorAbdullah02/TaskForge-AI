@@ -7,6 +7,7 @@ import { subtasks, comments, attachments, users } from '../db/schema';
 import { imagekit } from '../lib/imagekit';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { isProjectManager, isProjectMember } from '../lib/projectAuth';
+import { isReviewStatus, normalizeIncomingStatus } from '../lib/taskStatus';
 import { socketService } from '../services/socket.service';
 import { ProjectIntelligenceService } from '../services/projectIntelligence.service';
 import { NotificationService } from '../services/notification.service';
@@ -14,10 +15,41 @@ import { NotificationService } from '../services/notification.service';
 
 export class TaskController {
     // Helper to check if a user is a member of a project
-    private static async verifyMembership(userId: number, projectId: number) {
-        const details = await ProjectService.getProjectDetails(projectId);
-        if (!details) return false;
-        return details.members.some((m) => m.id === userId);
+    private static async verifyMembership(userId: number, userRole: string, projectId: number) {
+        return isProjectMember(userId, userRole, projectId);
+    }
+
+    private static async notifyTaskReviewers(
+        projectId: number,
+        taskId: number,
+        taskTitle: string,
+        submitterName: string,
+        workspaceId?: number | null
+    ) {
+        if (!workspaceId) return;
+
+        const projectDetails = await ProjectService.getProjectDetails(projectId);
+        const reviewerIds = new Set<number>();
+
+        projectDetails?.members?.forEach((member: any) => {
+            if (['owner', 'manager', 'project_manager'].includes(member.role)) {
+                reviewerIds.add(member.id);
+            }
+        });
+
+        for (const reviewerId of reviewerIds) {
+            await NotificationService.dispatch({
+                event: 'task.assigned',
+                userId: reviewerId,
+                workspaceId,
+                entityType: 'task',
+                entityId: taskId,
+                title: 'Task Ready for Review',
+                message: `${submitterName} submitted "${taskTitle}" for review in project "${projectDetails?.name || 'Unknown'}".`,
+                link: `/tasks/${taskId}`,
+                skipEmail: true,
+            });
+        }
     }
 
     // List all tasks forprojects user belongs to
@@ -54,7 +86,7 @@ export class TaskController {
             if (!details) return res.status(404).json({ message: 'Task not found' });
 
             // Security: Check if user is member of task's project
-            const isMember = await TaskController.verifyMembership(user.id, details.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, details.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied: Not a member of the project' });
 
             return res.status(200).json(details);
@@ -83,14 +115,20 @@ export class TaskController {
                 return res.status(403).json({ message: 'Access denied: Only project members can create tasks' });
             }
 
+            const isPM = await isProjectManager(user.id, user.role, parsedProjectId);
+            const parsedAssigneeId = assigneeId ? parseInt(assigneeId, 10) : null;
+            if (!isPM && parsedAssigneeId && parsedAssigneeId !== user.id) {
+                return res.status(403).json({ message: 'Access denied: Only project managers can assign tasks to others' });
+            }
+
             const task = await TaskService.createTask({
                 projectId: parsedProjectId,
                 title: title.trim(),
                 description: description || null,
-                status: status || 'todo',
+                status: normalizeIncomingStatus(status) || 'todo',
                 priority: priority || 'medium',
                 workType: workType || 'task',
-                assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
+                assigneeId: isPM ? parsedAssigneeId : (parsedAssigneeId === user.id ? user.id : null),
                 isMilestone: !!isMilestone,
                 dueDate: dueDate ? new Date(dueDate) : null,
             });
@@ -146,12 +184,13 @@ export class TaskController {
             if (!details) return res.status(404).json({ message: 'Task not found' });
 
             // Security: Check project membership
-            const isMember = await TaskController.verifyMembership(user.id, details.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, details.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const isPM = await isProjectManager(user.id, user.role, details.projectId);
 
             const { title, description, status, priority, assigneeId, isMilestone, dueDate } = req.body;
+            const normalizedStatus = normalizeIncomingStatus(status);
 
             // RBAC: If not PM/Owner, only allow status updates on tasks assigned to them
             if (!isPM) {
@@ -164,30 +203,44 @@ export class TaskController {
                     return res.status(403).json({ message: 'Access denied: Employees can only update the status of their assigned tasks' });
                 }
                 // Cannot transition out of review/done/approved/rejected without PM approval
-                if (details.status === 'in_review' || details.status === 'review' || details.status === 'approved' || details.status === 'done' || details.status === 'rejected') {
+                if (isReviewStatus(details.status) || details.status === 'approved' || details.status === 'done' || details.status === 'rejected') {
                     return res.status(403).json({ message: 'Access denied: Only project managers can transition tasks from this status' });
                 }
-                // Cannot set status to approved, rejected, or done directly
-                if (status === 'approved' || status === 'rejected' || status === 'done') {
-                    return res.status(403).json({ message: 'Access denied: Only project managers can approve/complete tasks' });
+                // Employees submit work for review — cannot mark done directly
+                if (normalizedStatus === 'approved' || normalizedStatus === 'rejected' || normalizedStatus === 'done') {
+                    return res.status(403).json({ message: 'Access denied: Submit tasks for review instead of marking them complete' });
                 }
             }
 
             const updated = await TaskService.updateTask(taskId, {
                 title: title ? title.trim() : undefined,
                 description: description !== undefined ? description : undefined,
-                status: status || undefined,
+                status: normalizedStatus || undefined,
                 priority: priority || undefined,
-                assigneeId: assigneeId !== undefined ? (assigneeId ? parseInt(assigneeId, 10) : null) : undefined,
+                assigneeId: isPM && assigneeId !== undefined ? (assigneeId ? parseInt(assigneeId, 10) : null) : undefined,
                 isMilestone: isMilestone !== undefined ? !!isMilestone : undefined,
                 dueDate: dueDate ? new Date(dueDate) : undefined,
-            });
+            }, user.id);
 
             if (user.activeWorkspaceId) {
                 const projectDetails = await ProjectService.getProjectDetails(updated.projectId);
 
+                if (
+                    normalizedStatus &&
+                    isReviewStatus(normalizedStatus) &&
+                    !isReviewStatus(details.status)
+                ) {
+                    await TaskController.notifyTaskReviewers(
+                        updated.projectId,
+                        updated.id,
+                        updated.title,
+                        user.name,
+                        user.activeWorkspaceId
+                    );
+                }
+
                 // If assignee changed, send unified notification
-                if (assigneeId !== undefined && assigneeId !== details.assigneeId && updated.assigneeId) {
+                if (isPM && assigneeId !== undefined && assigneeId !== details.assigneeId && updated.assigneeId) {
                     await NotificationService.dispatch({
                         event: 'task.assigned',
                         userId: updated.assigneeId,
@@ -285,11 +338,11 @@ export class TaskController {
             }
 
             if (details.status !== 'in_review' && details.status !== 'review') {
-                return res.status(400).json({ message: 'Only tasks with status "in_review" or "review" can be approved' });
+                return res.status(400).json({ message: 'Only tasks awaiting review can be approved' });
             }
 
 
-            const updated = await TaskService.approveTask(taskId);
+            const updated = await TaskService.approveTask(taskId, user.id);
 
             // Notify assignee
             if (updated.assigneeId && user.activeWorkspaceId) {
@@ -347,11 +400,11 @@ export class TaskController {
             }
 
             if (details.status !== 'in_review' && details.status !== 'review') {
-                return res.status(400).json({ message: 'Only tasks with status "in_review" or "review" can be rejected' });
+                return res.status(400).json({ message: 'Only tasks awaiting review can be rejected' });
             }
 
 
-            const updated = await TaskService.rejectTask(taskId);
+            const updated = await TaskService.rejectTask(taskId, user.id, reason);
 
             // Notify assignee
             if (updated.assigneeId && user.activeWorkspaceId) {
@@ -406,7 +459,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const sub = await TaskService.createSubtask({
@@ -433,7 +486,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(sub.taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const updated = await TaskService.updateSubtask(subtaskId, {
@@ -458,7 +511,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(sub.taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             await TaskService.deleteSubtask(subtaskId);
@@ -482,7 +535,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const comment = await TaskService.createComment({
@@ -553,7 +606,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const att = await TaskService.createAttachment({
@@ -582,7 +635,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(att.taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             // If the attachment has a fileId in the URL hash, delete it from ImageKit
@@ -723,7 +776,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const updated = await TaskService.undoChange(taskId, user.id);
@@ -742,7 +795,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const updated = await TaskService.redoChange(taskId, user.id);
@@ -801,7 +854,7 @@ export class TaskController {
             const task = await TaskService.getTaskDetails(taskId);
             if (!task) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, task.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, task.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const duplicated = await TaskService.duplicateTask(taskId, user.id);
@@ -992,7 +1045,7 @@ export class TaskController {
             const details = await TaskService.getTaskDetails(taskId);
             if (!details) return res.status(404).json({ message: 'Task not found' });
 
-            const isMember = await TaskController.verifyMembership(user.id, details.projectId);
+            const isMember = await TaskController.verifyMembership(user.id, user.role, details.projectId);
             if (!isMember) return res.status(403).json({ message: 'Access denied' });
 
             const scores = await ProjectIntelligenceService.calculateTaskRiskAndAIScores(taskId);

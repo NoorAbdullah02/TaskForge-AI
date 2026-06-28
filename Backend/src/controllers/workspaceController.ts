@@ -708,7 +708,8 @@ export class WorkspaceController {
             const fullUser = await queries.findUserById(user.id);
             const isAuthorized = fullUser?.role === 'super_admin' ||
                 membership?.role === 'owner' ||
-                membership?.role === 'admin';
+                membership?.role === 'admin' ||
+                membership?.role === 'manager';
 
             if (!isAuthorized) {
                 return res.status(403).json({ message: 'Only workspace owners and admins can view workspace details' });
