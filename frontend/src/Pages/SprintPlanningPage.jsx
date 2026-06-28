@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
-import { getSprints, createSprint, updateSprint, deleteSprint, startSprint, completeSprint } from '../Services/agileApi';
+import { getSprints, createSprint, deleteSprint, startSprint, completeSprint } from '../Services/agileApi';
 import { getProjects } from '../Services/projectApi';
 import { getTasks, updateTask } from '../Services/taskApi';
 import { getAdminUsers } from '../Services/adminApi';
@@ -23,7 +23,7 @@ export default function SprintPlanningPage() {
     const [selectedProjectId, setSelectedProjectId] = useState('');
     const [sprints, setSprints] = useState([]);
     const [tasksList, setTasksList] = useState([]);
-    const [usersList, setUsersList] = useState([]);
+    const [, setUsersList] = useState([]);
 
     // Modals
     const [sprintModalOpen, setSprintModalOpen] = useState(false);
@@ -31,7 +31,7 @@ export default function SprintPlanningPage() {
     const [submittingSprint, setSubmittingSprint] = useState(false);
 
     // Collapsed states
-    const [collapsedBacklog, setCollapsedBacklog] = useState(false);
+    const [, setCollapsedBacklog] = useState(false);
     const [collapsedSprints, setCollapsedSprints] = useState({});
 
     // Filter
@@ -116,7 +116,7 @@ export default function SprintPlanningPage() {
     // Sprints
     const activeSprint = sprints.find(s => s.status === 'active');
     const futureSprints = sprints.filter(s => s.status === 'future');
-    const completedSprints = sprints.filter(s => s.status === 'completed');
+    const _completedSprints = sprints.filter(s => s.status === 'completed'); // eslint-disable-line no-unused-vars
 
     const handleCreateSprint = async (e) => {
         e.preventDefault();

@@ -14,11 +14,11 @@ import { updateTask } from '../Services/taskApi';
 import toast from 'react-hot-toast';
 
 const WORK_TYPE_ICONS = {
-    task: { icon: CheckSquare, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
-    request: { icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
-    campaign: { icon: Megaphone, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' },
-    candidate: { icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-    asset: { icon: FileImage, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
+    task: { icon: CheckSquare, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+    request: { icon: HelpCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    campaign: { icon: Megaphone, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+    candidate: { icon: UserPlus, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+    asset: { icon: FileImage, color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
 };
 
 function KanbanTaskCard({ task, onClick, priorityColors }) {
@@ -35,7 +35,7 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
     };
 
     // A click handler that ensures dragging action doesn't conflict with normal click events
-    const handleCardClick = (e) => {
+    const handleCardClick = (_e) => {
         // Prevent click if we were dragging
         if (transform && (Math.abs(transform.x) > 2 || Math.abs(transform.y) > 2)) {
             return;
@@ -53,35 +53,35 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
             {...attributes}
             {...listeners}
             onClick={handleCardClick}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-150 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing space-y-3 relative group"
+            className="bg-card p-4 rounded-2xl shadow-soft border border-line hover:shadow-float hover:-translate-y-0.5 transition-all duration-300 cursor-grab active:cursor-grabbing space-y-3 relative group"
         >
             <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2.5">
                     <div className={`p-1.5 rounded-lg border shrink-0 ${workTypeInfo.bg}`}>
                         <WorkTypeIcon className={`w-3.5 h-3.5 ${workTypeInfo.color}`} />
                     </div>
-                    <h5 className="font-bold text-gray-800 line-clamp-2">{task.title}</h5>
+                    <h5 className="font-bold text-ink leading-snug line-clamp-2">{task.title}</h5>
                 </div>
                 {task.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
             </div>
-            <p className="text-xxs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
+            <p className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20 w-fit">
                 {task.projectName}
             </p>
 
-            <div className="flex justify-between items-center pt-2 text-xxs border-t border-gray-50">
-                <div className="flex items-center gap-1">
-                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase border ${priorityColors[task.priority] || priorityColors.medium}`}>
+            <div className="flex justify-between items-center pt-3 text-xxs border-t border-line">
+                <div className="flex items-center gap-1.5">
+                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase border text-[9px] ${priorityColors[task.priority] || priorityColors.medium}`}>
                         {task.priority}
                     </span>
                     {task.assigneeName && (
-                        <span className="bg-blue-50 text-blue-755 font-bold px-2 py-0.5 rounded-full text-xxs flex items-center gap-0.5 border border-blue-100">
+                        <span className="bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full text-[9px] flex items-center gap-0.5 border border-blue-500/20">
                             👤 {task.assigneeName}
                         </span>
                     )}
                 </div>
                 {task.dueDate && (
-                    <span className="text-gray-400 font-semibold flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-ink-soft font-semibold flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-ink-faint" />
                         {new Date(task.dueDate).toLocaleDateString()}
                     </span>
                 )}
@@ -98,22 +98,22 @@ function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
     return (
         <div
             ref={setNodeRef}
-            className={`bg-gray-50 rounded-3xl p-4 border-2 transition-all duration-200 flex-1 min-w-[250px] flex flex-col ${
-                isOver ? 'border-dashed border-blue-400 bg-blue-50/30 shadow-inner' : 'border-gray-200/50'
+            className={`bg-surface-2/45 rounded-3xl p-4 border border-line transition-all duration-300 flex-1 min-w-[250px] flex flex-col ${
+                isOver ? 'border-dashed border-blue-400 bg-blue-500/10 shadow-inner' : ''
             }`}
         >
             <div className="flex justify-between items-center mb-4 px-1">
-                <h4 className="font-extrabold text-gray-700 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                <h4 className="font-extrabold text-ink-soft uppercase tracking-wider text-xs flex items-center gap-1.5">
                     <span className={`w-2.5 h-2.5 rounded-full ${
-                        status === 'backlog' ? 'bg-gray-400' :
-                        status === 'todo' ? 'bg-blue-400' :
-                        status === 'in-progress' ? 'bg-amber-400 animate-pulse' :
-                        status === 'review' ? 'bg-indigo-400' :
-                        'bg-emerald-400'
+                        status === 'backlog' ? 'bg-slate-500' :
+                        status === 'todo' ? 'bg-blue-500' :
+                        status === 'in-progress' ? 'bg-amber-500 animate-pulse' :
+                        status === 'review' ? 'bg-purple-500' :
+                        'bg-emerald-500'
                     }`} />
                     {title}
                 </h4>
-                <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xxs">
+                <span className="bg-surface-3 border border-line text-ink font-bold px-2.5 py-0.5 rounded-full text-[10px] shadow-sm">
                     {tasks.length}
                 </span>
             </div>
@@ -128,9 +128,9 @@ function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
                     />
                 ))}
                 {tasks.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-[200px] border-2 border-dashed border-gray-200 rounded-2xl bg-white/20 select-none">
-                        <Sparkles className="w-6 h-6 text-gray-300 mb-2" />
-                        <p className="text-center text-gray-400 text-xs font-semibold">Drop tasks here</p>
+                    <div className="flex flex-col items-center justify-center h-[200px] border-2 border-dashed border-line rounded-2xl bg-surface-2/20 select-none">
+                        <Sparkles className="w-6 h-6 text-ink-faint/30 mb-2" />
+                        <p className="text-center text-ink-soft text-xs font-semibold">Drop tasks here</p>
                     </div>
                 )}
             </div>
@@ -227,26 +227,26 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
 
             <DragOverlay adjustScale={true}>
                 {activeTask && ActiveWorkTypeIcon && activeWorkTypeInfo ? (
-                    <div className="bg-white p-4 rounded-2xl shadow-xl border-2 border-blue-500 scale-105 opacity-90 cursor-grabbing space-y-3 relative select-none pointer-events-none">
+                    <div className="bg-card p-4 rounded-2xl shadow-xl border-2 border-blue-500 scale-105 opacity-90 cursor-grabbing space-y-3 relative select-none pointer-events-none">
                         <div className="flex items-start justify-between gap-2">
                             <div className="flex items-start gap-2">
                                 <div className={`p-1.5 rounded-lg border shrink-0 ${activeWorkTypeInfo.bg}`}>
                                     <ActiveWorkTypeIcon className={`w-3.5 h-3.5 ${activeWorkTypeInfo.color}`} />
                                 </div>
-                                <h5 className="font-bold text-gray-800 line-clamp-2">{activeTask.title}</h5>
+                                <h5 className="font-bold text-ink line-clamp-2">{activeTask.title}</h5>
                             </div>
                             {activeTask.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
                         </div>
-                        <p className="text-xxs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
+                        <p className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-500/20 w-fit">
                             {activeTask.projectName}
                         </p>
 
-                        <div className="flex justify-between items-center pt-2 text-xxs border-t border-gray-50">
+                        <div className="flex justify-between items-center pt-2 text-xxs border-t border-line">
                             <span className={`px-2 py-0.5 rounded font-extrabold uppercase border ${priorityColors[activeTask.priority] || priorityColors.medium}`}>
                                 {activeTask.priority}
                             </span>
                             {activeTask.dueDate && (
-                                <span className="text-gray-400 font-semibold flex items-center gap-1">
+                                <span className="text-ink-soft font-semibold flex items-center gap-1">
                                     <Calendar className="w-3.5 h-3.5" />
                                     {new Date(activeTask.dueDate).toLocaleDateString()}
                                 </span>

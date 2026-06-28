@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     applyLeave,
@@ -28,8 +27,6 @@ import toast from 'react-hot-toast';
 
 const LeavePage = () => {
     const { isLoggedIn, loading: authLoading, user } = useAuth();
-    const navigate = useNavigate();
-
     // Tabs: 'my-leaves' or 'approvals'
     const [activeTab, setActiveTab] = useState('my-leaves');
 
@@ -126,7 +123,7 @@ const LeavePage = () => {
             await approveLeave(id);
             toast.success('Leave request approved! 👍');
             fetchLeavesData();
-        } catch (error) {
+        } catch {
             toast.error('Approval failed');
             fetchLeavesData();
         }
@@ -141,7 +138,7 @@ const LeavePage = () => {
             await rejectLeave(id);
             toast.success('Leave request rejected! 👎');
             fetchLeavesData();
-        } catch (error) {
+        } catch {
             toast.error('Rejection failed');
             fetchLeavesData();
         }
@@ -386,22 +383,26 @@ const LeavePage = () => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {req.status === 'pending' ? (
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() => handleApprove(req.id)}
-                                                                    className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold"
-                                                                    title="Approve Leave"
-                                                                >
-                                                                    <ThumbsUp className="w-3.5 h-3.5" /> Approve
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleReject(req.id)}
-                                                                    className="p-1.5 bg-rose-50 text-rose-700 border border-rose-100 hover:bg-rose-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold"
-                                                                    title="Reject Leave"
-                                                                >
-                                                                    <ThumbsDown className="w-3.5 h-3.5" /> Reject
-                                                                </button>
-                                                            </div>
+                                                            user?.role === 'owner' ? (
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() => handleApprove(req.id)}
+                                                                        className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer"
+                                                                        title="Approve Leave"
+                                                                    >
+                                                                        <ThumbsUp className="w-3.5 h-3.5" /> Approve
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleReject(req.id)}
+                                                                        className="p-1.5 bg-rose-50 text-rose-700 border border-rose-100 hover:bg-rose-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer"
+                                                                        title="Reject Leave"
+                                                                    >
+                                                                        <ThumbsDown className="w-3.5 h-3.5" /> Reject
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xxs text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded font-bold">Pending Review</span>
+                                                            )
                                                         ) : (
                                                             <span className="text-xxs text-gray-400 font-bold">Closed</span>
                                                         )}

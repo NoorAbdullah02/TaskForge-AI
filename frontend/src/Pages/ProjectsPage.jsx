@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-    getProjects, 
-    getProjectsFiltered, 
-    archiveProject, 
-    restoreProject, 
-    duplicateProject, 
-    moveProject, 
-    transferOwnership, 
-    joinProject, 
-    exportProjects, 
-    importProjects 
+import {
+    getProjectsFiltered,
+    archiveProject,
+    restoreProject,
+    duplicateProject,
+    transferOwnership,
+    joinProject,
+    exportProjects,
+    importProjects
 } from '../Services/projectApi';
 import { getWorkspaceMembers } from '../Services/workspaceApi';
 import CreateProjectModal from '../Components/CreateProjectModal';

@@ -115,7 +115,7 @@ export const StatRing = ({ value = 0, color = '#6366f1', label, subLabel, size =
           <span className="text-xs font-black" style={{ color }}>{label ?? `${value}%`}</span>
         </div>
       </div>
-      {subLabel && <span className="text-[10px] text-ink0 text-center">{subLabel}</span>}
+      {subLabel && <span className="text-[10px] text-ink-soft text-center">{subLabel}</span>}
     </div>
   );
 };

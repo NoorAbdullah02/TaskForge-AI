@@ -46,7 +46,7 @@ const TaskModal = ({ isOpen, onClose, task = null, onTaskSaved }) => {
                             setProjectId(data[0].id);
                         }
                     }
-                } catch (error) {
+                } catch {
                     toast.error('Failed to load projects list');
                 } finally {
                     setFetchingProjects(false);

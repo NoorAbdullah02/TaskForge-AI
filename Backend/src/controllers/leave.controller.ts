@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { LeaveService } from '../services/leave.service';
 import { EmailTriggerService } from '../services/emailTrigger.service';
 import { db } from '../db/index';
-import { users, leaveRequests } from '../db/schema';
+import { users, leaveRequests, workspaces } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { NotificationService } from '../services/notification.service';
 
@@ -37,8 +37,7 @@ export class LeaveController {
                 reason: reason.trim()
             });
 
-            // Notify managers about new leave request
-            // Find workspace admins/managers to notify
+            // Notify applicant about new leave request submission
             if (user.activeWorkspaceId) {
                 await NotificationService.dispatch({
                     event: 'leave.request',
@@ -48,9 +47,40 @@ export class LeaveController {
                     entityId: record.id,
                     title: `Leave Request Submitted`,
                     message: `Your ${leaveType} leave request from ${start.toLocaleDateString()} to ${end.toLocaleDateString()} has been submitted.`,
-                    link: `/leaves/${record.id}`,
-                    skipEmail: true, // Employee doesn't need email — managers get notified separately
+                    link: `/leaves`,
+                    skipEmail: true,
                 });
+
+                // Find the workspace owner and notify them
+                const wsList = await db
+                    .select()
+                    .from(workspaces)
+                    .where(eq(workspaces.id, user.activeWorkspaceId))
+                    .limit(1);
+                if (wsList.length > 0 && wsList[0].ownerId) {
+                    const ownerId = wsList[0].ownerId;
+                    if (ownerId !== user.id) {
+                        await NotificationService.dispatch({
+                            event: 'leave.request',
+                            userId: ownerId,
+                            workspaceId: user.activeWorkspaceId,
+                            entityType: 'leave',
+                            entityId: record.id,
+                            title: `New Leave Request from ${user.name}`,
+                            message: `${user.name} has requested a ${leaveType} leave from ${start.toLocaleDateString()} to ${end.toLocaleDateString()}.`,
+                            link: `/leaves`,
+                            emailTemplate: 'leaveRequest',
+                            emailData: {
+                                employeeName: user.name,
+                                leaveType,
+                                startDate: start.toLocaleDateString(),
+                                endDate: end.toLocaleDateString(),
+                                reason: reason.trim(),
+                                link: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/leaves`,
+                            },
+                        });
+                    }
+                }
             }
 
             return res.status(201).json({
@@ -97,6 +127,11 @@ export class LeaveController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
+            // Enforce owner role restriction for approval
+            if (user.role !== 'owner') {
+                return res.status(403).json({ message: 'Forbidden: Only the workspace owner can approve leave requests' });
+            }
+
             const leaveId = parseInt(req.params.id, 10);
             if (isNaN(leaveId)) {
                 return res.status(400).json({ message: 'Invalid leave request ID' });
@@ -104,7 +139,16 @@ export class LeaveController {
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'approved', user.id);
 
-            // Send unified notification via NotificationService
+            // Get applicant name for owner confirmation message
+            const applicant = await db
+                .select()
+                .from(users)
+                .where(eq(users.id, record.userId))
+                .limit(1)
+                .then((res) => res[0]);
+            const applicantName = applicant ? applicant.name : 'Employee';
+
+            // Send unified notification to the applicant via NotificationService
             if (user.activeWorkspaceId) {
                 await NotificationService.dispatch({
                     event: 'leave.approved',
@@ -121,8 +165,21 @@ export class LeaveController {
                         startDate: record.startDate.toLocaleDateString(),
                         endDate: record.endDate.toLocaleDateString(),
                         approvedBy: user.name,
-                        link: '/leaves',
+                        link: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/leaves`,
                     },
+                });
+
+                // Send a confirmation notification to the owner
+                await NotificationService.dispatch({
+                    event: 'leave.approved_owner',
+                    userId: user.id,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'leave',
+                    entityId: leaveId,
+                    title: 'Leave Request Approved',
+                    message: `You approved ${record.leaveType} leave for ${applicantName} from ${record.startDate.toLocaleDateString()} to ${record.endDate.toLocaleDateString()}.`,
+                    link: '/leaves',
+                    skipEmail: true,
                 });
             }
 
@@ -142,6 +199,11 @@ export class LeaveController {
             const user = (req as any).user;
             if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
+            // Enforce owner role restriction for rejection
+            if (user.role !== 'owner') {
+                return res.status(403).json({ message: 'Forbidden: Only the workspace owner can reject leave requests' });
+            }
+
             const leaveId = parseInt(req.params.id, 10);
             if (isNaN(leaveId)) {
                 return res.status(400).json({ message: 'Invalid leave request ID' });
@@ -149,7 +211,16 @@ export class LeaveController {
 
             const record = await LeaveService.updateLeaveStatus(leaveId, 'rejected', user.id);
 
-            // Send unified notification via NotificationService
+            // Get applicant name for owner confirmation message
+            const applicant = await db
+                .select()
+                .from(users)
+                .where(eq(users.id, record.userId))
+                .limit(1)
+                .then((res) => res[0]);
+            const applicantName = applicant ? applicant.name : 'Employee';
+
+            // Send unified notification to the applicant via NotificationService
             if (user.activeWorkspaceId) {
                 await NotificationService.dispatch({
                     event: 'leave.rejected',
@@ -167,8 +238,21 @@ export class LeaveController {
                         endDate: record.endDate.toLocaleDateString(),
                         rejectedBy: user.name,
                         reason: null,
-                        link: '/leaves',
+                        link: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/leaves`,
                     },
+                });
+
+                // Send a confirmation notification to the owner
+                await NotificationService.dispatch({
+                    event: 'leave.rejected_owner',
+                    userId: user.id,
+                    workspaceId: user.activeWorkspaceId,
+                    entityType: 'leave',
+                    entityId: leaveId,
+                    title: 'Leave Request Rejected',
+                    message: `You rejected ${record.leaveType} leave for ${applicantName} from ${record.startDate.toLocaleDateString()} to ${record.endDate.toLocaleDateString()}.`,
+                    link: '/leaves',
+                    skipEmail: true,
                 });
             }
 

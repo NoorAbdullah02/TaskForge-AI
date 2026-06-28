@@ -1,8 +1,9 @@
 import { Server } from 'socket.io';
 import { db } from '../db/index';
-import { notifications } from '../db/schema';
+import { notifications, chatMembers } from '../db/schema';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { and, eq } from 'drizzle-orm';
 
 const parseCookies = (cookieString: string) => {
     const list: Record<string, string> = {};
@@ -98,10 +99,26 @@ class SocketService {
             socket.on('joinWorkspace', handleJoinWorkspace);
             socket.on('join_workspace', handleJoinWorkspace);
 
-            socket.on('join_chat', (chatId: number) => {
+            socket.on('join_chat', async (chatId: number) => {
                 if (chatId) {
-                    socket.join(`chat_${chatId}`);
-                    console.log(`💬 Socket ${socket.id} joined Chat Room chat_${chatId}`);
+                    try {
+                        const [membership] = await db.select()
+                            .from(chatMembers)
+                            .where(
+                                and(
+                                    eq(chatMembers.chatId, chatId),
+                                    eq(chatMembers.userId, userId)
+                                )
+                            );
+                        if (membership) {
+                            socket.join(`chat_${chatId}`);
+                            console.log(`💬 Socket ${socket.id} joined Chat Room chat_${chatId}`);
+                        } else {
+                            console.warn(`⚠️ Access denied: User ${userId} is not a member of chat_${chatId}`);
+                        }
+                    } catch (err) {
+                        console.error('Error joining chat socket room:', err);
+                    }
                 }
             });
 

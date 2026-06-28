@@ -42,7 +42,8 @@ import {
     HelpCircle,
     Megaphone,
     FileImage,
-    Brain
+    Brain,
+    ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -95,6 +96,7 @@ const ProjectDetailsPage = () => {
     const [editStart, setEditStart] = useState('');
     const [editEnd, setEditEnd] = useState('');
     const [isSavingProject, setIsSavingProject] = useState(false);
+    const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
     // Redirect if unauthorized
     useEffect(() => {
@@ -246,6 +248,22 @@ const ProjectDetailsPage = () => {
         }
     };
 
+    const handleUpdateStatus = async (newStatus) => {
+        try {
+            await updateProject(id, {
+                name: project.name,
+                description: project.description || '',
+                status: newStatus,
+                startDate: project.startDate ? project.startDate.split('T')[0] : null,
+                endDate: project.endDate ? project.endDate.split('T')[0] : null,
+            });
+            toast.success(`Project status updated to ${newStatus}`);
+            fetchDetails();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to update status');
+        }
+    };
+
     // Handle Project delete
     const handleDeleteProject = async () => {
         if (!window.confirm('Are you absolutely sure you want to delete this project? This will delete all tasks and milestones.')) {
@@ -355,6 +373,10 @@ const ProjectDetailsPage = () => {
         );
     }
 
+    if (!project) {
+        return null;
+    }
+
     const currentMember = project.members.find((m) => m.id === user.id);
     const isOwner = currentMember?.role === 'owner';
     const isManager = currentMember?.role === 'manager' || isOwner;
@@ -382,9 +404,41 @@ const ProjectDetailsPage = () => {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <div className="flex flex-wrap items-center gap-3 mb-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-indigo-100 text-indigo-800`}>
-                                    {project.status}
-                                </span>
+                                <div className="relative">
+                                    <button
+                                        disabled={!isManager}
+                                        onClick={() => setStatusDropdownOpen(p => !p)}
+                                        className={`px-3.5 py-1 rounded-full text-xs font-extrabold uppercase flex items-center gap-1.5 transition ${
+                                            project.status === 'completed'
+                                                ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                                                : project.status === 'active'
+                                                ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                                                : project.status === 'on-hold' || project.status === 'on hold'
+                                                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'
+                                        } ${isManager ? 'hover:opacity-85 cursor-pointer' : ''}`}
+                                    >
+                                        {project.status}
+                                        {isManager && <ChevronDown className="w-3.5 h-3.5 text-current" />}
+                                    </button>
+                                    {statusDropdownOpen && isManager && (
+                                        <div className="absolute left-0 mt-1.5 w-40 bg-slate-900 border border-slate-850 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1">
+                                            {['planning', 'active', 'completed', 'on-hold'].map((st) => (
+                                                <button
+                                                    key={st}
+                                                    onClick={() => {
+                                                        handleUpdateStatus(st);
+                                                        setStatusDropdownOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center justify-between capitalize cursor-pointer"
+                                                >
+                                                    <span>{st.replace('-', ' ')}</span>
+                                                    {project.status === st && <Check className="w-3.5 h-3.5 text-blue-400" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 <span className="text-xs font-bold text-gray-500">
                                     Role: {currentMember?.role.toUpperCase() || 'MEMBER'}
                                 </span>

@@ -84,8 +84,8 @@ const AttendancePage = () => {
     const [location, setLocation] = useState('Office'); // 'Office' or 'Remote'
 
     // History and Monthly Report State
-    const [history, setHistory] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(true);
+    const [, setHistory] = useState([]);
+    const [, setHistoryLoading] = useState(true);
 
     const handleGenerateQR = async () => {
         if (!isQRActive()) {

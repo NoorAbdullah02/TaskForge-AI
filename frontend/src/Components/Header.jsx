@@ -19,6 +19,7 @@ const Header = () => {
     const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const navigate = useNavigate();
 
     // Banglish: ekta jaygate nav links rakhi, mobile + desktop duitatei use korbo
@@ -85,6 +86,7 @@ const Header = () => {
             toast.success('Logged out successfully');
             navigate('/login');
             setProfileMenuOpen(false);
+            setShowLogoutConfirm(false);
         } catch (err) {
             console.error('Logout error:', err);
             toast.error('Logout failed');
@@ -369,7 +371,10 @@ const Header = () => {
                                                 <hr className="border-slate-100 my-1" />
 
                                                 <button
-                                                    onClick={handleLogout}
+                                                    onClick={() => {
+                                                        setProfileMenuOpen(false);
+                                                        setShowLogoutConfirm(true);
+                                                    }}
                                                     className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl transition group cursor-pointer"
                                                 >
                                                     <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition" />
@@ -424,11 +429,44 @@ const Header = () => {
             )}
 
             <NotificationCenter
-                isOpen={notificationCenterOpen}
-                onClose={() => setNotificationCenterOpen(false)}
-                onUnreadCountChange={setUnreadCount}
-            />
-        </header>
+                                                isOpen={notificationCenterOpen}
+                                                onClose={() => setNotificationCenterOpen(false)}
+                                                onUnreadCountChange={setUnreadCount}
+                                            />
+
+                                            {/* LOGOUT CONFIRMATION MODAL */}
+                                            {showLogoutConfirm && (
+                                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                                    <div className="bg-card border border-line w-full max-w-sm rounded-3xl p-6 shadow-2xl relative text-center">
+                                                        <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-red-400">
+                                                            <LogOut className="w-6 h-6" />
+                                                        </div>
+                                                        <h3 className="text-base font-extrabold text-ink mb-2">
+                                                            Confirm Logout
+                                                        </h3>
+                                                        <p className="text-xs text-ink-soft mb-6 leading-relaxed">
+                                                            Are you sure you want to log out of your TaskForge AI account?
+                                                        </p>
+                                                        <div className="flex gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowLogoutConfirm(false)}
+                                                                className="flex-1 py-3 bg-surface-2 hover:bg-surface-3 border border-line text-xs font-bold rounded-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-ink"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleLogout}
+                                                                className="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-red-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                                            >
+                                                                Logout
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </header>
     );
 };
 

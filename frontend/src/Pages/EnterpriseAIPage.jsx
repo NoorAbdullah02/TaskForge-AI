@@ -27,16 +27,16 @@ const EnterpriseAIPage = () => {
     const [selectedProject, setSelectedProject] = useState('');
     const [activeTab, setActiveTab] = useState('copilot');
     const [roleDashboardData, setRoleDashboardData] = useState(null);
-    const [loadingDashboard, setLoadingDashboard] = useState(false);
+    const [, setLoadingDashboard] = useState(false);
 
     // AI States
     const [copilotInput, setCopilotInput] = useState('');
     const [copilotHistory, setCopilotHistory] = useState([]);
     const [loadingCopilot, setLoadingCopilot] = useState(false);
 
-    const [burnoutUserId, setBurnoutUserId] = useState('');
-    const [burnoutResult, setBurnoutResult] = useState(null);
-    const [loadingBurnout, setLoadingBurnout] = useState(false);
+    const [burnoutUserId] = useState('');
+    const [, setBurnoutResult] = useState(null);
+    const [, setLoadingBurnout] = useState(false);
 
     const [teamBurnoutResult, setTeamBurnoutResult] = useState(null);
     const [loadingTeamBurnout, setLoadingTeamBurnout] = useState(false);
@@ -113,7 +113,7 @@ const EnterpriseAIPage = () => {
         try {
             const data = await askEnterpriseCopilot(copilotInput, copilotHistory);
             setCopilotHistory(prev => [...prev, { role: 'assistant', content: data.reply }]);
-        } catch (error) {
+        } catch {
             toast.error("Copilot request failed");
             setCopilotHistory(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
@@ -121,6 +121,7 @@ const EnterpriseAIPage = () => {
         }
     };
 
+    // eslint-disable-next-line no-unused-vars
     const handleDetectBurnout = async () => {
         setLoadingBurnout(true);
         setBurnoutResult(null);
@@ -128,8 +129,8 @@ const EnterpriseAIPage = () => {
             const data = await detectBurnout(burnoutUserId ? parseInt(burnoutUserId) : null);
             setBurnoutResult(data);
             toast.success("Burnout analysis completed!");
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Burnout analysis failed");
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Burnout analysis failed");
         } finally {
             setLoadingBurnout(false);
         }
@@ -143,7 +144,7 @@ const EnterpriseAIPage = () => {
             const data = await detectTeamBurnout(selectedProject);
             setTeamBurnoutResult(data.teamBurnout);
             toast.success("Team burnout assessment finished!");
-        } catch (error) {
+        } catch {
             toast.error("Failed to assess team burnout");
         } finally {
             setLoadingTeamBurnout(false);
@@ -158,7 +159,7 @@ const EnterpriseAIPage = () => {
             const data = await getHealthScore(healthScoreType, healthScoreId);
             setHealthScoreResult(data);
             toast.success("Health score analyzed!");
-        } catch (error) {
+        } catch {
             toast.error("Health analysis failed");
         } finally {
             setLoadingHealth(false);
@@ -173,7 +174,7 @@ const EnterpriseAIPage = () => {
             const data = await emailAssist(emailContext, emailTone);
             setEmailResult(data);
             toast.success("Email drafted!");
-        } catch (error) {
+        } catch {
             toast.error("Failed to generate email");
         } finally {
             setLoadingEmail(false);
@@ -187,7 +188,7 @@ const EnterpriseAIPage = () => {
             const data = await getWeeklyReport();
             setWeeklyReportResult(data);
             toast.success("Weekly report generated!");
-        } catch (error) {
+        } catch {
             toast.error("Failed to generate report");
         } finally {
             setLoadingWeekly(false);
@@ -201,7 +202,7 @@ const EnterpriseAIPage = () => {
             const data = await getDailyStandup(true);
             setStandupResult(data);
             toast.success("Standup generated!");
-        } catch (error) {
+        } catch {
             toast.error("Failed to generate daily standup");
         } finally {
             setLoadingStandup(false);
@@ -217,7 +218,6 @@ const EnterpriseAIPage = () => {
     }
 
     const isPMOrAbove = ['manager', 'owner', 'super_admin'].includes(user.role);
-    const isAdminOrOwner = ['owner', 'super_admin'].includes(user.role);
 
     return (
         <div className="min-h-screen text-ink flex flex-col md:flex-row">
@@ -279,7 +279,7 @@ const EnterpriseAIPage = () => {
                         {/* PM / Admin Gated Tab */}
                         {isPMOrAbove && (
                             <>
-                                <div className="pt-4 pb-2 text-[10px] font-semibold text-ink0 uppercase tracking-wider">PM & Analytics</div>
+                                <div className="pt-4 pb-2 text-[10px] font-semibold text-ink-soft uppercase tracking-wider">PM & Analytics</div>
                                 <button
                                     onClick={() => setActiveTab('health')}
                                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition ${activeTab === 'health' ? 'bg-violet-600 text-white font-medium shadow-lg shadow-violet-600/20' : 'text-white hover:bg-surface-2 hover:text-white'}`}
@@ -505,7 +505,7 @@ const EnterpriseAIPage = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-ink0 border-2 border-dashed border-line rounded-2xl min-h-[300px]">
+                                        <div className="flex-1 flex flex-col items-center justify-center text-ink-soft border-2 border-dashed border-line rounded-2xl min-h-[300px]">
                                             <Mail className="h-10 w-10 mb-2 opacity-30" />
                                             <span className="text-sm">No email drafted yet.</span>
                                         </div>
@@ -694,7 +694,7 @@ const EnterpriseAIPage = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="h-full min-h-[300px] border-2 border-dashed border-line rounded-3xl flex flex-col items-center justify-center text-ink0">
+                                        <div className="h-full min-h-[300px] border-2 border-dashed border-line rounded-3xl flex flex-col items-center justify-center text-ink-soft">
                                             <Activity className="h-12 w-12 mb-3 opacity-25" />
                                             <p className="text-sm">Select an entity and click analyze to calculate ML health status.</p>
                                         </div>
@@ -762,7 +762,7 @@ const EnterpriseAIPage = () => {
                                                     </p>
                                                     
                                                     <div>
-                                                        <span className="text-[10px] font-semibold text-ink0 uppercase tracking-wider block mb-2">Wellness Plan Suggestions</span>
+                                                        <span className="text-[10px] font-semibold text-ink-soft uppercase tracking-wider block mb-2">Wellness Plan Suggestions</span>
                                                         <ul className="space-y-1">
                                                             {member.narrative.recommendations.map((rec, i) => (
                                                                 <li key={i} className="text-xs text-ink-soft flex items-start gap-2">

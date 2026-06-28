@@ -511,7 +511,7 @@ const TaskDetailsPage = () => {
     const [addingSubtask, setAddingSubtask]     = useState(false);
     const [newComment, setNewComment]           = useState('');
     const [postingComment, setPostingComment]   = useState(false);
-    const [addingAttachment, setAddingAttachment] = useState(false);
+    const [, setAddingAttachment] = useState(false);
 
     // Edit modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -562,7 +562,7 @@ const TaskDetailsPage = () => {
             try {
                 const dl = await predictDeadline('task', id);
                 setDeadlinePrediction(dl);
-            } catch {}
+            } catch { /* deadline prediction is non-critical */ }
         } catch (err) {
             toast.error('Failed to load task details');
             navigate('/tasks');
@@ -593,7 +593,7 @@ const TaskDetailsPage = () => {
     const isPM = isOwner
         || user?.role === 'manager'
         || (project && ['manager', 'project_manager', 'owner'].includes(currentMember?.role));
-    const isAssignee = task?.assigneeId === user?.id;
+    const _isAssignee = task?.assigneeId === user?.id; // eslint-disable-line no-unused-vars
     const isReviewStatus = task?.status === 'review' || task?.status === 'in_review';
 
     // ─── Handlers ──────────────────────────────────────────────────────────

@@ -211,7 +211,7 @@ const AICopilot = () => {
                                 </div>
                                 <div className="bg-white rounded-2xl rounded-tl-none p-3 shadow-sm border border-gray-150 flex items-center gap-1">
                                     <Loader className="w-4 h-4 text-indigo-600 animate-spin" />
-                                    <span className="text-xxs font-bold text-ink0">Copilot is thinking...</span>
+                                    <span className="text-xxs font-bold text-ink-soft">Copilot is thinking...</span>
                                 </div>
                             </div>
                         )}

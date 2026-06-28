@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { 
     ResponsiveContainer, PieChart, Pie, Cell, Tooltip, 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
@@ -219,7 +218,7 @@ export default function ProjectIntelligenceDashboard() {
                                 }`}>
                                     {health ? 100 - health.riskScore : 'N/A'}
                                 </span>
-                                <span className="text-ink0 text-sm">/ 100</span>
+                                <span className="text-ink-soft text-sm">/ 100</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-blue-500/10 text-blue-500">
@@ -238,7 +237,7 @@ export default function ProjectIntelligenceDashboard() {
                                 }`}>
                                     {health?.riskScore || 0}
                                 </span>
-                                <span className="text-ink0 text-sm">/ 100</span>
+                                <span className="text-ink-soft text-sm">/ 100</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-red-500/10 text-red-400">
@@ -254,7 +253,7 @@ export default function ProjectIntelligenceDashboard() {
                                 <span className="text-4xl font-extrabold text-ink">
                                     {health?.sprintVelocity || 0}
                                 </span>
-                                <span className="text-ink0 text-sm">pts completed</span>
+                                <span className="text-ink-soft text-sm">pts completed</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-violet-500/10 text-violet-500">
@@ -270,7 +269,7 @@ export default function ProjectIntelligenceDashboard() {
                                 <span className="text-4xl font-extrabold text-ink">
                                     {health?.teamProductivity || 0}
                                 </span>
-                                <span className="text-ink0 text-sm">tasks closed</span>
+                                <span className="text-ink-soft text-sm">tasks closed</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-500">
@@ -405,7 +404,7 @@ export default function ProjectIntelligenceDashboard() {
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <h4 className="font-bold text-ink text-base">{cap.userName}</h4>
-                                                        <span className="text-ink0 text-xs font-semibold">Resource</span>
+                                                        <span className="text-ink-soft text-xs font-semibold">Resource</span>
                                                     </div>
                                                     <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${
                                                         cap.status === 'Underloaded' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
@@ -430,7 +429,7 @@ export default function ProjectIntelligenceDashboard() {
                                                             style={{ width: `${Math.min(100, ((heat?.activeTasksCount || 0) / 8) * 100)}%` }}
                                                         ></div>
                                                     </div>
-                                                    <div className="flex justify-between text-xs font-semibold text-ink0">
+                                                    <div className="flex justify-between text-xs font-semibold text-ink-soft">
                                                         <span>Capacity remaining</span>
                                                         <span>{cap.capacityHours} hrs/week</span>
                                                     </div>
@@ -448,7 +447,7 @@ export default function ProjectIntelligenceDashboard() {
                                         <Sparkles className="h-5 w-5 text-amber-500" />
                                         Resource Balancer AI
                                     </h3>
-                                    <span className="text-[10px] text-ink0 font-bold uppercase tracking-wider bg-surface-2 border border-line px-2 py-0.5 rounded">Mistral Suggested</span>
+                                    <span className="text-[10px] text-ink-soft font-bold uppercase tracking-wider bg-surface-2 border border-line px-2 py-0.5 rounded">Mistral Suggested</span>
                                 </div>
                                 <div className="prose prose-invert max-w-none text-ink text-xs leading-relaxed whitespace-pre-wrap bg-surface-2 p-4 rounded-xl border border-line font-medium">
                                     {workload.aiSuggestions}
@@ -484,7 +483,7 @@ export default function ProjectIntelligenceDashboard() {
                                                         {userScore.riskLevel} Risk
                                                     </span>
                                                 </div>
-                                                <div className="flex gap-4 text-xs font-semibold text-ink0">
+                                                <div className="flex gap-4 text-xs font-semibold text-ink-soft">
                                                     <span>Overtime days: <strong className="text-ink">{userScore.metrics.overtimeDays}</strong></span>
                                                     <span>Active Tasks: <strong className="text-ink">{userScore.metrics.activeTasks}</strong></span>
                                                     <span>Overdue: <strong className="text-ink">{userScore.metrics.overdueTasks}</strong></span>
@@ -494,7 +493,7 @@ export default function ProjectIntelligenceDashboard() {
 
                                             <div className="flex items-center gap-4">
                                                 <div className="text-right">
-                                                    <span className="text-xs font-semibold text-ink0">Burnout Index</span>
+                                                    <span className="text-xs font-semibold text-ink-soft">Burnout Index</span>
                                                     <p className={`text-2xl font-black ${
                                                         userScore.burnoutScore >= 70 ? 'text-red-500' :
                                                         userScore.burnoutScore >= 40 ? 'text-amber-500' : 'text-green-500'
@@ -609,7 +608,7 @@ export default function ProjectIntelligenceDashboard() {
                                     </h3>
 
                                     {dependenciesData.dependencies.length === 0 ? (
-                                        <p className="text-ink0 text-sm text-center py-6">No task dependency mappings defined.</p>
+                                        <p className="text-ink-soft text-sm text-center py-6">No task dependency mappings defined.</p>
                                     ) : (
                                         <div className="divide-y divide-gray-800">
                                             {dependenciesData.dependencies.map(dep => {
@@ -624,7 +623,7 @@ export default function ProjectIntelligenceDashboard() {
                                                             <span className="px-2 py-0.5 bg-surface-2 border border-line text-[10px] font-black rounded text-ink-soft">
                                                                 {dep.dependencyType}
                                                             </span>
-                                                            <ChevronRight className="h-3 w-3 text-ink0" />
+                                                            <ChevronRight className="h-3 w-3 text-ink-soft" />
                                                             <span className="text-xs text-ink-soft font-medium">Predecessor:</span>
                                                             <Link to={`/tasks/${dep.dependsOnTaskId}`} className="text-sm font-bold text-ink hover:underline">
                                                                 {parent?.title || `Task #${dep.dependsOnTaskId}`}
@@ -656,7 +655,7 @@ export default function ProjectIntelligenceDashboard() {
                                     <div className="bg-green-500/5 border border-green-500/10 p-5 rounded-2xl text-center space-y-2">
                                         <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto" />
                                         <p className="text-green-400 font-bold text-sm">Clear</p>
-                                        <p className="text-ink0 text-xs">All dependencies comply with logical rules.</p>
+                                        <p className="text-ink-soft text-xs">All dependencies comply with logical rules.</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">

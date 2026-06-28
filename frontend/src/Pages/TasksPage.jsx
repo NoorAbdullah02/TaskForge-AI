@@ -25,10 +25,10 @@ import {
 import toast from 'react-hot-toast';
 
 const PRIORITY_COLORS = {
-    low: 'bg-gray-100 text-gray-700 border-gray-200',
-    medium: 'bg-blue-50 text-blue-700 border-blue-100',
-    high: 'bg-orange-50 text-orange-700 border-orange-200',
-    critical: 'bg-red-50 text-red-700 border-red-200',
+    low: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    medium: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    high: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    critical: 'bg-red-500/10 text-red-400 border-red-500/20',
 };
 
 const STATUS_LABELS = {
@@ -42,11 +42,11 @@ const STATUS_LABELS = {
 const STATUS_STATES = Object.keys(STATUS_LABELS);
 
 const STATUS_COLORS = {
-    backlog: 'bg-gray-100 text-gray-600',
-    todo: 'bg-blue-50 text-blue-700',
-    'in-progress': 'bg-amber-50 text-amber-700',
-    review: 'bg-purple-50 text-purple-700',
-    done: 'bg-emerald-50 text-emerald-700',
+    backlog: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+    todo: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    'in-progress': 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    review: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+    done: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
 };
 
 // ─── Bulk Toolbar ──────────────────────────────────────────────────────────
@@ -56,25 +56,25 @@ const BulkToolbar = ({ selectedIds, tasks, onBulkStatusChange, onBulkDelete, onB
     if (selectedIds.length === 0) return null;
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 border border-gray-700 animate-slide-up">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-800 text-white rounded-3xl shadow-2xl px-6 py-3.5 flex items-center gap-4 animate-slide-up">
             <span className="text-sm font-bold text-blue-400">{selectedIds.length} selected</span>
-            <div className="w-px h-5 bg-gray-700" />
+            <div className="w-px h-5 bg-slate-850" />
 
             {/* Status Change */}
             <div className="relative">
                 <button
                     onClick={() => setStatusDropdown(p => !p)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-bold transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
                 >
                     <RefreshCw className="w-3.5 h-3.5" /> Change Status <ChevronDown className="w-3 h-3" />
                 </button>
                 {statusDropdown && (
-                    <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-700 rounded-xl shadow-xl py-1 min-w-[140px] z-50">
+                    <div className="absolute bottom-full mb-2 left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[140px] z-50">
                         {STATUS_STATES.map(s => (
                             <button
                                 key={s}
                                 onClick={() => { onBulkStatusChange(s); setStatusDropdown(false); }}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-gray-700 transition"
+                                className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-700 transition cursor-pointer text-white"
                             >
                                 {STATUS_LABELS[s]}
                             </button>
@@ -85,27 +85,27 @@ const BulkToolbar = ({ selectedIds, tasks, onBulkStatusChange, onBulkDelete, onB
 
             <button
                 onClick={onBulkDuplicate}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-bold transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
             >
                 <Copy className="w-3.5 h-3.5" /> Duplicate
             </button>
 
             <button
                 onClick={onBulkArchive}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-amber-900 rounded-xl text-xs font-bold transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-amber-900/60 rounded-xl text-xs font-bold transition cursor-pointer"
             >
                 <Archive className="w-3.5 h-3.5 text-amber-400" /> Archive
             </button>
 
             <button
                 onClick={onBulkDelete}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/60 hover:bg-red-900 rounded-xl text-xs font-bold transition text-red-300"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/60 hover:bg-red-950 rounded-xl text-xs font-bold transition text-red-300 cursor-pointer"
             >
                 <Trash2 className="w-3.5 h-3.5" /> Delete
             </button>
 
-            <div className="w-px h-5 bg-gray-700" />
-            <button onClick={onClear} className="text-gray-400 hover:text-white transition">
+            <div className="w-px h-5 bg-slate-800" />
+            <button onClick={onClear} className="text-slate-400 hover:text-white transition cursor-pointer">
                 <X className="w-4 h-4" />
             </button>
         </div>
@@ -119,42 +119,42 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
     const [selectedProjectId, setSelectedProjectId] = useState('');
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <LayoutTemplate className="w-5 h-5 text-blue-600" /> Task Templates
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-card border border-line rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+                <div className="p-6 border-b border-line flex justify-between items-center bg-surface-2/40">
+                    <h3 className="text-xl font-bold text-ink flex items-center gap-2">
+                        <LayoutTemplate className="w-5 h-5 text-blue-400" /> Task Templates
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition"><X className="w-5 h-5" /></button>
+                    <button onClick={onClose} className="text-ink-soft hover:text-ink transition cursor-pointer"><X className="w-5 h-5" /></button>
                 </div>
 
-                <div className="overflow-y-auto flex-1 p-6 space-y-6">
+                <div className="overflow-y-auto flex-1 p-6 space-y-6 bg-card">
                     {/* Apply Template */}
                     <div>
-                        <p className="text-xs font-extrabold uppercase text-gray-500 mb-3 tracking-wider">Available Templates</p>
+                        <p className="text-xs font-extrabold uppercase text-ink-soft mb-3 tracking-wider">Available Templates</p>
                         {templates.length === 0 ? (
-                            <p className="text-gray-400 text-sm text-center py-4">No templates created yet.</p>
+                            <p className="text-ink-faint text-sm text-center py-4 italic">No templates created yet.</p>
                         ) : (
                             <div className="space-y-2">
                                 {templates.map(t => (
-                                    <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div key={t.id} className="flex items-center justify-between p-3.5 bg-surface-2/40 rounded-xl border border-line">
                                         <div>
-                                            <p className="font-bold text-sm text-gray-800">{t.name}</p>
-                                            {t.description && <p className="text-xs text-gray-500 font-medium">{t.description}</p>}
+                                            <p className="font-bold text-sm text-ink">{t.name}</p>
+                                            {t.description && <p className="text-xs text-ink-soft font-medium mt-0.5">{t.description}</p>}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <select
                                                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                                                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white"
+                                                className="px-2.5 py-1.5 border border-line rounded-xl text-xs font-semibold text-ink bg-surface-2 focus:outline-none"
                                             >
-                                                <option value="">Select project</option>
+                                                <option value="" className="bg-card text-ink">Select project</option>
                                                 {projects.map(p => (
-                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                    <option key={p.id} value={p.id} className="bg-card text-ink">{p.name}</option>
                                                 ))}
                                             </select>
                                             <button
                                                 onClick={() => selectedProjectId && onApply(t.id, selectedProjectId)}
-                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition"
+                                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer"
                                             >
                                                 Apply
                                             </button>
@@ -166,29 +166,29 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
                     </div>
 
                     {/* Create Template */}
-                    <div className="border-t border-gray-100 pt-5">
-                        <p className="text-xs font-extrabold uppercase text-gray-500 mb-3 tracking-wider">Create New Template</p>
+                    <div className="border-t border-line pt-5">
+                        <p className="text-xs font-extrabold uppercase text-ink-soft mb-3 tracking-wider">Create New Template</p>
                         <div className="space-y-3">
                             <input
                                 type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 placeholder="Template name..."
-                                className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-400"
+                                className="w-full px-4 py-3 bg-surface-2 border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink"
                             />
                             <textarea
                                 value={newDesc}
                                 onChange={(e) => setNewDesc(e.target.value)}
                                 placeholder="Description (optional)..."
                                 rows={2}
-                                className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-400 resize-none"
+                                className="w-full p-4 bg-surface-2 border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink leading-normal resize-none h-20"
                             />
                             <button
                                 onClick={() => onCreateTemplate({ name: newName, description: newDesc })}
                                 disabled={!newName.trim()}
-                                className="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-sm transition hover:opacity-90 disabled:opacity-50"
+                                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl text-xs transition hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/10"
                             >
-                                <Plus className="w-4 h-4 inline mr-1" /> Save Template
+                                <Plus className="w-4 h-4 inline mr-1 text-white" /> Save Template
                             </button>
                         </div>
                     </div>
@@ -202,7 +202,7 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
 const TaskRow = ({ task, selected, onSelect, onNavigate, onEdit }) => (
     <tr
         onClick={() => onNavigate(task.id)}
-        className="border-b border-gray-100 hover:bg-gray-50/60 transition cursor-pointer group"
+        className="border-b border-line hover:bg-surface-2/40 transition cursor-pointer group"
     >
         <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
             <input
@@ -217,26 +217,26 @@ const TaskRow = ({ task, selected, onSelect, onNavigate, onEdit }) => (
                 {task.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
                 {task.isLocked && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 {task.isRecurring && <RefreshCw className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
-                <span className="font-bold text-gray-800 text-sm leading-tight">{task.title}</span>
+                <span className="font-bold text-ink text-sm leading-tight">{task.title}</span>
             </div>
             {(task.labels || task.category) && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                     {task.category && (
-                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold border border-indigo-100">
+                        <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded text-[10px] font-bold border border-indigo-500/20">
                             {task.category}
                         </span>
                     )}
                     {task.labels && task.labels.split(',').map(l => l.trim()).filter(Boolean).slice(0, 3).map(label => (
-                        <span key={label} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-bold border border-emerald-100">
+                        <span key={label} className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] font-bold border border-emerald-500/20">
                             #{label}
                         </span>
                     ))}
                 </div>
             )}
         </td>
-        <td className="px-4 py-4 text-gray-600 font-semibold text-sm">{task.projectName || '—'}</td>
+        <td className="px-4 py-4 text-ink-soft font-semibold text-sm">{task.projectName || '—'}</td>
         <td className="px-4 py-4">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-600'}`}>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${STATUS_COLORS[task.status] || 'bg-slate-500/10 text-slate-400'}`}>
                 {STATUS_LABELS[task.status] || task.status}
             </span>
         </td>
@@ -247,25 +247,25 @@ const TaskRow = ({ task, selected, onSelect, onNavigate, onEdit }) => (
         </td>
         <td className="px-4 py-4">
             {task.estimatedHours && (
-                <div className="flex items-center gap-1 text-xs text-gray-500 font-semibold">
-                    <Clock className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1 text-xs text-ink-soft font-semibold">
+                    <Clock className="w-3.5 h-3.5 text-ink-faint" />
                     {task.estimatedHours}h
                 </div>
             )}
         </td>
-        <td className="px-4 py-4 text-gray-600 text-sm font-semibold">
+        <td className="px-4 py-4 text-ink-soft text-sm font-semibold">
             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
         </td>
         <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
                 <button
                     onClick={() => onEdit(task)}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-extrabold"
+                    className="text-blue-500 hover:text-blue-400 text-xs font-extrabold cursor-pointer"
                 >Edit</button>
-                <span className="text-gray-200">|</span>
+                <span className="text-line">|</span>
                 <button
                     onClick={() => onNavigate(task.id)}
-                    className="text-indigo-600 hover:text-indigo-800 text-xs font-extrabold flex items-center gap-0.5"
+                    className="text-indigo-400 hover:text-indigo-300 text-xs font-extrabold flex items-center gap-0.5 cursor-pointer"
                 >
                     Details <ArrowRight className="w-3 h-3" />
                 </button>
@@ -282,22 +282,22 @@ const StatsBar = ({ tasks }) => {
     const locked = tasks.filter(t => t.isLocked).length;
 
     const stats = [
-        { label: 'Total', value: tasks.length, icon: Layers, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Completed', value: done, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { label: 'In Progress', value: inProg, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
-        { label: 'Overdue', value: over, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
-        { label: 'Locked', value: locked, icon: Lock, color: 'text-violet-600', bg: 'bg-violet-50' },
+        { label: 'Total', value: tasks.length, icon: Layers, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+        { label: 'Completed', value: done, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+        { label: 'In Progress', value: inProg, icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+        { label: 'Overdue', value: over, icon: AlertCircle, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+        { label: 'Locked', value: locked, icon: Lock, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
     ];
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
             {stats.map(({ label, value, icon: Icon, color, bg }) => (
-                <div key={label} className={`${bg} rounded-2xl p-4 flex items-center gap-3 border border-white shadow-sm`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm`}>
+                <div key={label} className={`${bg} rounded-2xl p-4 flex items-center gap-3 border shadow-sm`}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-card shadow-sm border border-line">
                         <Icon className={`w-5 h-5 ${color}`} />
                     </div>
                     <div>
-                        <p className="text-xl font-black text-gray-800">{value}</p>
+                        <p className="text-xl font-black text-ink">{value}</p>
                         <p className={`text-xs font-bold ${color}`}>{label}</p>
                     </div>
                 </div>
@@ -462,10 +462,10 @@ const TasksPage = () => {
     // ─── Render ────────────────────────────────────────────────────────────
     if (authLoading || isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-surface">
                 <div className="text-center">
                     <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600 font-semibold">Loading task workspace...</p>
+                    <p className="text-ink-soft font-semibold">Loading task workspace...</p>
                 </div>
             </div>
         );
@@ -474,51 +474,57 @@ const TasksPage = () => {
     const allVisibleSelected = filteredTasks.length > 0 && filteredTasks.every(t => selectedIds.includes(t.id));
 
     return (
-        <div className="min-h-screen p-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen text-ink py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col bg-surface">
+            {/* Background glowing overlays */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[100px]" />
+            </div>
+
+            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
 
                 {/* ─── Header ─── */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
-                        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent flex items-center gap-3">
-                            <CheckSquare className="w-10 h-10 text-blue-600" />
+                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
+                            <CheckSquare className="w-8 h-8 text-blue-500" />
                             Task Workspace
                         </h1>
-                        <p className="text-gray-500 font-medium mt-1">Enterprise task management — Jira-level power.</p>
+                        <p className="text-ink-soft mt-1 font-medium font-sans">Enterprise task management — Jira-level power.</p>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => setShowTemplatePanel(true)}
-                            className="px-4 py-2.5 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:border-blue-400 hover:text-blue-600 transition flex items-center gap-2 text-sm bg-white shadow-sm"
+                            className="px-4 py-3 bg-surface-2 hover:bg-surface-3 border border-line text-ink font-bold rounded-2xl hover:border-blue-500/50 hover:text-blue-400 transition flex items-center gap-2 text-xs cursor-pointer shadow-sm active:scale-95"
                         >
-                            <LayoutTemplate className="w-4 h-4" /> Templates
+                            <LayoutTemplate className="w-4.5 h-4.5 text-blue-400" /> Templates
                         </button>
                         <button
                             onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
-                            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-lg flex items-center gap-2 text-sm"
+                            className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-[0.98] transition flex items-center gap-2 text-xs border border-blue-500/20 cursor-pointer"
                         >
-                            <Plus className="w-5 h-5" /> New Task
+                            <Plus className="w-4.5 h-4.5 text-white" /> New Task
                         </button>
                     </div>
                 </div>
 
                 <StatsBar tasks={tasks} />
 
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+                <div className="bg-card border border-line rounded-3xl p-5 shadow-soft mb-8">
                     <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
                         {/* Search */}
                         <div className="relative w-full md:max-w-xs">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search tasks, labels..."
-                                className="w-full pl-9 pr-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-400 bg-gray-50"
+                                className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-line rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-400 text-ink"
                             />
                             {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink">
                                     <X className="w-3.5 h-3.5" />
                                 </button>
                             )}
@@ -527,28 +533,28 @@ const TasksPage = () => {
                         <div className="flex flex-wrap items-center gap-2">
                             <button
                                 onClick={() => setShowFilters(p => !p)}
-                                className={`flex items-center gap-1.5 px-3 py-2 border-2 rounded-xl text-xs font-bold transition ${showFilters ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-gray-200 text-gray-600 bg-white hover:border-blue-300'}`}
+                                className={`flex items-center gap-1.5 px-4 py-2 border rounded-xl text-xs font-bold transition ${showFilters ? 'border-blue-500/50 text-blue-400 bg-blue-500/10' : 'border-line text-ink-soft bg-surface-2 hover:border-line-active'}`}
                             >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
                             </button>
 
                             <button
                                 onClick={() => setShowArchived(p => !p)}
-                                className={`flex items-center gap-1.5 px-3 py-2 border-2 rounded-xl text-xs font-bold transition ${showArchived ? 'border-amber-400 text-amber-700 bg-amber-50' : 'border-gray-200 text-gray-600 bg-white hover:border-amber-300'}`}
+                                className={`flex items-center gap-1.5 px-4 py-2 border rounded-xl text-xs font-bold transition ${showArchived ? 'border-amber-500/50 text-amber-400 bg-amber-500/10' : 'border-line text-ink-soft bg-surface-2 hover:border-line-active'}`}
                             >
                                 <Archive className="w-3.5 h-3.5" /> {showArchived ? 'Archived' : 'Active'}
                             </button>
 
-                            <div className="flex bg-gray-100 p-1 rounded-xl">
+                            <div className="flex bg-surface-2/60 p-1 rounded-xl border border-line">
                                 <button
                                     onClick={() => setViewMode('kanban')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'kanban' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'kanban' ? 'bg-card text-blue-400 shadow-sm' : 'text-ink-soft hover:text-ink'}`}
                                 >
                                     <LayoutGrid className="w-3.5 h-3.5" /> Board
                                 </button>
                                 <button
                                     onClick={() => setViewMode('list')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'list' ? 'bg-card text-blue-400 shadow-sm' : 'text-ink-soft hover:text-ink'}`}
                                 >
                                     <List className="w-3.5 h-3.5" /> List
                                 </button>
@@ -557,41 +563,41 @@ const TasksPage = () => {
                     </div>
 
                     {showFilters && (
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-3">
+                        <div className="mt-3 pt-3 border-t border-line flex flex-wrap gap-3">
                             <select
                                 value={selectedProject}
                                 onChange={(e) => setSelectedProject(e.target.value)}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white"
+                                className="px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-bold text-ink focus:outline-none focus:border-blue-500"
                             >
-                                <option value="">All Projects</option>
-                                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                <option value="" className="bg-card text-ink">All Projects</option>
+                                {projects.map(p => <option key={p.id} value={p.id} className="bg-card text-ink">{p.name}</option>)}
                             </select>
 
                             <select
                                 value={selectedPriority}
                                 onChange={(e) => setSelectedPriority(e.target.value)}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white"
+                                className="px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-bold text-ink focus:outline-none focus:border-blue-500"
                             >
-                                <option value="">All Priorities</option>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
+                                <option value="" className="bg-card text-ink">All Priorities</option>
+                                <option value="low" className="bg-card text-ink">Low</option>
+                                <option value="medium" className="bg-card text-ink">Medium</option>
+                                <option value="high" className="bg-card text-ink">High</option>
+                                <option value="critical" className="bg-card text-ink">Critical</option>
                             </select>
 
                             <select
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-white"
+                                className="px-3 py-2 bg-surface-2 border border-line rounded-xl text-xs font-bold text-ink focus:outline-none focus:border-blue-500"
                             >
-                                <option value="">All Statuses</option>
-                                {STATUS_STATES.map(st => <option key={st} value={st}>{STATUS_LABELS[st]}</option>)}
+                                <option value="" className="bg-card text-ink">All Statuses</option>
+                                {STATUS_STATES.map(st => <option key={st} value={st} className="bg-card text-ink">{STATUS_LABELS[st]}</option>)}
                             </select>
 
                             {(selectedProject || selectedPriority || selectedStatus) && (
                                 <button
                                     onClick={() => { setSelectedProject(''); setSelectedPriority(''); setSelectedStatus(''); }}
-                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl text-xs transition flex items-center gap-1"
+                                    className="px-3 py-2 bg-surface-2 hover:bg-surface-3 text-ink-soft font-bold rounded-xl text-xs transition border border-line flex items-center gap-1 cursor-pointer"
                                 >
                                     <X className="w-3 h-3" /> Clear
                                 </button>
@@ -601,15 +607,15 @@ const TasksPage = () => {
                 </div>
 
                 {filteredTasks.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-16 text-center shadow border border-gray-100 max-w-lg mx-auto mt-10">
-                        <CheckSquare className="w-20 h-20 text-gray-200 mx-auto mb-4" />
-                        <h3 className="text-2xl font-bold text-gray-800 mb-2">No tasks found</h3>
-                        <p className="text-gray-400 font-medium mb-6">Adjust filters or create a new task to get started.</p>
+                    <div className="bg-card rounded-3xl p-16 text-center shadow-soft border border-line max-w-lg mx-auto mt-10">
+                        <CheckSquare className="w-20 h-20 text-ink-faint/30 mx-auto mb-4" />
+                        <h3 className="text-2xl font-bold text-ink mb-2">No tasks found</h3>
+                        <p className="text-ink-soft font-medium mb-6">Adjust filters or create a new task to get started.</p>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:opacity-90 transition shadow"
+                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:opacity-90 transition shadow-lg shadow-blue-500/20 cursor-pointer"
                         >
-                            <Plus className="w-4 h-4 inline mr-1" /> Create Task
+                            <Plus className="w-4 h-4 inline mr-1 text-white" /> Create Task
                         </button>
                     </div>
                 ) : viewMode === 'kanban' ? (
@@ -622,12 +628,12 @@ const TasksPage = () => {
                         statusTitles={STATUS_LABELS}
                     />
                 ) : (
-                    <div className="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
+                    <div className="bg-card rounded-3xl shadow-soft border border-line overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
+                                <thead className="bg-surface-2/40 border-b border-line">
                                     <tr>
-                                        <th className="px-4 py-3">
+                                        <th className="px-4 py-3.5">
                                             <input
                                                 type="checkbox"
                                                 checked={allVisibleSelected}
@@ -636,7 +642,7 @@ const TasksPage = () => {
                                             />
                                         </th>
                                         {['Task', 'Project', 'Status', 'Priority', 'Est.', 'Due Date', ''].map(h => (
-                                            <th key={h} className="px-4 py-3 text-left font-bold text-gray-600 text-xs uppercase tracking-wider">{h}</th>
+                                            <th key={h} className="px-4 py-3.5 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>

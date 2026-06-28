@@ -141,7 +141,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
         }
         return prev;
       });
-    } catch (err) {
+    } catch {
       toast.error('Failed to mark read');
     }
   };
@@ -152,7 +152,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       if (onUnreadCountChange) onUnreadCountChange(0);
       toast.success('All marked as read');
-    } catch (err) {
+    } catch {
       toast.error('Failed to mark all read');
     }
   };
@@ -164,7 +164,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
         prev.map((n) => (n.id === id ? { ...n, isArchived: true } : n))
       );
       toast.success('Notification archived');
-    } catch (err) {
+    } catch {
       toast.error('Failed to archive');
     }
   };
@@ -174,7 +174,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       await deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       toast.success('Notification deleted');
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete');
     }
   };
@@ -186,7 +186,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       setNotifications([]);
       if (onUnreadCountChange) onUnreadCountChange(0);
       toast.success('All cleared');
-    } catch (err) {
+    } catch {
       toast.error('Failed to clear');
     }
   };
@@ -282,7 +282,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       setPrefSaving(true);
       await updateNotificationPreferences(preferences);
       toast.success('Preferences saved successfully!');
-    } catch (err) {
+    } catch {
       toast.error('Failed to save preferences');
     } finally {
       setPrefSaving(false);

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getRooms, createRoom, getMessages, sendMessage } from '../Services/chatApi';
+import { getRooms, createRoom, addRoomMembers, getMessages, sendMessage } from '../Services/chatApi';
 import { getWorkspaceMembers } from '../Services/workspaceApi';
 import { socket, connectSocket } from '../Services/socket';
-import { MessageSquare, Users, Send, Hash, User, Loader2, Plus, Sparkles } from 'lucide-react';
+import { MessageSquare, Users, Send, Hash, User, Loader2, Plus, Sparkles, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ChatHub = () => {
@@ -21,6 +21,12 @@ const ChatHub = () => {
     const [newRoomName, setNewRoomName] = useState('');
     const [newRoomType, setNewRoomType] = useState('group'); // group or direct
     const [selectedMemberId, setSelectedMemberId] = useState('');
+    const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState([]);
+
+    // Add Member states
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+    const [selectedAddMemberIds, setSelectedAddMemberIds] = useState([]);
+    const [addingMembers, setAddingMembers] = useState(false);
 
     const messagesEndRef = useRef(null);
 
@@ -139,6 +145,7 @@ const ChatHub = () => {
                 return;
             }
             payload.name = newRoomName.trim();
+            payload.userIds = selectedGroupMemberIds.map(id => parseInt(id, 10));
         } else {
             if (!selectedMemberId) {
                 toast.error('Please select a member to direct message');
@@ -153,6 +160,7 @@ const ChatHub = () => {
             setShowNewRoomModal(false);
             setNewRoomName('');
             setSelectedMemberId('');
+            setSelectedGroupMemberIds([]);
             
             // Reload all rooms
             const updatedRooms = await getRooms();
@@ -166,6 +174,32 @@ const ChatHub = () => {
         } catch (error) {
             console.error('Failed to create room:', error);
             toast.error('Could not initialize chat room.');
+        }
+    };
+
+    const handleAddMembersSubmit = async (e) => {
+        e.preventDefault();
+        if (!selectedRoom || selectedAddMemberIds.length === 0) return;
+
+        setAddingMembers(true);
+        try {
+            await addRoomMembers(selectedRoom.id, selectedAddMemberIds);
+            toast.success('Members added successfully!');
+            setShowAddMemberModal(false);
+            setSelectedAddMemberIds([]);
+
+            // Reload rooms to update room list and selectedRoom details
+            const updatedRooms = await getRooms();
+            setRooms(updatedRooms);
+            const foundRoom = updatedRooms.find(r => r.id === selectedRoom.id);
+            if (foundRoom) {
+                setSelectedRoom(foundRoom);
+            }
+        } catch (error) {
+            console.error('Failed to add members:', error);
+            toast.error(error.response?.data?.message || 'Could not add members.');
+        } finally {
+            setAddingMembers(false);
         }
     };
 
@@ -213,12 +247,12 @@ const ChatHub = () => {
 
                         <div className="flex-1 overflow-y-auto p-3 space-y-1">
                             {loadingRooms ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                                <div className="flex flex-col items-center justify-center py-20 text-ink-soft">
                                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                     <span className="text-xs">Fetching active conversations...</span>
                                 </div>
                             ) : rooms.length === 0 ? (
-                                <div className="text-center py-20 text-ink0">
+                                <div className="text-center py-20 text-ink-soft">
                                     <p className="text-xs font-semibold">No active chats in this workspace.</p>
                                     <p className="text-[10px] text-ink-faint mt-1">Start a new conversation to begin.</p>
                                 </div>
@@ -239,7 +273,7 @@ const ChatHub = () => {
                                                 {r.name}
                                             </span>
                                             {r.lastMessage && (
-                                                <span className="text-[9px] text-ink0 font-mono">
+                                                <span className="text-[9px] text-ink-soft font-mono">
                                                     {new Date(r.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             )}
@@ -274,32 +308,44 @@ const ChatHub = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        {selectedRoom.members?.map(m => (
-                                            <div
-                                                key={m.id}
-                                                title={m.name}
-                                                className="w-7 h-7 bg-surface-2 rounded-full border border-line flex items-center justify-center text-[10px] font-bold text-indigo-300 hover:scale-105 transition cursor-pointer overflow-hidden"
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex gap-2">
+                                            {selectedRoom.members?.map(m => (
+                                                <div
+                                                    key={m.id}
+                                                    title={m.name}
+                                                    className="w-7 h-7 bg-surface-2 rounded-full border border-line flex items-center justify-center text-[10px] font-bold text-indigo-300 hover:scale-105 transition cursor-pointer overflow-hidden"
+                                                >
+                                                    {m.avatarUrl ? (
+                                                        <img src={m.avatarUrl.split('#')[0]} alt={m.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        m.name.charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {selectedRoom.type === 'group' && (
+                                            <button
+                                                onClick={() => setShowAddMemberModal(true)}
+                                                className="w-7 h-7 bg-blue-600/10 border border-blue-500/30 rounded-full flex items-center justify-center text-[12px] font-bold text-blue-400 hover:bg-blue-600/20 hover:scale-105 transition cursor-pointer"
+                                                title="Add members to group"
                                             >
-                                                {m.avatarUrl ? (
-                                                    <img src={m.avatarUrl.split('#')[0]} alt={m.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    m.name.charAt(0).toUpperCase()
-                                                )}
-                                            </div>
-                                        ))}
+                                                <Plus className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Message Stream */}
                                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                     {loadingMessages ? (
-                                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                                        <div className="flex flex-col items-center justify-center py-20 text-ink-soft">
                                             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                             <span className="text-xs">Loading message stream...</span>
                                         </div>
                                     ) : messages.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                                        <div className="flex flex-col items-center justify-center py-20 text-ink-soft">
                                             <Sparkles className="w-10 h-10 text-ink-faint animate-pulse mb-3" />
                                             <p className="text-xs font-semibold">Start of conversation thread</p>
                                             <p className="text-[10px] text-ink-faint mt-1">Send a message to initialize the dialogue.</p>
@@ -320,7 +366,7 @@ const ChatHub = () => {
                                                     <div className="flex flex-col gap-1">
                                                         <div className={`flex items-baseline gap-2 ${isMe ? 'justify-end' : ''}`}>
                                                             <span className="text-[10px] font-black text-ink">{msg.senderName}</span>
-                                                            <span className="text-[8px] text-ink0 font-mono">
+                                                            <span className="text-[8px] text-ink-soft font-mono">
                                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
@@ -359,10 +405,10 @@ const ChatHub = () => {
                                 </form>
                             </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-ink0 p-8">
+                            <div className="flex-1 flex flex-col items-center justify-center text-ink-soft p-8">
                                 <MessageSquare className="w-12 h-12 text-ink-faint mb-3 animate-bounce" />
                                 <h3 className="text-sm font-bold text-ink">No Selected Conversation</h3>
-                                <p className="text-xs text-ink0 mt-1 max-w-xs text-center leading-normal">
+                                <p className="text-xs text-ink-soft mt-1 max-w-xs text-center leading-normal">
                                     Select an active channel from the sidebar or launch a new conversation.
                                 </p>
                             </div>
@@ -410,15 +456,65 @@ const ChatHub = () => {
                             </div>
 
                             {newRoomType === 'group' ? (
-                                <div>
-                                    <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">Channel Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. general, marketing, project-omega"
-                                        value={newRoomName}
-                                        onChange={(e) => setNewRoomName(e.target.value)}
-                                        className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink"
-                                    />
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">Channel Name</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. general, marketing, project-omega"
+                                            value={newRoomName}
+                                            onChange={(e) => setNewRoomName(e.target.value)}
+                                            className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-ink-soft uppercase tracking-widest block mb-2">
+                                            Select Channel Members
+                                        </label>
+                                        <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                            {members.filter(m => Number(m.id) !== Number(user?.id)).map(m => {
+                                                const isSelected = selectedGroupMemberIds.includes(m.id);
+                                                return (
+                                                    <div
+                                                        key={m.id}
+                                                        onClick={() => {
+                                                            if (isSelected) {
+                                                                setSelectedGroupMemberIds(selectedGroupMemberIds.filter(id => id !== m.id));
+                                                            } else {
+                                                                setSelectedGroupMemberIds([...selectedGroupMemberIds, m.id]);
+                                                            }
+                                                        }}
+                                                        className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                                                            isSelected
+                                                                ? 'bg-blue-600/10 border-blue-500/30 text-blue-400'
+                                                                : 'bg-surface-2/40 border-line/60 hover:bg-surface-2 text-ink'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400 overflow-hidden shrink-0">
+                                                                {m.avatarUrl ? (
+                                                                    <img src={m.avatarUrl.split('#')[0]} alt={m.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    m.name.charAt(0).toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <p className="text-xs font-bold">{m.name}</p>
+                                                                <p className="text-[10px] text-ink-soft">{m.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                                                            isSelected
+                                                                ? 'bg-blue-600 border-blue-500 text-white'
+                                                                : 'border-line bg-surface-2'
+                                                        }`}>
+                                                            {isSelected && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div>
@@ -429,7 +525,7 @@ const ChatHub = () => {
                                         className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-blue-500 text-ink"
                                     >
                                         <option value="" className="bg-card text-ink-soft">Choose a colleague...</option>
-                                        {members.filter(m => m.id !== user.id).map(m => (
+                                        {members.filter(m => Number(m.id) !== Number(user?.id)).map(m => (
                                             <option key={m.id} value={m.id} className="bg-card text-ink">
                                                 {m.name} ({m.email})
                                             </option>
@@ -441,7 +537,10 @@ const ChatHub = () => {
                             <div className="flex gap-3 mt-6">
                                 <button
                                     type="button"
-                                    onClick={() => setShowNewRoomModal(false)}
+                                    onClick={() => {
+                                        setShowNewRoomModal(false);
+                                        setSelectedGroupMemberIds([]);
+                                    }}
                                     className="flex-1 py-3.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
                                 >
                                     Cancel
@@ -451,6 +550,93 @@ const ChatHub = () => {
                                     className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer"
                                 >
                                     Initialize
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* ADD MEMBERS TO GROUP MODAL */}
+            {showAddMemberModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md bg-card border border-line rounded-3xl p-6 shadow-2xl relative">
+                        <h2 className="text-base font-bold text-ink mb-2">
+                            Add Members to {selectedRoom?.name}
+                        </h2>
+                        <p className="text-xs text-ink-soft mb-6">
+                            Select colleagues to add to this group channel.
+                        </p>
+
+                        <form onSubmit={handleAddMembersSubmit} className="space-y-4">
+                            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                {members
+                                    .filter(m => !selectedRoom?.members?.some(rm => Number(rm.id) === Number(m.id)))
+                                    .map(m => {
+                                        const isSelected = selectedAddMemberIds.includes(m.id);
+                                        return (
+                                            <div
+                                                key={m.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setSelectedAddMemberIds(selectedAddMemberIds.filter(id => id !== m.id));
+                                                    } else {
+                                                        setSelectedAddMemberIds([...selectedAddMemberIds, m.id]);
+                                                    }
+                                                }}
+                                                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-blue-600/10 border-blue-500/30 text-blue-400'
+                                                        : 'bg-surface-2/40 border-line/60 hover:bg-surface-2 text-ink'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400 overflow-hidden shrink-0">
+                                                        {m.avatarUrl ? (
+                                                            <img src={m.avatarUrl.split('#')[0]} alt={m.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            m.name.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-xs font-bold">{m.name}</p>
+                                                        <p className="text-[10px] text-ink-soft">{m.email}</p>
+                                                    </div>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                                                    isSelected
+                                                        ? 'bg-blue-600 border-blue-500 text-white'
+                                                        : 'border-line bg-surface-2'
+                                                }`}>
+                                                    {isSelected && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                {members.filter(m => !selectedRoom?.members?.some(rm => Number(rm.id) === Number(m.id))).length === 0 && (
+                                    <p className="text-center py-6 text-xs text-ink-soft italic">
+                                        All workspace colleagues are already members of this channel.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowAddMemberModal(false);
+                                        setSelectedAddMemberIds([]);
+                                    }}
+                                    className="flex-1 py-3 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={addingMembers || selectedAddMemberIds.length === 0}
+                                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer disabled:bg-slate-500/50 disabled:cursor-not-allowed"
+                                >
+                                    {addingMembers ? 'Adding...' : 'Add Selected'}
                                 </button>
                             </div>
                         </form>

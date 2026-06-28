@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
+import { motion } from 'framer-motion';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -92,7 +92,7 @@ export default function PMDashboard({ user }) {
 
   // Velocity trend — stable on mount; avg derived from real stats if available
   const velocityTrend = useMemo(() => {
-    const totalDone = stats?.tasks?.byStatus?.done || 0;
+    const _totalDone = stats?.tasks?.byStatus?.done || 0; // reserved for future velocity calculation
     const weeklyAvg = stats?.productivity?.length
       ? Math.round(stats.productivity.reduce((s, w) => s + w.count, 0) / stats.productivity.length)
       : 36;

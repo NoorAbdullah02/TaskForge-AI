@@ -79,10 +79,7 @@ export default function AdminSettingsPage() {
     const [sendingInvites, setSendingInvites] = useState(false);
     const [inviteResultMessage, setInviteResultMessage] = useState('');
 
-    // Pending requests states
-    const [pendingRequests, setPendingRequests] = useState([]);
-    const [selectedRequests, setSelectedRequests] = useState([]);
-    const [loadingRequests, setLoadingRequests] = useState(false);
+
 
     // Data States
     const [settings, setSettings] = useState({
@@ -227,21 +224,7 @@ export default function AdminSettingsPage() {
         setTimeout(() => setCopied(''), 2000);
     };
 
-    // Load Pending Join Requests
-    const loadPendingRequests = useCallback(async (wsId) => {
-        const id = wsId || workspaceInfo?.id;
-        if (!id) return;
-        setLoadingRequests(true);
-        try {
-            const data = await getPendingRequests(id);
-            setPendingRequests(Array.isArray(data) ? data : []);
-            setSelectedRequests([]);
-        } catch (err) {
-            console.error('Failed to load pending requests:', err);
-        } finally {
-            setLoadingRequests(false);
-        }
-    }, [workspaceInfo?.id]);
+
 
     const handleSendInvites = async () => {
         if (!workspaceInfo?.id) {
@@ -282,22 +265,7 @@ export default function AdminSettingsPage() {
         }
     };
 
-    useEffect(() => {
-        if (activeTab === 'invite' && workspaceInfo?.id) {
-            loadPendingRequests(workspaceInfo.id);
-        }
-    }, [activeTab, workspaceInfo?.id]);
 
-    // Real-time socket listener — refresh pending requests when new join request arrives
-    useEffect(() => {
-        if (!socket) return;
-        const handleJoinAlert = () => {
-            loadPendingRequests(workspaceInfo?.id);
-            toast('New join request received!', { icon: '🔔' });
-        };
-        socket.on('join_request_alert', handleJoinAlert);
-        return () => socket.off('join_request_alert', handleJoinAlert);
-    }, [workspaceInfo?.id, loadPendingRequests]);
 
     const loadWorkspaceMembersAndProjects = async () => {
         setLoadingMembers(true);
@@ -340,40 +308,7 @@ export default function AdminSettingsPage() {
     };
 
 
-    // Handle Individual Action
-    const handleApproveReject = async (membershipId, action) => {
-        if (!workspaceInfo?.id) return;
-        const toastId = toast.loading('Processing join request...');
-        try {
-            await approveMember(workspaceInfo.id, membershipId, action);
-            toast.success(
-                action === 'approve'
-                    ? 'Member approved! They can now log in.'
-                    : 'Request rejected successfully.',
-                { id: toastId }
-            );
-            loadPendingRequests(workspaceInfo.id);
-        } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.message || 'Action failed', { id: toastId });
-        }
-    };
 
-    const handleBulkApproveReject = async (action) => {
-        if (!workspaceInfo?.id || selectedRequests.length === 0) return;
-        const toastId = toast.loading(`Performing bulk ${action}...`);
-        try {
-            await bulkApproveMembers(workspaceInfo.id, selectedRequests, action);
-            toast.success(
-                `${selectedRequests.length} request(s) ${action === 'approve' ? 'approved' : 'rejected'} successfully.`,
-                { id: toastId }
-            );
-            loadPendingRequests(workspaceInfo.id);
-        } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.message || 'Bulk action failed', { id: toastId });
-        }
-    };
 
 
     // Handle settings updates (Time, days, name, leave policy)
@@ -1466,115 +1401,7 @@ export default function AdminSettingsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="border-t border-gray-100 pt-6 mt-8">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
-                                                        <UserCheck className="w-4 h-4 text-blue-600" />
-                                                        Pending Join Requests
-                                                    </h3>
-                                                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                                                        Select pending members to approve or reject their access requests to join this workspace.
-                                                    </p>
-                                                </div>
-                                                {selectedRequests.length > 0 && (
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleBulkApproveReject('approve')}
-                                                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
-                                                        >
-                                                            Approve Selected ({selectedRequests.length})
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleBulkApproveReject('reject')}
-                                                            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-extrabold rounded-xl shadow-sm transition"
-                                                        >
-                                                            Reject Selected ({selectedRequests.length})
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
 
-                                            {loadingRequests ? (
-                                                <div className="py-12 flex items-center justify-center">
-                                                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                                                </div>
-                                            ) : (
-                                                <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
-                                                    <table className="min-w-full divide-y divide-gray-100 text-xs">
-                                                        <thead className="bg-gray-50/50">
-                                                            <tr>
-                                                                <th className="w-12 px-6 py-3.5 text-left">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={pendingRequests.length > 0 && selectedRequests.length === pendingRequests.length}
-                                                                        onChange={(e) => {
-                                                                            if (e.target.checked) {
-                                                                                setSelectedRequests(pendingRequests.map(r => r.membershipId));
-                                                                            } else {
-                                                                                setSelectedRequests([]);
-                                                                            }
-                                                                        }}
-                                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                                    />
-                                                                </th>
-                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Name</th>
-                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Email Address</th>
-                                                                <th className="px-6 py-3.5 text-left font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Requested Date</th>
-                                                                <th className="px-6 py-3.5 text-right font-extrabold text-gray-500 uppercase tracking-wider text-[10px]">Actions</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="bg-white divide-y divide-gray-100 font-medium text-gray-700">
-                                                            {pendingRequests.map((req) => (
-                                                                <tr key={req.membershipId} className="hover:bg-blue-50/30 transition-colors">
-                                                                    <td className="px-6 py-4">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={selectedRequests.includes(req.membershipId)}
-                                                                            onChange={(e) => {
-                                                                                if (e.target.checked) {
-                                                                                    setSelectedRequests([...selectedRequests, req.membershipId]);
-                                                                                } else {
-                                                                                    setSelectedRequests(selectedRequests.filter(id => id !== req.membershipId));
-                                                                                }
-                                                                            }}
-                                                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-6 py-4 font-bold text-gray-800">{req.name}</td>
-                                                                    <td className="px-6 py-4 text-gray-500">{req.email}</td>
-                                                                    <td className="px-6 py-4 text-gray-400">{new Date(req.joinedAt).toLocaleString()}</td>
-                                                                    <td className="px-6 py-4 text-right flex justify-end gap-1.5">
-                                                                        <button
-                                                                            onClick={() => handleApproveReject(req.membershipId, 'approve')}
-                                                                            className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-xl transition cursor-pointer"
-                                                                            title="Approve request"
-                                                                        >
-                                                                            <Check className="w-4 h-4" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleApproveReject(req.membershipId, 'reject')}
-                                                                            className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition cursor-pointer"
-                                                                            title="Reject request"
-                                                                        >
-                                                                            <X className="w-4 h-4" />
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-
-                                                            {pendingRequests.length === 0 && (
-                                                                <tr>
-                                                                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic font-medium">
-                                                                        No pending join requests active currently.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1953,7 +1780,7 @@ export default function AdminSettingsPage() {
                                             type="text"
                                             value={userForm.phone}
                                             onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                                            placeholder="e.g. +1 555-0199"
+                                            placeholder="e.g. 01748269350"
                                             className="w-full px-4 py-2.5 bg-white border border-blue-100 rounded-2xl text-sm focus:outline-none focus:border-blue-500 text-gray-800"
                                         />
                                     </div>

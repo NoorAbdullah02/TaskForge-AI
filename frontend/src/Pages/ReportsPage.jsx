@@ -10,7 +10,6 @@ import { getAdminUsers } from '../Services/adminApi';
 import { getAttendanceHistory } from '../Services/attendanceApi';
 import { emailReport } from '../Services/reportsApi';
 import { useAuth } from '../context/AuthContext';
-import { motion } from 'framer-motion';
 
 export default function ReportsPage() {
     const { isLoggedIn, user: authUser } = useAuth();

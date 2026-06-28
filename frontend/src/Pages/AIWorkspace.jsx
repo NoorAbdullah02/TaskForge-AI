@@ -51,7 +51,7 @@ const AIWorkspace = () => {
 
     const [activeTab, setActiveTab] = useState('task-generator');
     const [projects, setProjects] = useState([]);
-    const [projectsLoading, setProjectsLoading] = useState(false);
+    const [, setProjectsLoading] = useState(false);
 
     // ==========================================
     // GLOBAL METADATA LOAD
@@ -92,8 +92,8 @@ const AIWorkspace = () => {
     const [importMode, setImportMode] = useState('existing');
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
-    const [newProjectStart, setNewProjectStart] = useState('');
-    const [newProjectEnd, setNewProjectEnd] = useState('');
+    const [newProjectStart, _setNewProjectStart] = useState('');
+    const [newProjectEnd, _setNewProjectEnd] = useState('');
     const [importingTasks, setImportingTasks] = useState(false);
 
     useEffect(() => {
@@ -692,7 +692,7 @@ const AIWorkspace = () => {
                                             <div className="bg-surface-2 border border-dashed border-line rounded-3xl p-12 text-center min-h-[300px] flex flex-col items-center justify-center">
                                                 <Wand2 className="w-10 h-10 text-ink-faint mb-3 animate-pulse" />
                                                 <h4 className="text-ink-soft font-bold">Workspace Pending Objective Input</h4>
-                                                <p className="text-xs text-ink0 max-w-xs mt-1 font-sans">Provide project instructions on the left to structure tasks, priorities, and subtasks.</p>
+                                                <p className="text-xs text-ink-soft max-w-xs mt-1 font-sans">Provide project instructions on the left to structure tasks, priorities, and subtasks.</p>
                                             </div>
                                         )}
 
@@ -895,7 +895,7 @@ const AIWorkspace = () => {
                                             <div className="bg-surface-2 border border-dashed border-line rounded-3xl p-12 text-center min-h-[300px] flex flex-col items-center justify-center">
                                                 <FileText className="w-10 h-10 text-ink-faint mb-3 animate-pulse" />
                                                 <h4 className="text-ink-soft font-bold">Pending Meeting Brief Details</h4>
-                                                <p className="text-xs text-ink0 max-w-xs mt-1 font-sans">Input discussion summaries on the left to extract structured paragraphs and task action tables.</p>
+                                                <p className="text-xs text-ink-soft max-w-xs mt-1 font-sans">Input discussion summaries on the left to extract structured paragraphs and task action tables.</p>
                                             </div>
                                         )}
 
@@ -929,7 +929,7 @@ const AIWorkspace = () => {
                                                     </div>
 
                                                     {summaryResult.actionItems?.length === 0 ? (
-                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink0 font-sans">
+                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink-soft font-sans">
                                                             All action items have been processed!
                                                         </div>
                                                     ) : (
@@ -962,7 +962,7 @@ const AIWorkspace = () => {
                                                 <div className="space-y-4 pt-4 border-t border-line">
                                                     <h5 className="font-bold text-xs uppercase tracking-wider text-ink-soft">Risks & Bottlenecks Identified</h5>
                                                     {!summaryResult.risks || summaryResult.risks.length === 0 ? (
-                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink0 font-sans">
+                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink-soft font-sans">
                                                             No clear risks or bottlenecks identified from discussion notes.
                                                         </div>
                                                     ) : (
@@ -990,7 +990,7 @@ const AIWorkspace = () => {
                                                 <div className="space-y-4 pt-4 border-t border-line">
                                                     <h5 className="font-bold text-xs uppercase tracking-wider text-ink-soft">Recommended Concrete Tasks</h5>
                                                     {!summaryResult.generatedTasks || summaryResult.generatedTasks.length === 0 ? (
-                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink0 font-sans">
+                                                        <div className="bg-surface-2 border border-line p-4 rounded-2xl text-center text-xs text-ink-soft font-sans">
                                                             All generated tasks have been imported!
                                                         </div>
                                                     ) : (
@@ -1114,7 +1114,7 @@ const AIWorkspace = () => {
                                                 )}
 
                                                 {!generatingBlueprint && !blueprintResult && (
-                                                    <div className="bg-card border border-line border-dashed rounded-3xl p-12 text-center text-ink0 flex flex-col items-center justify-center min-h-[300px]">
+                                                    <div className="bg-card border border-line border-dashed rounded-3xl p-12 text-center text-ink-soft flex flex-col items-center justify-center min-h-[300px]">
                                                         <Calendar className="w-8 h-8 text-ink-faint mb-3" />
                                                         <p className="text-xs font-bold font-sans">Input a project description and click Generate to see the blueprint details.</p>
                                                     </div>
@@ -1153,7 +1153,7 @@ const AIWorkspace = () => {
                                                                             <div key={taskIdx} className="flex justify-between items-center bg-surface-2 border border-line p-3 rounded-xl">
                                                                                 <div>
                                                                                     <p className="text-xs font-semibold text-ink">{task.title}</p>
-                                                                                    <p className="text-[10px] text-ink0 mt-0.5">{task.description}</p>
+                                                                                    <p className="text-[10px] text-ink-soft mt-0.5">{task.description}</p>
                                                                                 </div>
                                                                                 <div className="flex items-center gap-2">
                                                                                     <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25">{task.role}</span>
@@ -1295,7 +1295,7 @@ const AIWorkspace = () => {
                                                                 <Loader className="w-8 h-8 text-blue-500 animate-spin" />
                                                             </div>
                                                         ) : projectTasks.length === 0 ? (
-                                                            <p className="text-xs text-ink0 py-6 text-center font-sans">No tasks available in this project. Create some first!</p>
+                                                            <p className="text-xs text-ink-soft py-6 text-center font-sans">No tasks available in this project. Create some first!</p>
                                                         ) : (
                                                             <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                                                                 {projectTasks.map(t => (
@@ -1416,7 +1416,7 @@ const AIWorkspace = () => {
                                             <div className="bg-surface-2 border border-dashed border-line rounded-3xl p-12 text-center min-h-[300px] flex flex-col items-center justify-center">
                                                 <ShieldAlert className="w-10 h-10 text-ink-faint mb-3 animate-pulse" />
                                                 <h4 className="text-ink-soft font-bold">Risk Assessment Pending</h4>
-                                                <p className="text-xs text-ink0 max-w-xs mt-1 font-sans">Select a workspace on the left and trigger scanning algorithms to compute health scores.</p>
+                                                <p className="text-xs text-ink-soft max-w-xs mt-1 font-sans">Select a workspace on the left and trigger scanning algorithms to compute health scores.</p>
                                             </div>
                                         )}
 
@@ -1577,7 +1577,7 @@ const AIWorkspace = () => {
                                             <div className="bg-surface-2 border border-dashed border-line rounded-3xl p-12 text-center min-h-[300px] flex flex-col items-center justify-center">
                                                 <FileText className="w-10 h-10 text-ink-faint mb-3 animate-pulse" />
                                                 <h4 className="text-ink-soft font-bold">Documentation Board Empty</h4>
-                                                <p className="text-xs text-ink0 max-w-xs mt-1 font-sans">Isolate your technical scope guidelines on the left to compile standard specs.</p>
+                                                <p className="text-xs text-ink-soft max-w-xs mt-1 font-sans">Isolate your technical scope guidelines on the left to compile standard specs.</p>
                                             </div>
                                         )}
 
@@ -1633,7 +1633,7 @@ const AIWorkspace = () => {
                                             <p className="text-xs text-ink-soft font-medium">Assembling daily updates and standup bullet points...</p>
                                         </div>
                                     ) : !dailyStandupData ? (
-                                        <div className="bg-card border border-line border-dashed rounded-3xl p-12 text-center text-ink0 flex flex-col items-center justify-center min-h-[300px]">
+                                        <div className="bg-card border border-line border-dashed rounded-3xl p-12 text-center text-ink-soft flex flex-col items-center justify-center min-h-[300px]">
                                             <Flame className="w-8 h-8 text-ink-faint mb-3 animate-pulse" />
                                             <p className="text-xs font-bold font-sans">No standup report generated yet. Click Regenerate Standup to trigger.</p>
                                         </div>

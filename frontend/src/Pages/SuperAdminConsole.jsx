@@ -364,7 +364,7 @@ const SuperAdminConsole = () => {
                     {activeTab !== 'analytics' && (
                         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-6">
                             <div className="relative flex-1 max-w-md">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink0" />
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-soft" />
                                 <input
                                     type="text"
                                     placeholder={`Filter ${activeTab}...`}
@@ -395,7 +395,7 @@ const SuperAdminConsole = () => {
                     {activeTab === 'workspaces' && (
                         <div className="overflow-x-auto">
                             {filteredWorkspaces.length === 0 ? (
-                                <p className="text-xs text-ink0 py-10 text-center font-sans">No workspaces match filters.</p>
+                                <p className="text-xs text-ink-soft py-10 text-center font-sans">No workspaces match filters.</p>
                             ) : (
                                 <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                     <thead>
@@ -416,7 +416,7 @@ const SuperAdminConsole = () => {
                                                 <td className="py-3.5 pr-4">
                                                     <div>
                                                         <span className="font-semibold block">{w.ownerName || 'System'}</span>
-                                                        <span className="text-[10px] text-ink0 block">{w.ownerEmail || 'N/A'}</span>
+                                                        <span className="text-[10px] text-ink-soft block">{w.ownerEmail || 'N/A'}</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 font-mono text-ink-soft pr-4">{w.inviteCode}</td>
@@ -468,7 +468,7 @@ const SuperAdminConsole = () => {
                     {activeTab === 'users' && (
                         <div className="overflow-x-auto">
                             {filteredUsers.length === 0 ? (
-                                <p className="text-xs text-ink0 py-10 text-center font-sans">No user accounts found matching query.</p>
+                                <p className="text-xs text-ink-soft py-10 text-center font-sans">No user accounts found matching query.</p>
                             ) : (
                                 <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                     <thead>
@@ -529,7 +529,7 @@ const SuperAdminConsole = () => {
                     {activeTab === 'projects' && (
                         <div className="overflow-x-auto">
                             {projectsList.length === 0 ? (
-                                <p className="text-xs text-ink0 py-10 text-center font-sans">No platform projects found.</p>
+                                <p className="text-xs text-ink-soft py-10 text-center font-sans">No platform projects found.</p>
                             ) : (
                                 <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                     <thead>
@@ -585,7 +585,7 @@ const SuperAdminConsole = () => {
                                             </div>
                                         ))}
                                         {analytics.ai?.breakdown?.length === 0 && (
-                                            <p className="text-xs text-ink0 py-6 text-center">No AI usage logged yet.</p>
+                                            <p className="text-xs text-ink-soft py-6 text-center">No AI usage logged yet.</p>
                                         )}
                                     </div>
                                 </div>
@@ -614,7 +614,7 @@ const SuperAdminConsole = () => {
                                             </div>
                                         ))}
                                         {analytics.email?.length === 0 && (
-                                            <p className="text-xs text-ink0 py-6 text-center font-sans">No email logs captured.</p>
+                                            <p className="text-xs text-ink-soft py-6 text-center font-sans">No email logs captured.</p>
                                         )}
                                     </div>
                                 </div>
@@ -626,7 +626,7 @@ const SuperAdminConsole = () => {
                     {activeTab === 'audit-logs' && (
                         <div className="overflow-x-auto">
                             {filteredLogs.length === 0 ? (
-                                <p className="text-xs text-ink0 py-10 text-center font-sans">No platform actions match filter criteria.</p>
+                                <p className="text-xs text-ink-soft py-10 text-center font-sans">No platform actions match filter criteria.</p>
                             ) : (
                                 <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                     <thead>
@@ -660,11 +660,11 @@ const SuperAdminConsole = () => {
                                                 <td className="py-3.5 pr-4">
                                                     <div>
                                                         <span className="font-semibold block">{l.userName || 'System'}</span>
-                                                        <span className="text-[10px] text-ink0 block font-mono">{l.userEmail || 'N/A'}</span>
+                                                        <span className="text-[10px] text-ink-soft block font-mono">{l.userEmail || 'N/A'}</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 font-mono text-ink-soft pr-4">{l.ipAddress || 'unknown'}</td>
-                                                <td className="py-3.5 text-right font-mono text-ink0">{new Date(l.createdAt).toLocaleString()}</td>
+                                                <td className="py-3.5 text-right font-mono text-ink-soft">{new Date(l.createdAt).toLocaleString()}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -712,7 +712,7 @@ const SuperAdminConsole = () => {
                                             <Loader className="w-6 h-6 text-blue-500 animate-spin" />
                                         </div>
                                     ) : emailLogsList.length === 0 ? (
-                                        <p className="text-xs text-ink0 py-16 text-center font-sans">No email delivery logs found.</p>
+                                        <p className="text-xs text-ink-soft py-16 text-center font-sans">No email delivery logs found.</p>
                                     ) : (
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left text-xs text-ink font-sans border-collapse">
@@ -732,7 +732,7 @@ const SuperAdminConsole = () => {
                                                             <td className="py-3 pr-2">
                                                                 <span className="font-semibold text-ink block truncate max-w-[150px]">{log.recipient}</span>
                                                                 {log.sentAt && (
-                                                                    <span className="text-[9px] text-ink0 block font-mono">
+                                                                    <span className="text-[9px] text-ink-soft block font-mono">
                                                                         {new Date(log.sentAt).toLocaleTimeString()}
                                                                     </span>
                                                                 )}
@@ -792,7 +792,7 @@ const SuperAdminConsole = () => {
                                             <Loader className="w-6 h-6 text-purple-500 animate-spin" />
                                         </div>
                                     ) : automationLogsList.length === 0 ? (
-                                        <p className="text-xs text-ink0 py-12 text-center font-sans">No automation logs recorded.</p>
+                                        <p className="text-xs text-ink-soft py-12 text-center font-sans">No automation logs recorded.</p>
                                     ) : (
                                         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                                             {automationLogsList.map((log) => (
@@ -813,7 +813,7 @@ const SuperAdminConsole = () => {
                                                     
                                                     <p className="text-[10px] text-ink-soft leading-normal font-sans">{log.summary}</p>
                                                     
-                                                    <div className="flex justify-between items-center text-[8px] font-semibold text-ink0 font-mono pt-1">
+                                                    <div className="flex justify-between items-center text-[8px] font-semibold text-ink-soft font-mono pt-1">
                                                         <span>ID: {log.id}</span>
                                                         <span>{new Date(log.runAt).toLocaleTimeString()} {new Date(log.runAt).toLocaleDateString()}</span>
                                                     </div>
@@ -850,7 +850,7 @@ const SuperAdminConsole = () => {
                             <div className="px-6 py-4 border-b border-line bg-surface-2 flex justify-between items-center">
                                 <div>
                                     <h3 className="text-xs font-black uppercase text-ink-soft tracking-wider">Email HTML Content Preview</h3>
-                                    <span className="text-[10px] text-ink0 font-bold block mt-0.5">{selectedEmail.subject}</span>
+                                    <span className="text-[10px] text-ink-soft font-bold block mt-0.5">{selectedEmail.subject}</span>
                                 </div>
                                 <button 
                                     onClick={() => setSelectedEmail(null)}
@@ -872,7 +872,7 @@ const SuperAdminConsole = () => {
 
                             {/* Modal Footer */}
                             <div className="px-6 py-4 border-t border-line bg-surface-2 flex justify-between items-center">
-                                <div className="text-[9px] font-bold text-ink0">
+                                <div className="text-[9px] font-bold text-ink-soft">
                                     Recipient: <span className="text-ink font-mono">{selectedEmail.recipient}</span>
                                 </div>
                                 <div className="space-x-3">

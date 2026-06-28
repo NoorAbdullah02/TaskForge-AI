@@ -15,7 +15,6 @@ import { ChartTooltip, CalendarHeatmap } from '../../Components/DashboardUtils';
 import { getDashboardStats } from '../../Services/dashboardApi';
 import { getProjects } from '../../Services/projectApi';
 import { getWorkspaceInfo } from '../../Services/workspaceApi';
-import { socket } from '../../Services/socket';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -43,7 +42,7 @@ export default function OwnerDashboard({ user }) {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [projects, setProjects] = useState([]);
+  const [, setProjects] = useState([]);
   const [workspaceInfo, setWorkspaceInfo] = useState(null);
   const [copiedType, setCopiedType] = useState('');
   const [loading, setLoading] = useState(true);

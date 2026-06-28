@@ -10,5 +10,6 @@ router.get('/rooms', ChatController.getRooms);
 router.post('/rooms', ChatController.createRoom);
 router.get('/rooms/:id/messages', ChatController.getMessages);
 router.post('/rooms/:id/messages', ChatController.sendMessage);
+router.post('/rooms/:id/members', ChatController.addMembers);
 
 export default router;

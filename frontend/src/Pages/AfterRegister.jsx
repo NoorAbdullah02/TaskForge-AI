@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Mail, Inbox, RefreshCw, CheckCircle, AlertCircle, Sparkles, Loader, ArrowRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { resendVerificationEmail } from '../Services/authApi';
 import { motion } from 'framer-motion';
+import { resendVerificationEmail } from '../Services/authApi';
 import toast from 'react-hot-toast';
 import { GlassCard } from '../design-system/primitives';
 

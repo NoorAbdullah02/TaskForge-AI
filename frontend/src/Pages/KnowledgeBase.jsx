@@ -180,12 +180,12 @@ const KnowledgeBase = () => {
 
                         <div className="flex-1 overflow-y-auto p-3 space-y-1">
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                                <div className="flex flex-col items-center justify-center py-20 text-ink-soft">
                                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                                     <span className="text-xs">Scanning directory...</span>
                                 </div>
                             ) : pages.length === 0 ? (
-                                <div className="text-center py-20 text-ink0">
+                                <div className="text-center py-20 text-ink-soft">
                                     <p className="text-xs font-semibold">No records found.</p>
                                     <p className="text-[10px] text-ink-faint mt-1">Create a new document to populate this tab.</p>
                                 </div>
@@ -270,7 +270,7 @@ const KnowledgeBase = () => {
                                 <div className="border-b border-line pb-4 flex justify-between items-start gap-4">
                                     <div>
                                         <h2 className="text-xl font-bold text-ink">{selectedPage.title}</h2>
-                                        <div className="flex items-center gap-4 text-[10px] text-ink0 mt-2 font-mono">
+                                        <div className="flex items-center gap-4 text-[10px] text-ink-soft mt-2 font-mono">
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="w-3.5 h-3.5" />
                                                 Updated {new Date(selectedPage.updatedAt).toLocaleDateString()}
@@ -289,14 +289,14 @@ const KnowledgeBase = () => {
                                 </div>
 
                                 <div className="flex-1 text-ink text-xs leading-relaxed font-sans whitespace-pre-wrap font-medium">
-                                    {selectedPage.content || <span className="italic text-ink0">Empty document. Click Edit Page to add context.</span>}
+                                    {selectedPage.content || <span className="italic text-ink-soft">Empty document. Click Edit Page to add context.</span>}
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-ink0 p-8">
+                            <div className="flex-1 flex flex-col items-center justify-center text-ink-soft p-8">
                                 <BookOpen className="w-12 h-12 text-ink-faint mb-3 animate-bounce" />
                                 <h3 className="text-sm font-bold text-ink">No Selected Document</h3>
-                                <p className="text-xs text-ink0 mt-1 max-w-xs text-center leading-normal">
+                                <p className="text-xs text-ink-soft mt-1 max-w-xs text-center leading-normal">
                                     Choose a document from the directory catalog directory or create one.
                                 </p>
                             </div>

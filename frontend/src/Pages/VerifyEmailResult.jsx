@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, ArrowRight, Sparkles, AlertCircle, Mail, Loader, RefreshCw, ShieldCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { resendVerificationEmail } from '../Services/authApi';
 import toast from 'react-hot-toast';
 import { GlassCard } from '../design-system/primitives';

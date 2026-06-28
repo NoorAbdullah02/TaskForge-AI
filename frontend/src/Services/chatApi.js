@@ -10,6 +10,11 @@ export const createRoom = async (data) => {
     return response.data;
 };
 
+export const addRoomMembers = async (roomId, userIds) => {
+    const response = await api.post(`/chat/rooms/${roomId}/members`, { userIds });
+    return response.data;
+};
+
 export const getMessages = async (roomId) => {
     const response = await api.get(`/chat/rooms/${roomId}/messages`);
     return response.data;

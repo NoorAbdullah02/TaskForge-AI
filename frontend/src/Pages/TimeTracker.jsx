@@ -201,7 +201,7 @@ const TimeTracker = () => {
                                 <div>
                                     <span className="text-[10px] font-black text-ink-soft uppercase tracking-widest block">Active Log Timer</span>
                                     <h3 className="text-sm font-bold text-ink mt-1">
-                                        {activeTimer.description || <span className="italic text-ink0">Unlabeled tracking session</span>}
+                                        {activeTimer.description || <span className="italic text-ink-soft">Unlabeled tracking session</span>}
                                     </h3>
                                     {activeTimer.taskTitle && (
                                         <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold font-mono uppercase">
@@ -231,7 +231,7 @@ const TimeTracker = () => {
                                                 onChange={(e) => setSelectedTaskId(e.target.value)}
                                                 className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
                                             >
-                                                <option value="" className="bg-card text-ink0">Choose task (Optional)</option>
+                                                <option value="" className="bg-card text-ink-soft">Choose task (Optional)</option>
                                                 {tasks.map(t => (
                                                     <option key={t.id} value={t.id} className="bg-card text-ink">
                                                         {t.title}
@@ -294,7 +294,7 @@ const TimeTracker = () => {
                             </div>
                         </div>
                         <div className="border-t border-line pt-4 mt-4">
-                            <span className="text-[10px] text-ink0 font-sans block">Timer preserves status in database and will continue running even if you navigate away or close the app.</span>
+                            <span className="text-[10px] text-ink-soft font-sans block">Timer preserves status in database and will continue running even if you navigate away or close the app.</span>
                         </div>
                     </div>
                 </div>
@@ -307,12 +307,12 @@ const TimeTracker = () => {
                     </h3>
 
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-ink0">
+                        <div className="flex flex-col items-center justify-center py-20 text-ink-soft">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                             <span className="text-xs">Gathering work logs...</span>
                         </div>
                     ) : logs.length === 0 ? (
-                        <p className="text-xs text-ink0 py-10 text-center font-sans">No work hours logged yet.</p>
+                        <p className="text-xs text-ink-soft py-10 text-center font-sans">No work hours logged yet.</p>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs text-ink font-sans border-collapse">
@@ -328,14 +328,14 @@ const TimeTracker = () => {
                                 <tbody className="divide-y divide-white/5">
                                     {logs.map(log => (
                                         <tr key={log.id} className="hover:bg-surface-2 transition-colors">
-                                            <td className="py-3.5 font-bold text-ink pr-4">{log.description || <span className="text-ink0 italic">No description</span>}</td>
+                                            <td className="py-3.5 font-bold text-ink pr-4">{log.description || <span className="text-ink-soft italic">No description</span>}</td>
                                             <td className="py-3.5 pr-4">
                                                 {log.taskTitle ? (
                                                     <span className="px-2 py-0.5 rounded bg-surface-2 text-[10px] font-semibold text-indigo-300 border border-line">
                                                         {log.taskTitle}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-ink0 italic">None</span>
+                                                    <span className="text-ink-soft italic">None</span>
                                                 )}
                                             </td>
                                             <td className="py-3.5 font-mono text-ink-soft pr-4">{new Date(log.startTime).toLocaleString()}</td>
@@ -400,7 +400,7 @@ const TimeTracker = () => {
                                     onChange={(e) => setManualTaskId(e.target.value)}
                                     className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
                                 >
-                                    <option value="" className="bg-card text-ink0">Choose task (Optional)</option>
+                                    <option value="" className="bg-card text-ink-soft">Choose task (Optional)</option>
                                     {tasks.map(t => (
                                         <option key={t.id} value={t.id} className="bg-card text-ink">
                                             {t.title}

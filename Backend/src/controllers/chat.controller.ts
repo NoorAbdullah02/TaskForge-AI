@@ -238,4 +238,68 @@ export class ChatController {
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }
+
+    // 5. Add members to an existing room
+    static async addMembers(req: Request, res: Response) {
+        try {
+            const user = (req as any).user;
+            if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+            const roomId = parseInt(req.params.id, 10);
+            if (isNaN(roomId)) return res.status(400).json({ message: 'Invalid Room ID' });
+
+            const { userIds } = req.body; // array of userIds to add
+            if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+                return res.status(400).json({ message: 'User IDs are required' });
+            }
+
+            // Verify requesting user is already a member of this chat
+            const [membership] = await db.select().from(chatMembers)
+                .where(
+                    and(
+                        eq(chatMembers.chatId, roomId),
+                        eq(chatMembers.userId, user.id)
+                    )
+                );
+            if (!membership) {
+                return res.status(403).json({ message: 'Forbidden: You are not a member of this chat' });
+            }
+
+            // Check if the chat is a group room (you shouldn't add members to a direct message)
+            const [chatRoom] = await db.select().from(chats).where(eq(chats.id, roomId));
+            if (!chatRoom) return res.status(404).json({ message: 'Chat room not found' });
+            if (chatRoom.type === 'direct') {
+                return res.status(400).json({ message: 'Cannot add members to a Direct Message room' });
+            }
+
+            // Insert new members
+            const addedIds = [];
+            for (const targetId of userIds) {
+                const targetIdNum = parseInt(targetId, 10);
+                if (isNaN(targetIdNum)) continue;
+
+                // Check if already a member
+                const [existing] = await db.select().from(chatMembers)
+                    .where(
+                        and(
+                            eq(chatMembers.chatId, roomId),
+                            eq(chatMembers.userId, targetIdNum)
+                        )
+                    );
+                if (!existing) {
+                    await db.insert(chatMembers).values({
+                        chatId: roomId,
+                        userId: targetIdNum,
+                        joinedAt: new Date()
+                    });
+                    addedIds.push(targetIdNum);
+                }
+            }
+
+            return res.status(200).json({ message: 'Members added successfully', addedIds });
+        } catch (error) {
+            console.error('Error adding members to room:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
 }

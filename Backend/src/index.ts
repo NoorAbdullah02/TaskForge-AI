@@ -53,6 +53,7 @@ app.use(helmet({
             imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
             scriptSrc: ["'self'"],
             connectSrc: ["'self'", env.FRONTEND_URL || '', 'wss:'],
+            mediaSrc: ["'self'", "https://assets.mixkit.co"],
         }
     }
 }));

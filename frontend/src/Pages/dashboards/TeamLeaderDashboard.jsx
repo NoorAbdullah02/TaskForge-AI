@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
+import { motion } from 'framer-motion';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -23,7 +23,7 @@ const STATUS_COLORS   = { todo: '#475569', 'in-progress': '#06b6d4', done: '#10b
 
 export default function TeamLeaderDashboard({ user }) {
   const [stats,    setStats]    = useState(null);
-  const [projects, setProjects] = useState([]);
+  const [, setProjects] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const headerRef = useRef(null);
 

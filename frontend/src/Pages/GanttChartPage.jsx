@@ -10,7 +10,7 @@ import { getEpics } from '../Services/agileApi';
 import { getTasks } from '../Services/taskApi';
 
 export default function GanttChartPage() {
-    const { user } = useAuth();
+    const { user: _user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -18,7 +18,7 @@ export default function GanttChartPage() {
     const [tasks, setTasks] = useState([]);
 
     // Gantt Settings
-    const [timeScale, setTimeScale] = useState('days'); // days, weeks
+    const [, setTimeScale] = useState('days'); // days, weeks
 
     const loadProjects = async () => {
         try {
