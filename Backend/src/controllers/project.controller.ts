@@ -10,6 +10,7 @@ import { socketService } from '../services/socket.service';
 import { isProjectManager, isProjectMember } from '../lib/projectAuth';
 import { isReviewStatus, normalizeIncomingStatus } from '../lib/taskStatus';
 import { NotificationService } from '../services/notification.service';
+import { env } from '../config/env';
 
 
 
@@ -997,7 +998,7 @@ export class ProjectController {
                 if (!item.name) continue;
 
                 const inviteCode = 'PROJ-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-                const inviteLink = `http://localhost:5173/projects/join?code=${inviteCode}`;
+                const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/projects/join?code=${inviteCode}`;
 
                 const [project] = await db.insert(projects).values({
                     workspaceId: activeWorkspaceId,

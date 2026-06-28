@@ -2,6 +2,7 @@ import { db } from '../db/index';
 import { eq, and, sql, ne } from 'drizzle-orm';
 import { projects, projectMembers, tasks, users, projectDocuments, epics, stories, sprints } from '../db/schema';
 import type { Project, NewProject, Task, NewTask } from '../db/schema';
+import { env } from '../config/env';
 
 export class ProjectService {
     // Fetch all projects in workspace with optional search, filter, pagination, and role-based access
@@ -63,7 +64,7 @@ export class ProjectService {
                 .where(whereClause)
                 .limit(limit)
                 .offset(offset);
-            
+
             projectList = projectList.map(p => ({ ...p, userRole: 'owner' }));
         } else {
             // Join with projectMembers
@@ -83,9 +84,9 @@ export class ProjectService {
                     project: projects,
                     role: projectMembers.role
                 })
-                .from(projectMembers)
-                .innerJoin(projects, eq(projectMembers.projectId, projects.id))
-                .where(memberWhereClause);
+                    .from(projectMembers)
+                    .innerJoin(projects, eq(projectMembers.projectId, projects.id))
+                    .where(memberWhereClause);
                 return list.map(m => ({ ...m.project, userRole: m.role }));
             }
 
@@ -93,11 +94,11 @@ export class ProjectService {
                 project: projects,
                 role: projectMembers.role
             })
-            .from(projectMembers)
-            .innerJoin(projects, eq(projectMembers.projectId, projects.id))
-            .where(memberWhereClause)
-            .limit(limit)
-            .offset(offset);
+                .from(projectMembers)
+                .innerJoin(projects, eq(projectMembers.projectId, projects.id))
+                .where(memberWhereClause)
+                .limit(limit)
+                .offset(offset);
 
             projectList = results.map(r => ({
                 ...r.project,
@@ -129,9 +130,9 @@ export class ProjectService {
             role: projectMembers.role,
             joinedAt: projectMembers.joinedAt,
         })
-        .from(projectMembers)
-        .innerJoin(users, eq(projectMembers.userId, users.id))
-        .where(eq(projectMembers.projectId, projectId));
+            .from(projectMembers)
+            .innerJoin(users, eq(projectMembers.userId, users.id))
+            .where(eq(projectMembers.projectId, projectId));
 
         // Fetch tasks with assignee details
         const projectTasksRaw = await db.select({
@@ -139,9 +140,9 @@ export class ProjectService {
             assigneeName: users.name,
             assigneeEmail: users.email,
         })
-        .from(tasks)
-        .leftJoin(users, eq(tasks.assigneeId, users.id))
-        .where(eq(tasks.projectId, projectId));
+            .from(tasks)
+            .leftJoin(users, eq(tasks.assigneeId, users.id))
+            .where(eq(tasks.projectId, projectId));
 
         const projectTasks = projectTasksRaw.map(r => ({
             ...r.task,
@@ -176,7 +177,7 @@ export class ProjectService {
     }) {
         return db.transaction(async (tx) => {
             const inviteCode = 'PROJ-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-            const inviteLink = `http://localhost:5173/projects/join?code=${inviteCode}`;
+            const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/projects/join?code=${inviteCode}`;
 
             const [project] = await tx.insert(projects).values({
                 workspaceId: data.workspaceId,
@@ -210,7 +211,7 @@ export class ProjectService {
             if (!srcProject) throw new Error('Source project not found');
 
             const inviteCode = 'PROJ-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-            const inviteLink = `http://localhost:5173/projects/join?code=${inviteCode}`;
+            const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/projects/join?code=${inviteCode}`;
 
             // 1. Create duplicate project record
             const [newProject] = await tx.insert(projects).values({

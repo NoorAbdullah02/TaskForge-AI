@@ -9,6 +9,22 @@ import { socketService } from '../services/socket.service';
 import { env } from '../config/env';
 import { NotificationService } from '../services/notification.service';
 
+function normalizeUrl(url: string) {
+    return url.replace(/\/+$/, '');
+}
+
+function getFrontendUrl(req?: Request) {
+    const configuredFrontend = env.FRONTEND_URL?.trim();
+    if (configuredFrontend) return normalizeUrl(configuredFrontend);
+
+    if (req) {
+        const origin = String(req.get('origin') || req.get('referer') || '').trim();
+        if (origin) return normalizeUrl(origin);
+    }
+
+    return 'http://localhost:5173';
+}
+
 // Utility to generate random invite code TF-XXXXXX
 function generateInviteCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -68,7 +84,7 @@ export class WorkspaceController {
             if (!isFirstUser) {
                 // Create workspace when this is not the initial super admin
                 inviteCode = generateInviteCode();
-                inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
+                inviteLink = `${getFrontendUrl(req)}/register?code=${inviteCode}`;
 
                 const [workspaceRecord] = await db.insert(workspaces).values({
                     name: workspaceName,
@@ -811,7 +827,7 @@ export class WorkspaceController {
             }
 
             const inviteCode = generateInviteCode();
-            const inviteLink = `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${inviteCode}`;
+            const inviteLink = `${getFrontendUrl(req)}/register?code=${inviteCode}`;
 
             const [updated] = await db.update(workspaces).set({
                 inviteCode,
@@ -867,7 +883,7 @@ export class WorkspaceController {
                 return res.status(404).json({ message: 'Workspace not found' });
             }
 
-            const inviteLink = workspace.inviteLink || `${env.FRONTEND_URL || 'http://localhost:5173'}/register?code=${workspace.inviteCode}`;
+            const inviteLink = workspace.inviteLink || `${getFrontendUrl(req)}/register?code=${workspace.inviteCode}`;
             const inviteNote = String(note || '').trim();
 
             for (const inviteEmail of validEmails) {

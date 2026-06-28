@@ -219,7 +219,6 @@ export class NotificationService {
           }
 
           if (html) {
-            // Log the email before sending
             const [emailLog] = await db
               .insert(emailLogs)
               .values({
