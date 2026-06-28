@@ -3,7 +3,7 @@ import { notificationRepository } from '../repositories/notification.repository'
 import { db } from '../db';
 import { notificationPreferences, emailLogs, automationLogs, notifications } from '../db/schema';
 import { eq, and, desc, count, or, ilike } from 'drizzle-orm';
-import { mailQueue } from '../lib/queue';
+import { sendMail } from '../lib/send-email';
 import { logger } from '../lib/logger';
 
 export class NotificationController {
@@ -277,20 +277,32 @@ export class NotificationController {
       await db
         .update(emailLogs)
         .set({
-          status: 'queued',
+          status: 'sending',
           errorMessage: null,
         })
         .where(eq(emailLogs.id, id));
 
-      // Re-enqueue BullMQ
-      await mailQueue.add('send-email', {
-        emailLogId: log.id,
-        to: log.recipient,
-        subject: log.subject,
-        html: log.htmlContent,
-      });
-
-      return res.status(200).json({ message: 'Email enqueued for retry successfully' });
+      try {
+        const result = await sendMail(log.recipient, log.subject, log.htmlContent);
+        await db.update(emailLogs)
+          .set({
+            status: 'sent',
+            messageId: result.messageId || null,
+            sentAt: new Date(),
+            errorMessage: null,
+          })
+          .where(eq(emailLogs.id, id));
+        return res.status(200).json({ message: 'Email retried successfully' });
+      } catch (sendError: any) {
+        await db.update(emailLogs)
+          .set({
+            status: 'failed',
+            errorMessage: sendError?.error || sendError?.message || String(sendError),
+          })
+          .where(eq(emailLogs.id, id));
+        logger.error('Error retrying email log:', sendError);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
     } catch (err: any) {
       logger.error('Error retrying email log:', err);
       return res.status(500).json({ message: 'Internal Server Error' });

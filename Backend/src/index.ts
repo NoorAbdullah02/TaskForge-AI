@@ -26,9 +26,6 @@ import timeRoute from './routes/time.routes';
 import calendarRoute from './routes/calendar.routes';
 import fileRoute from './routes/file.routes';
 import notificationRoute from './routes/notification.routes';
-import { AutomationScheduler } from './services/automation.scheduler';
-import './workers/mail.worker';
-import './workers/automation.worker';
 import { startEscalationScheduler } from './services/escalation.scheduler';
 
 
@@ -136,7 +133,6 @@ if (env.NODE_ENV === 'production') {
 const server = http.createServer(app);
 socketService.init(server);
 startEscalationScheduler();
-AutomationScheduler.init();
 
 server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);

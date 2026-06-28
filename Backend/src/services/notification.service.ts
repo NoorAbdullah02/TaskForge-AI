@@ -1,10 +1,10 @@
 import { db } from '../db';
 import { notifications, emailLogs, notificationPreferences, activityLogs, users } from '../db/schema';
-import { mailQueue } from '../lib/queue';
 import { socketService } from './socket.service';
 import { EmailTemplates } from '../emails/templates';
 import { eq } from 'drizzle-orm';
 import { logger } from '../lib/logger';
+import { sendMail } from '../lib/send-email';
 
 export interface NotificationDispatchPayload {
   event: string; // e.g. 'task.assigned', 'leave.approved', etc.
@@ -219,7 +219,7 @@ export class NotificationService {
           }
 
           if (html) {
-            // Log to emailLogs
+            // Log the email before sending
             const [emailLog] = await db
               .insert(emailLogs)
               .values({
@@ -227,22 +227,36 @@ export class NotificationService {
                 recipient: user.email,
                 subject: title,
                 eventType: event,
-                status: 'queued',
+                status: 'sending',
                 userId: userId,
                 htmlContent: html,
                 createdAt: new Date(),
               })
               .returning();
 
-            // Enqueue BullMQ job
-            await mailQueue.add('send-email', {
-              emailLogId: emailLog.id,
-              to: user.email,
-              subject: title,
-              html,
-            });
-            
-            logger.info(`Queued email dispatch to ${user.email} for event ${event}`);
+            try {
+              const result = await sendMail(user.email, title, html);
+
+              await db.update(emailLogs)
+                .set({
+                  status: 'sent',
+                  messageId: result.messageId || null,
+                  sentAt: new Date(),
+                  errorMessage: null,
+                })
+                .where(eq(emailLogs.id, emailLog.id));
+
+              logger.info(`Sent email to ${user.email} for event ${event}`);
+            } catch (sendErr: any) {
+              await db.update(emailLogs)
+                .set({
+                  status: 'failed',
+                  errorMessage: sendErr?.error || sendErr?.message || JSON.stringify(sendErr),
+                })
+                .where(eq(emailLogs.id, emailLog.id));
+
+              logger.error(`Failed to send email to ${user.email} for event ${event}: ${sendErr?.message || JSON.stringify(sendErr)}`);
+            }
           }
         }
       }
