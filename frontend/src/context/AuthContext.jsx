@@ -8,7 +8,6 @@ const normalizeUserRole = (role) => {
     if (role === 'workspace_owner') return 'owner';
     return role;
 };
-
 const normalizeUser = (user) => {
     if (!user) return user;
     return { ...user, role: normalizeUserRole(user.role) };
@@ -99,7 +98,6 @@ export const AuthProvider = ({ children }) => {
 };
 
 
-// USE THIS HOOK IN ANY COMPONENT
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
