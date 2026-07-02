@@ -26,6 +26,8 @@ export default defineConfig({
       'lucide-react',
       'zustand',
       'socket.io-client',
+      'lenis',
+      'gsap',
     ],
     // Heavy optional deps — only bundle when actually used
     exclude: ['three', '@react-three/fiber', '@react-three/drei'],
@@ -41,31 +43,25 @@ export default defineConfig({
         // Fine-grained manual chunks: each heavy lib loads independently
         manualChunks(id) {
           // Three.js ecosystem — only loaded on pages that need it
-          if (id.includes('three') || id.includes('@react-three')) {
+          if (id.includes('node_modules/three') || id.includes('node_modules/@react-three')) {
             return 'chunk-three';
           }
-          // Framer Motion — lazy loaded
-          if (id.includes('framer-motion')) {
+          // Framer Motion — standalone, no React circular risk
+          if (id.includes('node_modules/framer-motion')) {
             return 'chunk-framer';
           }
-          // GSAP — lazy loaded
-          if (id.includes('gsap')) {
+          // GSAP — standalone animation library
+          if (id.includes('node_modules/gsap')) {
             return 'chunk-gsap';
           }
-          // Recharts
-          if (id.includes('recharts') || id.includes('d3-')) {
-            return 'chunk-charts';
-          }
-          // Core React runtime
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'chunk-react';
-          }
-          // Router
-          if (id.includes('react-router-dom') || id.includes('react-router/')) {
+          // React Router
+          if (id.includes('node_modules/react-router')) {
             return 'chunk-router';
           }
-          // Everything else in node_modules
-          if (id.includes('node_modules')) {
+          // Everything else (react, react-dom, recharts, d3, zustand, etc.)
+          // All kept in one chunk to prevent any circular dependency between
+          // packages that import each other (e.g. recharts <-> d3 <-> react).
+          if (id.includes('node_modules/')) {
             return 'chunk-vendor';
           }
         },
