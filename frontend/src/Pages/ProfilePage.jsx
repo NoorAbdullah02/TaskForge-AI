@@ -454,10 +454,8 @@ export default function ProfilePage() {
                                 { id: 'email', label: 'Email Control', icon: Mail },
                                 { id: 'security', label: 'Security Center', icon: Shield },
                                 { id: 'notifications', label: 'Notifications', icon: Bell },
-                                { id: 'theme', label: 'Theme & Style', icon: Paintbrush },
                                 { id: 'language', label: 'Language Options', icon: Globe },
                                 { id: 'sessions', label: 'Active Sessions', icon: Laptop },
-                                { id: 'api', label: 'Developer API Keys', icon: Key },
                                 { id: 'logs', label: 'Activity Logs', icon: Activity }
                             ].map((tab) => {
                                 const Icon = tab.icon;
@@ -845,6 +843,7 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
+<<<<<<< HEAD
                                 {/* TAB 6: THEME & STYLE */}
                                 {activeTab === 'theme' && (
                                     <div className="space-y-6">
@@ -880,6 +879,8 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
+=======
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
                                 {/* TAB 7: LANGUAGE */}
                                 {activeTab === 'language' && (
                                     <div className="space-y-6">
@@ -969,6 +970,7 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
+<<<<<<< HEAD
                                 {/* TAB 9: DEVELOPER API KEYS */}
                                 {activeTab === 'api' && (
                                     <div className="space-y-6">
@@ -1070,6 +1072,9 @@ export default function ProfilePage() {
                                 )}
 
                                 {/* TAB 10: ACTIVITY LOGS */}
+=======
+                                {/* TAB 9: ACTIVITY LOGS */}
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
                                 {activeTab === 'logs' && (
                                     <div className="space-y-6">
                                         <div>

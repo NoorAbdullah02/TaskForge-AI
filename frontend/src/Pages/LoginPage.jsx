@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, ArrowRight, Shield, Zap, BarChart3, Clock, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -119,10 +119,16 @@ const LoginPage = () => {
   const [is2FaRequired, setIs2FaRequired] = useState(false);
   const [otpEmail, setOtpEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
   const [otpTimer, setOtpTimer] = useState(300);
   const [isPending, setIsPending] = useState(false);
   const [pendingMsg, setPendingMsg] = useState('');
   const [isResendingCode, setIsResendingCode] = useState(false);
+
+  const otpRefs = useRef([]);
+  const focusOtp = useCallback((idx) => {
+    otpRefs.current[Math.max(0, Math.min(idx, 5))]?.focus();
+  }, []);
 
   const isEmailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const navigate = useNavigate();

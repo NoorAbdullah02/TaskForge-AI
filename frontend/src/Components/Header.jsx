@@ -1,6 +1,17 @@
+<<<<<<< HEAD
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Bell, Search, Building2, ChevronDown, Menu, X, Loader2 } from 'lucide-react';
+=======
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  LogOut, Settings, Bell, Search, Building2, ChevronDown,
+  Menu, X, Zap, LayoutDashboard, FolderKanban, CheckSquare,
+  MessageSquare, BookOpen, Clock, Calendar, Users, Plane,
+  BarChart2, SlidersHorizontal, ShieldCheck, Bot
+} from 'lucide-react';
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import { logoutUser } from '../Services/authApi.js';
@@ -10,7 +21,32 @@ import { socket } from '../Services/socket';
 import api from '../Services/api';
 import { getNotifications } from '../Services/notificationApi';
 
+/* ─── nav link definitions ───────────────────────────────────────── */
+const NAV_ITEMS = [
+  { to: '/projects',            label: 'Projects',        icon: FolderKanban },
+  { to: '/tasks',               label: 'Tasks',           icon: CheckSquare  },
+  { to: '/chat',                label: 'Chat',            icon: MessageSquare },
+  { to: '/kb',                  label: 'Wiki',            icon: BookOpen     },
+  { to: '/time-tracker',        label: 'Timer',           icon: Clock        },
+  { to: '/calendar',            label: 'Calendar',        icon: Calendar     },
+  { to: '/attendance',          label: 'Attendance',      icon: Users        },
+  { to: '/leaves',              label: 'Leaves',          icon: Plane        },
+  { to: '/ai-workspace',        label: 'AI',              icon: Bot          },
+  { to: '/executive-dashboard', label: 'Executive',       icon: LayoutDashboard },
+];
+
+const ADMIN_ITEMS = [
+  { to: '/reports',       label: 'Reports',       icon: BarChart2       },
+  { to: '/admin-settings',label: 'Admin',         icon: SlidersHorizontal },
+];
+
+const SUPER_ITEMS = [
+  { to: '/super-admin', label: 'Super Admin', icon: ShieldCheck },
+];
+
+
 const Header = () => {
+<<<<<<< HEAD
     const { user, login, logout, isLoggedIn } = useAuth();
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -23,64 +59,44 @@ const Header = () => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [switchingWorkspaceId, setSwitchingWorkspaceId] = useState(null);
     const navigate = useNavigate();
+=======
+  const { user, login, logout, isLoggedIn } = useAuth();
+  const location = useLocation();
+  const navigate  = useNavigate();
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
 
-    // Banglish: ekta jaygate nav links rakhi, mobile + desktop duitatei use korbo
-    const navLinks = [
-        { to: '/projects', label: 'Projects' },
-        { to: '/tasks', label: 'Tasks' },
-        { to: '/chat', label: '💬 Chat' },
-        { to: '/kb', label: '📚 Wiki' },
-        { to: '/time-tracker', label: '⏱️ Timer' },
-        { to: '/calendar', label: '🗓️ Calendar' },
-        { to: '/attendance', label: 'Attendance' },
-        { to: '/leaves', label: 'Leaves' },
-        { to: '/ai-workspace', label: 'AI Workspace' },
-        { to: '/executive-dashboard', label: 'Executive Dashboard' },
-        ...(user?.role === 'super_admin' ? [{ to: '/super-admin', label: 'Super Admin Portal' }] : []),
-        ...((user?.role === 'admin' || user?.role === 'manager' || user?.role === 'owner')
-            ? [{ to: '/reports', label: 'Reports' }, { to: '/admin-settings', label: 'Admin Settings' }]
-            : []),
-    ];
+  const [profileOpen,      setProfileOpen]      = useState(false);
+  const [workspaceOpen,    setWorkspaceOpen]     = useState(false);
+  const [workspaces,       setWorkspaces]        = useState([]);
+  const [searchOpen,       setSearchOpen]        = useState(false);
+  const [searchQuery,      setSearchQuery]       = useState('');
+  const [notifOpen,        setNotifOpen]         = useState(false);
+  const [unreadCount,      setUnreadCount]       = useState(0);
+  const [mobileOpen,       setMobileOpen]        = useState(false);
+  const [scrolled,         setScrolled]          = useState(false);
 
-    const fetchUnreadCount = useCallback(async () => {
-        if (!isLoggedIn) return;
-        try {
-            const res = await getNotifications({ status: 'all', limit: 1 });
-            setUnreadCount(res?.unreadCount ?? 0);
-        } catch {
-            // silently ignore — non-critical UI feature
-        }
-    }, [isLoggedIn]);
+  const searchRef = useRef(null);
 
-    useEffect(() => {
-        fetchUnreadCount();
-    }, [fetchUnreadCount]);
+  /* scroll shadow */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-    useEffect(() => {
-        if (!socket) return;
-        const handleNewNotification = () => {
-            setUnreadCount((prev) => prev + 1);
-        };
-        socket.on('notification', handleNewNotification);
-        return () => {
-            socket.off('notification', handleNewNotification);
-        };
-    }, []);
+  /* close mobile menu on route change */
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-    // Fetch workspaces on login
-    useEffect(() => {
-        if (isLoggedIn) {
-            getUserWorkspaces()
-                .then(data => {
-                    const extracted = (data || []).map(item => item.workspace).filter(Boolean);
-                    setWorkspaces(extracted);
-                })
-                .catch(err => {
-                    console.error('Failed to fetch workspaces:', err);
-                });
-        }
-    }, [isLoggedIn, user?.activeWorkspaceId]);
+  /* unread notifications */
+  const fetchUnread = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const res = await getNotifications({ status: 'all', limit: 1 });
+      setUnreadCount(res?.unreadCount ?? 0);
+    } catch { /* non-critical */ }
+  }, [isLoggedIn]);
 
+<<<<<<< HEAD
     const handleLogout = async () => {
         setIsLoggingOut(true);
         try {
@@ -119,85 +135,271 @@ const Header = () => {
             setSwitchingWorkspaceId(null);
         }
     };
+=======
+  useEffect(() => { fetchUnread(); }, [fetchUnread]);
 
-    return (
-        <header className="bg-gradient-to-r from-white via-blue-50/30 to-white sticky top-0 z-50 shadow-lg border-b border-blue-100/60">
-            <div className="max-w-7xl mx-auto px-6 py-3">
-                <div className="flex justify-between items-center">
-                    {/* Logo Section */}
-                    <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center gap-3 group">
-                            <div>
-                                <h1 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                                    TaskForge AI
-                                </h1>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Neural Platform</p>
-                            </div>
+  useEffect(() => {
+    if (!socket) return;
+    const inc = () => setUnreadCount(p => p + 1);
+    socket.on('notification', inc);
+    return () => socket.off('notification', inc);
+  }, []);
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
+
+  /* workspaces */
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    getUserWorkspaces()
+      .then(data => setWorkspaces((data || []).map(i => i.workspace).filter(Boolean)))
+      .catch(() => {});
+  }, [isLoggedIn, user?.activeWorkspaceId]);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+      setProfileOpen(false);
+    } catch { toast.error('Logout failed'); }
+  };
+
+  const handleSwitch = async (id) => {
+    if (id === user?.activeWorkspaceId) return;
+    setWorkspaceOpen(false);
+    try {
+      const res = await switchWorkspace(id);
+      toast.success(res.message || 'Switched workspace');
+      const me = await api.get('/users/me');
+      if (me?.data?.user) { login(me.data.user); navigate('/dashboard'); window.location.reload(); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to switch workspace');
+    }
+  };
+
+  /* active link helper */
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+
+  /* build full nav for this role */
+  const allNavItems = [
+    ...NAV_ITEMS,
+    ...((user?.role === 'admin' || user?.role === 'manager' || user?.role === 'owner') ? ADMIN_ITEMS : []),
+    ...(user?.role === 'super_admin' ? SUPER_ITEMS : []),
+  ];
+
+
+  return (
+    <>
+      <header className={[
+        'sticky top-0 z-50 w-full transition-all duration-300',
+        'bg-white/90 backdrop-blur-xl border-b',
+        scrolled
+          ? 'border-slate-200 shadow-[0_2px_20px_rgba(0,0,0,0.08)]'
+          : 'border-slate-100 shadow-none',
+      ].join(' ')}>
+
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+
+          {/* ── Logo ─────────────────────────────────────────── */}
+          <Link to="/" className="flex items-center gap-3 shrink-0 group mr-3">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md group-hover:shadow-blue-500/40 transition-shadow">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div className="leading-none">
+              <span className="block text-[17px] font-black bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
+                TaskForge
+              </span>
+              <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                AI Platform
+              </span>
+            </div>
+          </Link>
+
+          {/* ── Desktop Nav (scrollable strip) ───────────────── */}
+          {isLoggedIn && (
+            <nav className="hidden lg:flex items-center flex-1 min-w-0 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1 px-1">
+                {allNavItems.map(({ to, label, icon: Icon }) => {
+                  const active = isActive(to);
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      className={[
+                        'flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold whitespace-nowrap transition-all',
+                        active
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                      ].join(' ')}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          )}
+
+          {/* spacer when not logged in */}
+          {!isLoggedIn && <div className="flex-1" />}
+
+
+          {/* ── Right action cluster ─────────────────────────── */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
+
+            {isLoggedIn ? (
+              <>
+                {/* Mobile toggle */}
+                <button
+                  onClick={() => setMobileOpen(v => !v)}
+                  className="lg:hidden p-2.5 rounded-xl hover:bg-slate-100 transition cursor-pointer text-slate-500"
+                  aria-label="Toggle menu"
+                >
+                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+
+                {/* Search */}
+                <div className="relative hidden sm:flex items-center">
+                  {searchOpen ? (
+                    <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 w-56 animate-scale-in">
+                      <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                      <input
+                        ref={searchRef}
+                        autoFocus
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search…"
+                        className="flex-1 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                        onBlur={() => { setSearchOpen(false); setSearchQuery(''); }}
+                        onKeyDown={e => e.key === 'Escape' && setSearchOpen(false)}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSearchOpen(true)}
+                      className="p-2.5 rounded-xl hover:bg-slate-100 transition cursor-pointer text-slate-400 hover:text-slate-700"
+                      aria-label="Search"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Notifications */}
+                <button
+                  onClick={() => setNotifOpen(true)}
+                  className="relative p-2.5 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                  aria-label="Notifications"
+                >
+                  <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-blue-600' : 'text-slate-400 hover:text-slate-700'}`} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Workspace selector */}
+                {user?.role !== 'super_admin' && (
+                  <div className="relative hidden sm:block">
+                    <button
+                      onClick={() => setWorkspaceOpen(v => !v)}
+                      className="flex items-center gap-2 pl-3 pr-2.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 transition cursor-pointer max-w-[160px]"
+                    >
+                      <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
+                      <span className="truncate">{user?.workspaceName || 'Workspace'}</span>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    </button>
+
+                    {workspaceOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-1.5 z-50 animate-scale-in">
+                        <div className="px-4 py-2.5 border-b border-slate-100">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Switch Workspace</span>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1.5 space-y-0.5">
+                          {workspaces.map(w => (
+                            <button
+                              key={w.id}
+                              onClick={() => handleSwitch(w.id)}
+                              className={[
+                                'w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition',
+                                w.id === user?.activeWorkspaceId
+                                  ? 'bg-blue-600 text-white font-bold'
+                                  : 'text-slate-600 hover:bg-slate-50 font-medium',
+                              ].join(' ')}
+                            >
+                              <span className="truncate pr-2">{w.name}</span>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${w.id === user?.activeWorkspaceId ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>/{w.slug}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="border-t border-slate-100 p-2">
+                          <Link
+                            to="/register"
+                            onClick={() => setWorkspaceOpen(false)}
+                            className="flex items-center justify-center w-full py-2 bg-linear-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold rounded-xl hover:opacity-90 transition"
+                          >
+                            + Create / Join Workspace
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+
+                {/* Profile */}
+                <div className="relative">
+                  <button
+                    onClick={() => setProfileOpen(v => !v)}
+                    className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer group"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden shrink-0">
+                      {user?.avatarUrl
+                        ? <img src={user.avatarUrl.split('#')[0]} alt="Avatar" className="w-full h-full object-cover" />
+                        : user?.name?.charAt(0).toUpperCase()
+                      }
+                    </div>
+                    <div className="hidden sm:block text-left leading-none">
+                      <span className="block text-sm font-bold text-slate-700">{user?.name}</span>
+                      <span className="block text-[10px] text-slate-400 capitalize font-medium mt-0.5">
+                        {user?.role === 'super_admin' ? 'Super Admin' : user?.role || 'User'}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+                  </button>
+
+                  {profileOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-scale-in">
+                      {/* user info strip */}
+                      <div className="px-4 py-3.5 bg-linear-to-br from-blue-600 to-indigo-600 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
+                          {user?.avatarUrl
+                            ? <img src={user.avatarUrl.split('#')[0]} alt="Avatar" className="w-full h-full object-cover" />
+                            : user?.name?.charAt(0).toUpperCase()
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-bold text-xs truncate">{user?.name}</p>
+                          <p className="text-blue-200 text-[10px] truncate">{user?.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-2 space-y-0.5">
+                        <Link
+                          to="/profile"
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition group"
+                        >
+                          <Settings className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition" />
+                          Profile & Settings
                         </Link>
 
-                        {isLoggedIn && (
-                            <div className="hidden lg:flex items-center gap-6">
-                                <Link
-                                    to="/projects"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider"
-                                >
-                                    Projects
-                                </Link>
-                                <Link
-                                    to="/tasks"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider"
-                                >
-                                    Tasks
-                                </Link>
-                                <Link
-                                    to="/chat"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider font-semibold bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100"
-                                >
-                                    💬 Chat
-                                </Link>
-                                <Link
-                                    to="/kb"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider font-semibold bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100"
-                                >
-                                    📚 Wiki
-                                </Link>
-                                <Link
-                                    to="/time-tracker"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider font-semibold bg-emerald-50/50 px-2 py-1 rounded-lg border border-emerald-100"
-                                >
-                                    ⏱️ Timer
-                                </Link>
-                                <Link
-                                    to="/calendar"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider font-semibold bg-purple-50/50 px-2 py-1 rounded-lg border border-purple-100"
-                                >
-                                    🗓️ Calendar
-                                </Link>
-                                <Link
-                                    to="/attendance"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider"
-                                >
-                                    Attendance
-                                </Link>
-                                <Link
-                                    to="/leaves"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider"
-                                >
-                                    Leaves
-                                </Link>
-                                <Link
-                                    to="/ai-workspace"
-                                    className="text-xs font-extrabold text-gray-600 hover:text-blue-600 transition-colors uppercase tracking-wider"
-                                >
-                                    AI Workspace
-                                </Link>
-                                <Link
-                                    to="/executive-dashboard"
-                                    className="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-wider"
-                                >
-                                    Executive Dashboard
-                                </Link>
+                        <div className="my-1 border-t border-slate-100" />
 
+<<<<<<< HEAD
                                 {user?.role === 'super_admin' && (
                                     <Link
                                         to="/super-admin"
@@ -419,27 +621,38 @@ const Header = () => {
                                 </Link>
                             </div>
                         )}
-                    </div>
-                </div>
-            </div>
-            {/* Mobile nav drawer */}
-            {isLoggedIn && mobileMenuOpen && (
-                <div className="lg:hidden border-t border-blue-100/60 bg-white/95 backdrop-blur-xl shadow-lg">
-                    <nav className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 gap-1">
-                        {navLinks.map((l) => (
-                            <Link
-                                key={l.to}
-                                to={l.to}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="px-3 py-2.5 rounded-xl text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            >
-                                {l.label}
-                            </Link>
-                        ))}
-                    </nav>
-                </div>
-            )}
+=======
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
 
+                      <div className="px-4 py-2 bg-slate-50 text-center text-[9px] text-slate-400 border-t border-slate-100">
+                        v2.0.0 · TaskForge AI
+                      </div>
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login" className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition">
+                  Sign In
+                </Link>
+                <Link to="/register" className="px-4 py-2 text-xs font-bold text-white bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl hover:opacity-90 shadow-sm transition">
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+<<<<<<< HEAD
             <NotificationCenter
                                                 isOpen={notificationCenterOpen}
                                                 onClose={() => setNotificationCenterOpen(false)}
@@ -487,6 +700,55 @@ const Header = () => {
                                             )}
                                         </header>
     );
+=======
+
+        {/* ── Mobile menu drawer ──────────────────────────────── */}
+        {isLoggedIn && mobileOpen && (
+          <div className="lg:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl shadow-lg">
+            {/* workspace pill on mobile */}
+            {user?.role !== 'super_admin' && (
+              <div className="px-4 pt-3 pb-1">
+                <button
+                  onClick={() => setWorkspaceOpen(v => !v)}
+                  className="flex items-center gap-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="flex-1 text-left truncate">{user?.workspaceName || 'Select Workspace'}</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+              </div>
+            )}
+            <nav className="px-3 py-3 grid grid-cols-3 gap-1">
+              {allNavItems.map(({ to, label, icon: Icon }) => {
+                const active = isActive(to);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileOpen(false)}
+                    className={[
+                      'flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[10px] font-semibold text-center transition',
+                      active ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+                    ].join(' ')}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+      </header>
+
+      <NotificationCenter
+        isOpen={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
+    </>
+  );
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
 };
 
 export default Header;

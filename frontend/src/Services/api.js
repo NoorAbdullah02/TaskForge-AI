@@ -6,6 +6,7 @@ const apiBaseURL = import.meta.env.VITE_API_BASE_URL || (isDev ? 'http://localho
 const api = axios.create({
     baseURL: apiBaseURL,
     withCredentials: true, // send and receive cookies (httpOnly token)
+    timeout: 15000,        // 15 s — fail fast instead of hanging forever
 });
 
 api.interceptors.response.use(

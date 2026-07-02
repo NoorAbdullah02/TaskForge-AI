@@ -27,7 +27,18 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(false);
   const [prefSaving, setPrefSaving] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false); // inline confirm instead of window.confirm
   const audioRef = useRef(null);
+  const clearConfirmTimeoutRef = useRef(null);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clearConfirmTimeoutRef.current) {
+        clearTimeout(clearConfirmTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* Inline action state — { [notifId]: 'approve' | 'reject' } while loading */
   const [actionLoading, setActionLoading] = useState({});
@@ -193,14 +204,37 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm('Are you sure you want to clear all notifications?')) return;
+    if (!confirmClear) {
+      // First click: show inline confirmation
+      setConfirmClear(true);
+      if (clearConfirmTimeoutRef.current) {
+        clearTimeout(clearConfirmTimeoutRef.current);
+      }
+      // Auto-reset after 4 seconds if user doesn't confirm
+      clearConfirmTimeoutRef.current = setTimeout(() => {
+        setConfirmClear(false);
+      }, 4000);
+      return;
+    }
+    // Second click: actually clear
+    if (clearConfirmTimeoutRef.current) {
+      clearTimeout(clearConfirmTimeoutRef.current);
+      clearConfirmTimeoutRef.current = null;
+    }
+    setConfirmClear(false);
     try {
       await clearAllNotifications();
       setNotifications([]);
       if (onUnreadCountChange) onUnreadCountChange(0);
+<<<<<<< HEAD
       toast.success('All cleared');
     } catch {
       toast.error('Failed to clear');
+=======
+      toast.success('All notifications cleared');
+    } catch (err) {
+      toast.error('Failed to clear notifications');
+>>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
     }
   };
 
@@ -424,11 +458,15 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                   <button
                     onClick={handleClearAll}
                     disabled={notifications.length === 0}
-                    className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-400 hover:text-red-500 disabled:opacity-50 transition cursor-pointer"
-                    title="Clear all"
+                    className={`flex items-center gap-1 text-[10px] font-bold uppercase disabled:opacity-50 transition cursor-pointer ${
+                      confirmClear
+                        ? 'text-red-600 animate-pulse'
+                        : 'text-slate-400 hover:text-red-500'
+                    }`}
+                    title={confirmClear ? 'Click again to confirm' : 'Clear all'}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Clear All
+                    {confirmClear ? 'Confirm?' : 'Clear All'}
                   </button>
                 </div>
               </div>

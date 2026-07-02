@@ -1,50 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mail, CheckCircle, ArrowRight, Sparkles, AlertCircle, Loader } from 'lucide-react';
 import { verifyEmailToken, resendVerificationEmail } from '../Services/authApi';
 import { GlassCard } from '../design-system/primitives';
 import toast from 'react-hot-toast';
 
+const DIGIT_COUNT = 8;
+
 const EmailVerificationPage = () => {
   const [step, setStep] = useState('verify');
   const [email, setEmail] = useState('');
-  const [verificationToken, setVerificationToken] = useState('');
+  // digits stored as array of strings for individual box control
+  const [digits, setDigits] = useState(Array(DIGIT_COUNT).fill(''));
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  useEffect(() => {
-    const initializeData = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const emailParam = urlParams.get('email');
-      const tokenParam = urlParams.get('token');
+  // one ref per digit input
+  const inputRefs = useRef([]);
 
-      let finalEmail = '';
-      let finalToken = '';
+  // derived full token string
+  const verificationToken = digits.join('');
 
-      if (emailParam && emailParam.trim()) {
-        finalEmail = decodeURIComponent(emailParam);
-        localStorage.setItem('verificationEmail', finalEmail);
-      } else {
-        finalEmail = localStorage.getItem('verificationEmail') || '';
-      }
-
-      if (tokenParam && tokenParam.trim()) {
-        finalToken = tokenParam;
-        localStorage.setItem('verificationToken', finalToken);
-      } else {
-        finalToken = localStorage.getItem('verificationToken') || '';
-      }
-
-      console.log('Initialized with:', { email: finalEmail, token: finalToken });
-
-      if (finalEmail) setEmail(finalEmail);
-      if (finalToken) setVerificationToken(finalToken);
-    };
-
-    initializeData();
+  // helper: focus a box by index (clamped)
+  const focusBox = useCallback((idx) => {
+    const el = inputRefs.current[Math.max(0, Math.min(idx, DIGIT_COUNT - 1))];
+    el?.focus();
   }, []);
+
+  // fill all boxes from a string (e.g. from paste or URL param)
+  const fillFromString = useCallback((str) => {
+    const clean = str.replace(/\D/g, '').slice(0, DIGIT_COUNT);
+    const next = Array(DIGIT_COUNT).fill('');
+    clean.split('').forEach((ch, i) => { next[i] = ch; });
+    setDigits(next);
+    setError('');
+    // focus last filled box or last box
+    const focusIdx = Math.min(clean.length, DIGIT_COUNT - 1);
+    setTimeout(() => focusBox(focusIdx), 0);
+  }, [focusBox]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailParam = urlParams.get('email');
+    const tokenParam = urlParams.get('token');
+
+    let finalEmail = emailParam
+      ? decodeURIComponent(emailParam.trim())
+      : localStorage.getItem('verificationEmail') || '';
+
+    let finalToken = tokenParam?.trim()
+      || localStorage.getItem('verificationToken') || '';
+
+    if (emailParam?.trim()) localStorage.setItem('verificationEmail', finalEmail);
+    if (tokenParam?.trim()) localStorage.setItem('verificationToken', finalToken);
+
+    if (finalEmail) setEmail(finalEmail);
+    if (finalToken) fillFromString(finalToken);
+  }, [fillFromString]);
 
   const handleVerifyToken = async () => {
     console.log('Verify clicked with:', { email, token: verificationToken });
@@ -114,7 +128,8 @@ const EmailVerificationPage = () => {
       }
 
       // Clear any entered token to avoid confusion
-      setVerificationToken('');
+      setDigits(Array(DIGIT_COUNT).fill(''));
+      setTimeout(() => focusBox(0), 50);
 
       setTimeout(() => {
         setResendSuccess(false);
@@ -178,42 +193,64 @@ const EmailVerificationPage = () => {
                   <div>
                     <label className="block text-sm font-bold text-gray-800 mb-4">8-Digit Verification Code</label>
                     <div className="flex gap-2 justify-center mb-4">
-                      {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
+                      {Array.from({ length: DIGIT_COUNT }).map((_, index) => (
                         <input
                           key={index}
+                          ref={(el) => { inputRefs.current[index] = el; }}
+                          id={`digit-${index}`}
                           type="text"
                           inputMode="numeric"
-                          maxLength="1"
-                          value={verificationToken[index] || ''}
+                          maxLength={1}
+                          value={digits[index]}
+                          autoFocus={index === 0}
+                          autoComplete="off"
                           onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9]/g, '');
-                            if (value) {
-                              const newToken = verificationToken.split('');
-                              newToken[index] = value;
-                              setVerificationToken(newToken.join(''));
-                              setError('');
-                              if (index < 7) {
-                                const nextInput = document.getElementById(`digit-${index + 1}`);
-                                nextInput?.focus();
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (!val) return; // handled by onKeyDown
+                            const next = [...digits];
+                            next[index] = val[val.length - 1]; // take last char (handles held-down key)
+                            setDigits(next);
+                            setError('');
+                            if (index < DIGIT_COUNT - 1) focusBox(index + 1);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Backspace') {
+                              e.preventDefault();
+                              const next = [...digits];
+                              if (next[index]) {
+                                // clear current box
+                                next[index] = '';
+                                setDigits(next);
+                              } else if (index > 0) {
+                                // already empty — move back and clear previous
+                                next[index - 1] = '';
+                                setDigits(next);
+                                focusBox(index - 1);
                               }
+                            } else if (e.key === 'ArrowLeft') {
+                              e.preventDefault();
+                              focusBox(index - 1);
+                            } else if (e.key === 'ArrowRight') {
+                              e.preventDefault();
+                              focusBox(index + 1);
+                            } else if (e.key === 'Delete') {
+                              e.preventDefault();
+                              const next = [...digits];
+                              next[index] = '';
+                              setDigits(next);
                             }
                           }}
                           onPaste={(e) => {
                             e.preventDefault();
-                            const pastedText = e.clipboardData.getData('text').replace(/[^0-9]/g, '');
-                            if (pastedText.length >= 8) {
-                              setVerificationToken(pastedText.substring(0, 8));
-                              setError('');
-                            }
+                            const pasted = e.clipboardData.getData('text');
+                            fillFromString(pasted);
                           }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Backspace' && !verificationToken[index] && index > 0) {
-                              const prevInput = document.getElementById(`digit-${index - 1}`);
-                              prevInput?.focus();
-                            }
-                          }}
-                          id={`digit-${index}`}
-                          className="w-12 h-14 text-center border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all bg-white text-gray-800 font-bold text-2xl hover:border-blue-400"
+                          onFocus={(e) => e.target.select()}
+                          className={`w-12 h-14 text-center border-2 rounded-2xl focus:outline-none transition-all bg-white text-gray-800 font-bold text-2xl select-all
+                            ${digits[index]
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20'
+                            }`}
                         />
                       ))}
                     </div>
@@ -256,7 +293,7 @@ const EmailVerificationPage = () => {
 
                   <button
                     onClick={handleVerifyToken}
-                    disabled={isVerifying || !verificationToken.trim() || !email.trim()}
+                    disabled={isVerifying || verificationToken.length < DIGIT_COUNT || !email.trim()}
                     className="w-full px-6 py-4 bg-gradient-to-r from-brand to-accent text-white font-bold rounded-2xl hover:opacity-95 transition-all shadow-[0_10px_30px_rgba(37,99,235,0.25)] disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-2 group"
                   >
                     {isVerifying ? (
