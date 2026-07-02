@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   resolve: {
     alias: {
-      'zustand/traditional': path.resolve(__dirname, 'src/lib/zustand-traditional.js'),
-      'use-sync-external-store/shim/with-selector.js': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
-      'use-sync-external-store/shim/with-selector': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
+      // 'zustand/traditional': path.resolve(__dirname, 'src/lib/zustand-traditional.js'),
+      // 'use-sync-external-store/shim/with-selector.js': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
+      // 'use-sync-external-store/shim/with-selector': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
     },
   },
 
@@ -37,6 +37,7 @@ export default defineConfig({
       'react-hot-toast',
       'lucide-react',
       'zustand',
+      'zustand/traditional',
       'socket.io-client',
       'lenis',
       'gsap',
