@@ -1,8 +1,20 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 export default defineConfig({
+  resolve: {
+    alias: {
+      'zustand/traditional': path.resolve(__dirname, 'src/lib/zustand-traditional.js'),
+      'use-sync-external-store/shim/with-selector.js': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
+      'use-sync-external-store/shim/with-selector': path.resolve(__dirname, 'src/lib/use-sync-external-store-shim.js'),
+    },
+  },
+
   plugins: [
     react({
       // babel fast-refresh stays on; JSX transform is automatic
@@ -32,6 +44,8 @@ export default defineConfig({
       'use-sync-external-store',
       'use-sync-external-store/shim',
       'use-sync-external-store/shim/with-selector',
+      'scheduler',
+      'stats.js',
     ],
     // Heavy optional deps — only bundle when actually used
     exclude: ['three', '@react-three/fiber', '@react-three/drei'],
