@@ -1,162 +1,198 @@
 # TaskForge AI
 
-TaskForge AI is an enterprise-ready task and team intelligence platform built to support workspace-based onboarding, team collaboration, project management, notifications, AI-driven insights, and operational reporting.
+TaskForge AI is a full-stack team and project intelligence platform for modern organizations. It combines workspace onboarding, project execution, employee operations, reporting, and AI-assisted insights into a single product experience.
 
-## Overview
+## What is included
 
-This repository includes a full-stack product with:
-- Backend API and business logic in `Backend/` using Express, TypeScript, Drizzle ORM, PostgreSQL, Redis, and BullMQ.
-- Frontend web application in `frontend/` built with React 19, Vite, Tailwind CSS, React Router, and Zustand.
+This repository contains three connected parts:
 
-## Key Features
+- Frontend: a React 19 + Vite application with dashboards, project views, task management, calendar and attendance pages, AI workspace tooling, and reporting surfaces.
+- Backend: an Express + TypeScript API with authentication, workspace management, project workflows, notifications, file handling, analytics endpoints, and AI integrations.
+- ML service: a Python service with pre-trained models for productivity, delay, burnout, attendance, and resource prediction.
 
-- Workspace onboarding with invite links, registration codes, and admin invite emails
-- First-user super admin bootstrap and role-based workspace access
-- Pending workspace join requests, approval workflow, and member management
-- Project, sprint, epic, story, task, and time management
-- Attendance, leave, calendar, and notification workflows
-- AI and intelligence endpoints for productivity, delay, burnout, and resourcing insights
-- Email queuing and trigger service for workspace events, onboarding, approvals, and reminders
-- Real-time socket notifications with socket.io
+## Core capabilities
 
-## Repository Structure
+- Workspace-based onboarding with invites, registration codes, and admin approvals
+- Role-based access for super admins, workspace admins, team leads, and members
+- Project, sprint, epic, story, task, and time management workflows
+- Attendance, leave, calendar, and notification modules
+- Executive, PM, owner, and employee dashboards
+- AI-powered workspace assistance, forecasting, and insight endpoints
+- Real-time notifications and socket-based collaboration
 
-- `/Backend` - Express backend, TypeScript code, routes, controllers, services, Drizzle ORM schema, and workers
-- `/frontend` - React app, UI pages, components, services, and design system
+## Architecture at a glance
 
-## Tech Stack
+- Frontend runs on Vite and communicates with the backend API over HTTP and Socket.IO.
+- Backend exposes the application API, handles auth and business rules, and integrates with AI/ML services.
+- The ML service exposes prediction endpoints and is intended to support the analytics and intelligence features.
 
-- Backend: Node.js, Express, TypeScript, Drizzle ORM, PostgreSQL, Redis, BullMQ, JWT auth, socket.io
-- Frontend: React 19, Vite, Tailwind CSS v4, React Router v7, Zustand, Axios
-- ML: Python, FastAPI-style service, CatBoost/joblib models, data training pipelines
+## Repository structure
 
-## Getting Started
+- Backend/ - Express/TypeScript backend, routes, controllers, services, database schema, and workers
+- frontend/ - React application, pages, components, services, hooks, and design system
+- ml-service/ - Python service with model assets, schemas, routers, and training scripts
 
-### Prerequisites
+## Prerequisites
 
-- Node.js 20+
-- npm 10+
-- PostgreSQL database
-- Redis server
-- Optional: email provider credentials for outbound email delivery
+Before you start, make sure you have:
 
-### Install dependencies
+- Node.js 20 or newer
+- npm 10 or newer
+- Python 3.10+ (for the ML service)
+- PostgreSQL running locally or remotely
+- Redis running locally or remotely (recommended for queues and background workflows)
+- Optional: API keys for email, AI, and image upload providers
+
+## Quick start
+
+### 1) Clone the repository
+
+```bash
+git clone https://github.com/NoorAbdullah02/TaskForge-AI.git
+cd "TaskForge AI"
+```
+
+### 2) Install dependencies
 
 ```bash
 npm install --prefix Backend --include=dev
 npm install --prefix frontend --include=dev
 ```
 
-### Backend configuration
+If you want to work with the ML service as well, install the Python dependencies inside a virtual environment:
 
-Create a `.env` file in `Backend/` with the required environment variables. Example:
+```bash
+cd ml-service
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3) Configure environment variables
+
+Create a file named .env inside Backend/ with values similar to the following:
 
 ```env
 PORT=4000
-DB_URL=postgresql://user:password@localhost:5432/taskforge
 NODE_ENV=development
+DB_URL=postgresql://user:password@localhost:5432/taskforge
 FRONTEND_URL=http://localhost:5173
 BACKEND_URL=http://localhost:4000
-JWT_SECRET=supersecretjwtkey
-BREVO_API_KEY=your-brevo-api-key
+JWT_SECRET=replace-with-a-strong-secret
+BREVO_API_KEY=
 EMAIL_FROM=no-reply@taskforge.ai
 EMAIL_FROM_NAME=TaskForge AI
-GEMINI_API_KEY=your-gemini-api-key
-MISTRAL_API_KEY=your-mistral-api-key
+GEMINI_API_KEY=
+MISTRAL_API_KEY=
 REDIS_URL=redis://127.0.0.1:6379
-IMAGEKIT_PUBLIC_KEY=your-imagekit-public-key
-IMAGEKIT_PRIVATE_KEY=your-imagekit-private-key
-IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your-account
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=
+IMAGEKIT_URL_ENDPOINT=
 ```
 
-### Frontend configuration
-
-The frontend reads its API base URL from `VITE_API_BASE_URL`. Set it in a `.env` file at the project root or `frontend/`:
+Create a frontend environment file at frontend/.env or at the repository root:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000/api
 ```
 
-### Run in development
+### 4) Start the required services
+
+Make sure your database and Redis services are running before you start the app.
+
+### 5) Run the services
+
+Open separate terminals for each service:
 
 ```bash
 npm run dev --prefix Backend
+```
+
+```bash
 npm run dev --prefix frontend
 ```
 
-If you want to run both at once from the root, use separate shells or a multiplexer.
-
-### Build for production
-
 ```bash
-npm run build
+cd ml-service && source .venv/bin/activate && python run.py
 ```
 
-This command installs backend and frontend dependencies, then builds both projects.
+The frontend should be available at http://localhost:5173 and the backend at http://localhost:4000.
 
-### Start the backend server
+## Database and migrations
+
+The backend uses Drizzle ORM. After setting your database connection string, apply the schema:
 
 ```bash
 npm run db:push --prefix Backend
-npm run start --prefix Backend
 ```
 
-## Available scripts
+You can also launch Drizzle Studio if needed:
+
+```bash
+npm run db:studio --prefix Backend
+```
+
+## Useful scripts
 
 ### Root
 
-- `npm run build` - install dependencies and build frontend and backend
-- `npm run start` - run database migration push and start backend
+- npm run build - installs dependencies and builds both the frontend and backend
+- npm run start - runs DB schema push and starts the backend
 
 ### Backend
 
-- `npm run dev` - start backend with `nodemon`
-- `npm run build` - compile TypeScript
-- `npm run db:push` - apply Drizzle ORM schema changes to the database
-- `npm run db:studio` - open Drizzle Studio
-- `npm run start` - run compiled backend from `dist/`
+- npm run dev - starts the backend in development mode
+- npm run build - compiles the TypeScript server
+- npm run db:push - applies the Drizzle schema to the database
+- npm run db:studio - opens Drizzle Studio
+- npm run start - runs the compiled server from dist/
 
 ### Frontend
 
-- `npm run dev` - start Vite development server
-- `npm run build` - build production frontend assets
-- `npm run lint` - run ESLint
-- `npm run preview` - preview built frontend
+- npm run dev - starts the Vite development server
+- npm run build - builds the production frontend bundle
+- npm run lint - runs ESLint
+- npm run preview - previews the production build locally
 
-## Environment Variables
+### ML service
+
+- python run.py - starts the local ML service
+- python -m pytest or the repository test scripts can be used to validate the service once the environment is set up
+
+## Environment variables
 
 ### Backend
 
-- `PORT` - backend server port
-- `DB_URL` - PostgreSQL database connection string
-- `NODE_ENV` - environment mode (`development`, `production`)
-- `FRONTEND_URL` - frontend application URL
-- `BACKEND_URL` - backend application URL
-- `JWT_SECRET` - JWT signing secret
-- `BREVO_API_KEY` - Brevo transactional email API key
-- `EMAIL_FROM` - outbound email "from" address
-- `EMAIL_FROM_NAME` - outbound email sender name
-- `GEMINI_API_KEY` - Gemini AI key for AI services
-- `MISTRAL_API_KEY` - Mistral AI key for AI services
-- `REDIS_URL` - Redis connection URL for queues and caching
-- `IMAGEKIT_PUBLIC_KEY` - ImageKit public key
-- `IMAGEKIT_PRIVATE_KEY` - ImageKit private key
-- `IMAGEKIT_URL_ENDPOINT` - ImageKit upload endpoint URL
+- PORT - backend port
+- NODE_ENV - runtime mode
+- DB_URL - database connection string
+- FRONTEND_URL - frontend base URL
+- BACKEND_URL - backend base URL
+- JWT_SECRET - secret for JWT signing
+- BREVO_API_KEY - email provider key
+- EMAIL_FROM - sender address for outbound mail
+- EMAIL_FROM_NAME - sender display name
+- GEMINI_API_KEY - AI service key
+- MISTRAL_API_KEY - AI service key
+- REDIS_URL - Redis connection string
+- IMAGEKIT_PUBLIC_KEY - ImageKit public key
+- IMAGEKIT_PRIVATE_KEY - ImageKit private key
+- IMAGEKIT_URL_ENDPOINT - ImageKit endpoint
 
 ### Frontend
 
-- `VITE_API_BASE_URL` - API base URL used by the frontend app (default: `http://localhost:4000/api`)
+- VITE_API_BASE_URL - base URL for frontend API calls
 
 ## Notes
 
-- The first registered user is designed to become a `super_admin` and bootstrap the system.
-- Workspace invites support email-based invitations, coded invite links, and workspace join approvals.
-- The backend serves the frontend statically when `NODE_ENV=production`.
+- The first user to register is intended to bootstrap the workspace as a super admin.
+- Workspace invites, approval flows, and member management are part of the core experience.
+- The backend and ML service should both be running for the full AI-driven experience to work end to end.
 
-## Contribution
+## Contributing
 
-Contributions are welcome. Open issues or submit pull requests against the main repository.
+Contributions are welcome. Please open an issue or submit a pull request with a clear description of the improvement.
 
 ## License
 
-This project is currently published under the ISC license.
+This project is published under the ISC license.
