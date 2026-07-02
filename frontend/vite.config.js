@@ -28,6 +28,10 @@ export default defineConfig({
       'socket.io-client',
       'lenis',
       'gsap',
+      'recharts',
+      'use-sync-external-store',
+      'use-sync-external-store/shim',
+      'use-sync-external-store/shim/with-selector',
     ],
     // Heavy optional deps — only bundle when actually used
     exclude: ['three', '@react-three/fiber', '@react-three/drei'],
