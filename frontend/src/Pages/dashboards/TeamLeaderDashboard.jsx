@@ -25,6 +25,7 @@ export default function TeamLeaderDashboard({ user }) {
   const [stats,    setStats]    = useState(null);
   const [, setProjects] = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const headerRef = useRef(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -45,6 +46,20 @@ export default function TeamLeaderDashboard({ user }) {
       if (p.status === 'fulfilled') setProjects(p.value || []);
     } catch { toast.error('Could not load team data'); }
     finally  { setLoading(false); }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [s, p] = await Promise.allSettled([getDashboardStats(), getProjects()]);
+      if (s.status === 'fulfilled') setStats(s.value);
+      if (p.status === 'fulfilled') setProjects(p.value || []);
+      toast.success('Dashboard refreshed');
+    } catch {
+      toast.error('Could not refresh team data');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // ── Derived chart data ──────────────────────────────────────────────────────
@@ -177,8 +192,12 @@ export default function TeamLeaderDashboard({ user }) {
             <Badge status="danger" pulse={blockedTasks > 0}>
               {blockedTasks} Blocked
             </Badge>
-            <button onClick={fetchAll} className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors">
-              <RefreshCw className="h-4 w-4 text-ink-soft" />
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 text-ink-soft ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

@@ -1008,7 +1008,7 @@ export class TaskController {
     static async getTemplates(req: Request, res: Response) {
         try {
             const user = (req as any).user;
-            if (!user.activeWorkspaceId) return res.status(400).json({ message: 'Active workspace is required' });
+            if (!user?.activeWorkspaceId) return res.status(200).json([]);
 
             const templates = await TaskService.getTemplates(user.activeWorkspaceId);
             return res.status(200).json(templates);

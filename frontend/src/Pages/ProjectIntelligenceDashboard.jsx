@@ -40,6 +40,12 @@ export default function ProjectIntelligenceDashboard() {
     // Escalation testing loader
     const [runningEscalation, setRunningEscalation] = useState(false);
 
+    // Manual refresh metrics loader
+    const [refreshingMetrics, setRefreshingMetrics] = useState(false);
+
+    // Per-row dependency deletion loader
+    const [deletingDepId, setDeletingDepId] = useState(null);
+
     const loadData = async () => {
         try {
             setLoading(true);
@@ -109,9 +115,10 @@ export default function ProjectIntelligenceDashboard() {
 
     const handleDeleteDependency = async (depId) => {
         try {
+            setDeletingDepId(depId);
             await deleteDependency(depId);
             toast.success('Dependency deleted');
-            
+
             // Reload dependencies & risks
             const depsData = await getProjectDependencies(id);
             setDependenciesData(depsData);
@@ -122,6 +129,21 @@ export default function ProjectIntelligenceDashboard() {
         } catch (error) {
             console.error('Failed to delete dependency:', error);
             toast.error('Failed to delete dependency');
+        } finally {
+            setDeletingDepId(null);
+        }
+    };
+
+    const handleRefreshMetrics = async () => {
+        try {
+            setRefreshingMetrics(true);
+            await loadData();
+            toast.success('Metrics refreshed successfully');
+        } catch (error) {
+            console.error('Failed to refresh metrics:', error);
+            toast.error('Failed to refresh metrics');
+        } finally {
+            setRefreshingMetrics(false);
         }
     };
 
@@ -197,10 +219,18 @@ export default function ProjectIntelligenceDashboard() {
                         </button>
                         
                         <button
-                            onClick={loadData}
-                            className="px-5 py-3 bg-surface-2 hover:bg-gray-700 text-ink font-semibold rounded-2xl border border-line transition text-sm cursor-pointer"
+                            onClick={handleRefreshMetrics}
+                            disabled={refreshingMetrics}
+                            className="flex items-center gap-2 px-5 py-3 bg-surface-2 hover:bg-gray-700 text-ink font-semibold rounded-2xl border border-line transition text-sm cursor-pointer disabled:opacity-50"
                         >
-                            Refresh Metrics
+                            {refreshingMetrics ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Refreshing...
+                                </>
+                            ) : (
+                                'Refresh Metrics'
+                            )}
                         </button>
                     </div>
                 </div>
@@ -632,9 +662,14 @@ export default function ProjectIntelligenceDashboard() {
 
                                                         <button
                                                             onClick={() => handleDeleteDependency(dep.id)}
-                                                            className="p-2 hover:bg-red-500/10 text-white0 hover:text-red-500 rounded-xl transition cursor-pointer"
+                                                            disabled={deletingDepId === dep.id}
+                                                            className="p-2 hover:bg-red-500/10 text-white0 hover:text-red-500 rounded-xl transition cursor-pointer disabled:opacity-50"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            {deletingDepId === dep.id ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <Trash2 className="h-4 w-4" />
+                                                            )}
                                                         </button>
                                                     </div>
                                                 );

@@ -21,7 +21,7 @@ import { predictDeadline } from '../Services/aiApi';
 import TaskModal from '../Components/TaskModal';
 
 import {
-    Loader, Calendar, ArrowLeft, CheckSquare, AlertCircle, User, Trophy, Trash2,
+    Loader, Loader2, Calendar, ArrowLeft, CheckSquare, AlertCircle, User, Trophy, Trash2,
     MessageSquare, Paperclip, Plus, CheckCircle, Circle, Download, Eye, Edit2, Brain,
     ShieldAlert, ChevronRight, Sparkles, Lock, Unlock, Clock, Play, Pause, Square,
     RotateCcw, RotateCw, Archive, Copy, RefreshCw, Eye as EyeIcon, EyeOff,
@@ -533,6 +533,21 @@ const TaskDetailsPage = () => {
     // Active panel on the right sidebar
     const [rightPanel, setRightPanel] = useState('info'); // 'info' | 'timer' | 'history' | 'ai'
 
+    // Per-action loading states
+    const [isDeletingTask, setIsDeletingTask]           = useState(false);
+    const [isApproving, setIsApproving]                 = useState(false);
+    const [isRejecting, setIsRejecting]                 = useState(false);
+    const [togglingSubtaskId, setTogglingSubtaskId]     = useState(null);
+    const [deletingSubtaskId, setDeletingSubtaskId]     = useState(null);
+    const [deletingCommentId, setDeletingCommentId]     = useState(null);
+    const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
+    const [assigningUserId, setAssigningUserId]         = useState(null);
+    const [deletingDependencyId, setDeletingDependencyId] = useState(null);
+    const [isDuplicating, setIsDuplicating]             = useState(false);
+    const [isTogglingArchive, setIsTogglingArchive]     = useState(false);
+    const [isUndoing, setIsUndoing]                     = useState(false);
+    const [isRedoing, setIsRedoing]                     = useState(false);
+
     useEffect(() => {
         if (!authLoading && !isLoggedIn) navigate('/login');
     }, [isLoggedIn, authLoading, navigate]);
@@ -563,7 +578,7 @@ const TaskDetailsPage = () => {
                 const dl = await predictDeadline('task', id);
                 setDeadlinePrediction(dl);
             } catch { /* deadline prediction is non-critical */ }
-        } catch (err) {
+        } catch {
             toast.error('Failed to load task details');
             navigate('/tasks');
         } finally {
@@ -604,20 +619,25 @@ const TaskDetailsPage = () => {
 
     const handleDeleteTask = async () => {
         if (!window.confirm('Permanently delete this task?')) return;
+        setIsDeletingTask(true);
         try { await deleteTask(id); toast.success('Task deleted'); navigate('/tasks'); }
-        catch { toast.error('Failed to delete task'); }
+        catch { toast.error('Failed to delete task'); setIsDeletingTask(false); }
     };
 
     const handleApproveTask = async () => {
+        setIsApproving(true);
         try { await approveTask(id); toast.success('Task approved'); fetchDetails(); }
         catch (e) { toast.error(e?.response?.data?.message || 'Failed to approve'); }
+        finally { setIsApproving(false); }
     };
 
     const handleRejectTask = async () => {
         const reason = window.prompt('Rejection reason:');
         if (reason === null) return;
+        setIsRejecting(true);
         try { await rejectTask(id, reason.trim()); toast.success('Task rejected'); fetchDetails(); }
         catch (e) { toast.error(e?.response?.data?.message || 'Failed to reject'); }
+        finally { setIsRejecting(false); }
     };
 
     const handleAddSubtask = async (e) => {
@@ -634,13 +654,17 @@ const TaskDetailsPage = () => {
     };
 
     const handleToggleSubtask = async (subtaskId, isCompleted) => {
+        setTogglingSubtaskId(subtaskId);
         try { await updateSubtask(id, subtaskId, { isCompleted: !isCompleted }); fetchDetails(); }
         catch { toast.error('Failed to update subtask'); }
+        finally { setTogglingSubtaskId(null); }
     };
 
     const handleDeleteSubtask = async (subtaskId) => {
-        try { await deleteSubtask(id, subtaskId); fetchDetails(); }
+        setDeletingSubtaskId(subtaskId);
+        try { await deleteSubtask(id, subtaskId); toast.success('Subtask deleted'); fetchDetails(); }
         catch { toast.error('Failed to delete subtask'); }
+        finally { setDeletingSubtaskId(null); }
     };
 
     const handleAddComment = async (e) => {
@@ -649,6 +673,7 @@ const TaskDetailsPage = () => {
         try {
             setPostingComment(true);
             await createComment(id, newComment.trim());
+            toast.success('Comment posted');
             setNewComment('');
             fetchDetails();
         } catch { toast.error('Failed to post comment'); }
@@ -656,13 +681,17 @@ const TaskDetailsPage = () => {
     };
 
     const handleDeleteComment = async (cId) => {
-        try { await deleteComment(id, cId); fetchDetails(); }
+        setDeletingCommentId(cId);
+        try { await deleteComment(id, cId); toast.success('Comment deleted'); fetchDetails(); }
         catch { toast.error('Failed to delete comment'); }
+        finally { setDeletingCommentId(null); }
     };
 
     const handleDeleteAttachment = async (aId) => {
-        try { await deleteAttachment(id, aId); fetchDetails(); }
+        setDeletingAttachmentId(aId);
+        try { await deleteAttachment(id, aId); toast.success('Attachment deleted'); fetchDetails(); }
         catch { toast.error('Failed to delete attachment'); }
+        finally { setDeletingAttachmentId(null); }
     };
 
     const handleRecommendAssignee = async () => {
@@ -680,8 +709,10 @@ const TaskDetailsPage = () => {
             toast.error('Only project managers can assign tasks');
             return;
         }
+        setAssigningUserId(userId);
         try { await updateTask(id, { assigneeId: userId }); toast.success('Assignee updated'); setIsRecommenderOpen(false); fetchDetails(); }
         catch { toast.error('Failed to update assignee'); }
+        finally { setAssigningUserId(null); }
     };
 
     const handleAddDependency = async (e) => {
@@ -699,31 +730,41 @@ const TaskDetailsPage = () => {
     };
 
     const handleDeleteDependency = async (depId) => {
+        setDeletingDependencyId(depId);
         try { await deleteDependency(depId); toast.success('Dependency removed'); fetchDetails(); }
         catch { toast.error('Failed to delete dependency'); }
+        finally { setDeletingDependencyId(null); }
     };
 
     const handleDuplicate = async () => {
+        setIsDuplicating(true);
         try { await duplicateTask(id); toast.success('Task duplicated'); fetchDetails(); }
         catch { toast.error('Failed to duplicate task'); }
+        finally { setIsDuplicating(false); }
     };
 
     const handleArchiveToggle = async () => {
+        setIsTogglingArchive(true);
         try {
             if (task.isArchived) { await restoreTask(id); toast.success('Task restored'); }
             else { await archiveTask(id); toast.success('Task archived'); }
             fetchDetails();
         } catch { toast.error('Failed to toggle archive'); }
+        finally { setIsTogglingArchive(false); }
     };
 
     const handleUndo = async () => {
+        setIsUndoing(true);
         try { await undoChange(id); toast.success('Change undone'); fetchDetails(); }
         catch (e) { toast.error(e?.response?.data?.error || 'Nothing to undo'); }
+        finally { setIsUndoing(false); }
     };
 
     const handleRedo = async () => {
+        setIsRedoing(true);
         try { await redoChange(id); toast.success('Change redone'); fetchDetails(); }
         catch (e) { toast.error(e?.response?.data?.error || 'Nothing to redo'); }
+        finally { setIsRedoing(false); }
     };
 
     // ─── Loading state ─────────────────────────────────────────────────────
@@ -838,36 +879,38 @@ const TaskDetailsPage = () => {
                             <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-gray-100">
                                 {isPM && isReviewStatus && (
                                     <>
-                                        <button onClick={handleApproveTask}
-                                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition shadow-sm">
-                                            <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                        <button onClick={handleApproveTask} disabled={isApproving}
+                                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition shadow-sm disabled:opacity-50">
+                                            {isApproving ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />} Approve
                                         </button>
-                                        <button onClick={handleRejectTask}
-                                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition shadow-sm">
-                                            <AlertCircle className="w-3.5 h-3.5" /> Reject
+                                        <button onClick={handleRejectTask} disabled={isRejecting}
+                                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition shadow-sm disabled:opacity-50">
+                                            {isRejecting ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <AlertCircle className="w-3.5 h-3.5" />} Reject
                                         </button>
                                     </>
                                 )}
                                 {isPM && <LockControl task={task} isPM={isPM} onRefresh={fetchDetails} />}
                                 {isPM && (
-                                    <button onClick={handleArchiveToggle}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-xl text-xs font-bold transition border border-amber-200">
-                                        <Archive className="w-3.5 h-3.5" /> {task.isArchived ? 'Restore' : 'Archive'}
+                                    <button onClick={handleArchiveToggle} disabled={isTogglingArchive}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-xl text-xs font-bold transition border border-amber-200 disabled:opacity-50">
+                                        {isTogglingArchive ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />} {task.isArchived ? 'Restore' : 'Archive'}
                                     </button>
                                 )}
-                                <button onClick={handleDuplicate}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200">
-                                    <Copy className="w-3.5 h-3.5" /> Duplicate
+                                <button onClick={handleDuplicate} disabled={isDuplicating}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200 disabled:opacity-50">
+                                    {isDuplicating ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />} Duplicate
                                 </button>
                                 <button onClick={handleUndo}
                                     title="Undo last change"
-                                    className="flex items-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200">
-                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    disabled={isUndoing}
+                                    className="flex items-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200 disabled:opacity-50">
+                                    {isUndoing ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                                 </button>
                                 <button onClick={handleRedo}
                                     title="Redo"
-                                    className="flex items-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200">
-                                    <RotateCw className="w-3.5 h-3.5" />
+                                    disabled={isRedoing}
+                                    className="flex items-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl text-xs font-bold transition border border-gray-200 disabled:opacity-50">
+                                    {isRedoing ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
                                 </button>
                                 {isPM && (
                                     <>
@@ -875,9 +918,9 @@ const TaskDetailsPage = () => {
                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold transition border border-blue-200 ml-auto">
                                             <Edit2 className="w-3.5 h-3.5" /> Edit
                                         </button>
-                                        <button onClick={handleDeleteTask}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition border border-red-200">
-                                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                                        <button onClick={handleDeleteTask} disabled={isDeletingTask}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition border border-red-200 disabled:opacity-50">
+                                            {isDeletingTask ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} {isDeletingTask ? 'Deleting...' : 'Delete'}
                                         </button>
                                     </>
                                 )}
@@ -931,16 +974,18 @@ const TaskDetailsPage = () => {
                                             className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition ${sub.isCompleted ? 'bg-emerald-50/50 border-emerald-100' : 'bg-gray-50 border-gray-100'}`}>
                                             <div className="flex items-center gap-2.5">
                                                 <button type="button" onClick={() => handleToggleSubtask(sub.id, sub.isCompleted)}
-                                                    className={`p-1 rounded-full transition ${sub.isCompleted ? 'text-emerald-600' : 'text-gray-300 hover:text-blue-500'}`}>
-                                                    {sub.isCompleted ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                                                    disabled={togglingSubtaskId === sub.id}
+                                                    className={`p-1 rounded-full transition disabled:opacity-50 ${sub.isCompleted ? 'text-emerald-600' : 'text-gray-300 hover:text-blue-500'}`}>
+                                                    {togglingSubtaskId === sub.id ? <Loader2 className="w-5 h-5 animate-spin" /> : (sub.isCompleted ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />)}
                                                 </button>
                                                 <span className={`font-semibold text-sm ${sub.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                                                     {sub.title}
                                                 </span>
                                             </div>
                                             <button onClick={() => handleDeleteSubtask(sub.id)}
-                                                className="text-gray-300 hover:text-red-500 transition p-1">
-                                                <Trash2 className="w-4 h-4" />
+                                                disabled={deletingSubtaskId === sub.id}
+                                                className="text-gray-300 hover:text-red-500 transition p-1 disabled:opacity-50">
+                                                {deletingSubtaskId === sub.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                         </div>
                                     ))}
@@ -971,8 +1016,9 @@ const TaskDetailsPage = () => {
                                             <p className="text-sm text-gray-600 font-medium whitespace-pre-wrap pl-9">{com.content}</p>
                                             {com.userId === user?.id && (
                                                 <button onClick={() => handleDeleteComment(com.id)}
-                                                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 p-1">
-                                                    <Trash2 className="w-4 h-4" />
+                                                    disabled={deletingCommentId === com.id}
+                                                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 p-1 disabled:opacity-50">
+                                                    {deletingCommentId === com.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                 </button>
                                             )}
                                         </div>
@@ -1018,8 +1064,9 @@ const TaskDetailsPage = () => {
                                                 </a>
                                             </div>
                                             <button onClick={() => handleDeleteAttachment(att.id)}
-                                                className="text-gray-300 hover:text-red-500 transition p-1">
-                                                <Trash2 className="w-4 h-4" />
+                                                disabled={deletingAttachmentId === att.id}
+                                                className="text-gray-300 hover:text-red-500 transition p-1 disabled:opacity-50">
+                                                {deletingAttachmentId === att.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                         </div>
                                     ))}
@@ -1069,8 +1116,9 @@ const TaskDetailsPage = () => {
                                                     </div>
                                                 </div>
                                                 <button onClick={() => handleDeleteDependency(dep.id)}
-                                                    className="text-gray-300 hover:text-red-500 transition p-1">
-                                                    <Trash2 className="w-4 h-4" />
+                                                    disabled={deletingDependencyId === dep.id}
+                                                    className="text-gray-300 hover:text-red-500 transition p-1 disabled:opacity-50">
+                                                    {deletingDependencyId === dep.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                 </button>
                                             </div>
                                         );
@@ -1266,7 +1314,9 @@ const TaskDetailsPage = () => {
                                     </p>
                                     <div className="flex justify-end">
                                         <button onClick={() => handleAssignMember(recommendations.bestMatch.userId)}
-                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition">
+                                            disabled={assigningUserId === recommendations.bestMatch.userId}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition disabled:opacity-50 flex items-center gap-1.5">
+                                            {assigningUserId === recommendations.bestMatch.userId && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                                             Assign to {recommendations.bestMatch.userName}
                                         </button>
                                     </div>
@@ -1286,7 +1336,9 @@ const TaskDetailsPage = () => {
                                                 <p className="text-xs text-ink-soft leading-relaxed">{alt.explanation}</p>
                                             </div>
                                             <button onClick={() => handleAssignMember(alt.userId)}
-                                                className="px-3 py-1.5 bg-white border border-line hover:bg-surface-2 text-ink font-bold rounded-lg text-xs transition">
+                                                disabled={assigningUserId === alt.userId}
+                                                className="px-3 py-1.5 bg-white border border-line hover:bg-surface-2 text-ink font-bold rounded-lg text-xs transition disabled:opacity-50 flex items-center gap-1.5">
+                                                {assigningUserId === alt.userId && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                                                 Assign
                                             </button>
                                         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, ArrowRight, Shield, Zap, BarChart3, Clock, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
@@ -68,16 +68,30 @@ function Particles({ count = 110 }) {
   );
 }
 
+/* ── 3D: cursor-reactive parallax group ── */
+function ParallaxGroup({ children }) {
+  const group = useRef(null);
+  const { pointer } = useThree();
+  useFrame(() => {
+    if (!group.current) return;
+    group.current.rotation.y += (pointer.x * 0.35 - group.current.rotation.y) * 0.04;
+    group.current.rotation.x += (-pointer.y * 0.25 - group.current.rotation.x) * 0.04;
+  });
+  return <group ref={group}>{children}</group>;
+}
+
 /* ── 3D: scene ── */
 function AuthScene() {
   return (
     <>
       <ambientLight intensity={0.7} />
       <directionalLight position={[4, 6, 4]} intensity={0.9} />
-      <Orb position={[-1.4, 1.6, 0]} color="#6366f1" scale={2.4} speed={1.1} distort={0.42} />
-      <Orb position={[1.8, -0.8, -1]} color="#8b5cf6" scale={1.6} speed={1.7} distort={0.3} />
-      <Orb position={[0.2, -2.2, 0.5]} color="#06b6d4" scale={1.1} speed={2.1} distort={0.5} />
-      <Particles count={110} />
+      <ParallaxGroup>
+        <Orb position={[-1.4, 1.6, 0]} color="#6366f1" scale={2.4} speed={1.1} distort={0.42} />
+        <Orb position={[1.8, -0.8, -1]} color="#8b5cf6" scale={1.6} speed={1.7} distort={0.3} />
+        <Orb position={[0.2, -2.2, 0.5]} color="#0d9488" scale={1.1} speed={2.1} distort={0.5} />
+        <Particles count={130} />
+      </ParallaxGroup>
     </>
   );
 }
@@ -108,6 +122,7 @@ const LoginPage = () => {
   const [otpTimer, setOtpTimer] = useState(300);
   const [isPending, setIsPending] = useState(false);
   const [pendingMsg, setPendingMsg] = useState('');
+  const [isResendingCode, setIsResendingCode] = useState(false);
 
   const isEmailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const navigate = useNavigate();
@@ -254,7 +269,7 @@ const LoginPage = () => {
 
   /* Resend OTP */
   const handleResendOtp = async () => {
-    setIsLoading(true);
+    setIsResendingCode(true);
     try {
       await loginUser({ email: otpEmail, password });
       setOtpTimer(300);
@@ -262,7 +277,7 @@ const LoginPage = () => {
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Failed to resend verification code.');
     } finally {
-      setIsLoading(false);
+      setIsResendingCode(false);
     }
   };
 
@@ -308,12 +323,16 @@ const LoginPage = () => {
           className="absolute -bottom-20 -left-20 w-56 h-56 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(circle,rgba(139,92,246,0.14) 0%,transparent 70%)' }}
         />
+        <div
+          className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(13,148,136,0.12) 0%,transparent 70%)' }}
+        />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between h-full p-10 xl:p-14">
           {/* Brand */}
           <Link to="/" className="login-brand inline-flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+            <div className="w-9 h-9 rounded-xl bg-gradient-owner flex items-center justify-center shadow-lg shadow-glow-teal">
               <Zap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-black text-gray-900">
@@ -469,10 +488,17 @@ const LoginPage = () => {
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        disabled={otpTimer > 0 || isLoading}
-                        className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled={otpTimer > 0 || isResendingCode}
+                        className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                       >
-                        Resend Code
+                        {isResendingCode ? (
+                          <>
+                            <Loader className="w-3.5 h-3.5 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          'Resend Code'
+                        )}
                       </button>
                     </div>
                   </div>

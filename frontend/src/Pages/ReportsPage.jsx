@@ -41,6 +41,9 @@ export default function ReportsPage() {
         productivity: false
     });
 
+    // Export-in-progress state, tracked per card + format (e.g. "attendance-csv")
+    const [exportingKey, setExportingKey] = useState(null);
+
     useEffect(() => {
         if (authUser?.email) {
             setEmailAttendance(authUser.email);
@@ -164,6 +167,7 @@ export default function ReportsPage() {
     // 1. Export Attendance Reports
     // ==========================================
     const handleExportAttendance = async (format) => {
+        setExportingKey(`attendance-${format}`);
         try {
             const allHistory = await getAttendanceHistory();
             const filtered = allHistory.filter(r => {
@@ -199,6 +203,8 @@ export default function ReportsPage() {
         } catch (error) {
             console.error('Attendance export failed:', error);
             toast.error('Failed to export attendance data');
+        } finally {
+            setExportingKey(null);
         }
     };
 
@@ -426,14 +432,14 @@ export default function ReportsPage() {
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleExportAttendance('csv')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
-                                        <Download className="w-3 h-3" /> CSV
+                                    <button onClick={() => handleExportAttendance('csv')} disabled={exportingKey === 'attendance-csv'} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50">
+                                        {exportingKey === 'attendance-csv' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} CSV
                                     </button>
-                                    <button onClick={() => handleExportAttendance('excel')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
-                                        <Download className="w-3 h-3" /> XLS
+                                    <button onClick={() => handleExportAttendance('excel')} disabled={exportingKey === 'attendance-excel'} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50">
+                                        {exportingKey === 'attendance-excel' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} XLS
                                     </button>
-                                    <button onClick={() => handleExportAttendance('pdf')} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer">
-                                        <Download className="w-3 h-3" /> PDF
+                                    <button onClick={() => handleExportAttendance('pdf')} disabled={exportingKey === 'attendance-pdf'} className="flex-1 py-2 bg-surface-2 hover:bg-surface-2 border border-line rounded-xl text-xxs font-bold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50">
+                                        {exportingKey === 'attendance-pdf' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />} PDF
                                     </button>
                                 </div>
                             </div>

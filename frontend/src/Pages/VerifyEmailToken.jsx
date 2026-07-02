@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Mail, CheckCircle, ArrowRight, Sparkles, AlertCircle, Loader } from 'lucide-react';
 import { verifyEmailToken, resendVerificationEmail } from '../Services/authApi';
 import { GlassCard } from '../design-system/primitives';
+import toast from 'react-hot-toast';
 
 const EmailVerificationPage = () => {
   const [step, setStep] = useState('verify');
@@ -65,6 +66,7 @@ const EmailVerificationPage = () => {
       const res = await verifyEmailToken({ email: email.trim(), token: verificationToken });
 
       setStep('success');
+      toast.success(res?.message || 'Email verified successfully!');
 
       setTimeout(() => {
         localStorage.removeItem('verificationEmail');
@@ -75,6 +77,7 @@ const EmailVerificationPage = () => {
       console.error('Verification error:', err);
       const errorMessage = err?.response?.data?.message || err.message || 'Verification failed. Please check your code and try again.';
       setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsVerifying(false);
     }
@@ -101,10 +104,12 @@ const EmailVerificationPage = () => {
         // Token was created but sending failed
         const serverMessage = res?.error || res?.message || 'Verification token created but email sending failed.';
         setError(serverMessage);
+        toast.error(serverMessage);
         if (res?.previewUrl) setPreviewUrl(res.previewUrl);
       } else {
         // Successful send
         setResendSuccess(true);
+        toast.success(res?.message || 'A new verification code has been sent!');
         if (res?.previewUrl) setPreviewUrl(res.previewUrl);
       }
 
@@ -120,6 +125,7 @@ const EmailVerificationPage = () => {
       console.error('Resend error:', err);
       const errorMessage = err?.response?.data?.message || err.message || 'Failed to resend verification email';
       setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsResending(false);
     }

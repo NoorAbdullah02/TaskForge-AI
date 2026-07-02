@@ -38,6 +38,24 @@ export default function LightPremiumBackground({ mode = 'app', className = '' })
                         animation: 'blob-drift 16s ease-in-out infinite',
                     }}
                 />
+                <div
+                    className="blob-anim absolute top-10 right-1/4 rounded-full blur-3xl"
+                    style={{
+                        width: hero ? 460 : 340,
+                        height: hero ? 460 : 340,
+                        background: 'radial-gradient(circle, rgba(13,148,136,0.10), transparent 70%)',
+                        animation: 'blob-drift 20s ease-in-out infinite reverse',
+                    }}
+                />
+                <div
+                    className="blob-anim absolute bottom-1/4 -right-16 rounded-full blur-3xl"
+                    style={{
+                        width: hero ? 400 : 300,
+                        height: hero ? 400 : 300,
+                        background: 'radial-gradient(circle, rgba(225,29,72,0.08), transparent 70%)',
+                        animation: 'blob-drift 22s ease-in-out infinite',
+                    }}
+                />
             </div>
 
             {/* Top sheen to keep content area airy */}

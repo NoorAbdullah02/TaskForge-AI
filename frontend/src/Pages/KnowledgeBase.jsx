@@ -16,6 +16,8 @@ const KnowledgeBase = () => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
 
     const loadPages = async (type) => {
         try {
@@ -70,9 +72,10 @@ const KnowledgeBase = () => {
             return;
         }
 
+        setIsSaving(true);
         try {
             if (isCreating) {
-                const newPage = await createPage({
+                await createPage({
                     title: title.trim(),
                     content: content,
                     type: activeTab
@@ -94,20 +97,25 @@ const KnowledgeBase = () => {
             }
         } catch (error) {
             console.error('Failed to save document:', error);
-            toast.error('Operation failed');
+            toast.error(error?.response?.data?.message || (isCreating ? 'Failed to create document' : 'Failed to update document'));
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleDelete = async (pageId) => {
         if (!window.confirm('Are you sure you want to permanently delete this document?')) return;
 
+        setDeletingId(pageId);
         try {
             await deletePage(pageId);
             toast.success('Document deleted.');
             loadPages(activeTab);
         } catch (error) {
             console.error('Failed to delete page:', error);
-            toast.error('Deletion failed');
+            toast.error(error?.response?.data?.message || 'Failed to delete document');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -207,9 +215,14 @@ const KnowledgeBase = () => {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(p.id)}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition cursor-pointer"
+                                            disabled={deletingId === p.id}
+                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition cursor-pointer disabled:opacity-50"
                                         >
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                            {deletingId === p.id ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            )}
                                         </button>
                                     </div>
                                 ))
@@ -259,9 +272,17 @@ const KnowledgeBase = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer"
+                                        disabled={isSaving}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer disabled:opacity-50"
                                     >
-                                        Save Changes
+                                        {isSaving ? (
+                                            <span className="flex items-center gap-1.5">
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                Saving...
+                                            </span>
+                                        ) : (
+                                            'Save Changes'
+                                        )}
                                     </button>
                                 </div>
                             </form>

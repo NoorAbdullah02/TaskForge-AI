@@ -29,6 +29,9 @@ export default function SprintPlanningPage() {
     const [sprintModalOpen, setSprintModalOpen] = useState(false);
     const [sprintForm, setSprintForm] = useState({ name: '', startDate: '', endDate: '', goal: '' });
     const [submittingSprint, setSubmittingSprint] = useState(false);
+    const [startingSprintId, setStartingSprintId] = useState(null);
+    const [completingSprintId, setCompletingSprintId] = useState(null);
+    const [deletingSprintId, setDeletingSprintId] = useState(null);
 
     // Collapsed states
     const [, setCollapsedBacklog] = useState(false);
@@ -148,6 +151,7 @@ export default function SprintPlanningPage() {
 
     const handleStartSprint = async (sprintId) => {
         if (!isAdmin && !isManager) return;
+        setStartingSprintId(sprintId);
         try {
             await startSprint(sprintId);
             toast.success('Sprint started successfully');
@@ -155,6 +159,8 @@ export default function SprintPlanningPage() {
         } catch (error) {
             console.error('Sprint launch failed:', error);
             toast.error(error.response?.data?.message || 'Failed to start sprint');
+        } finally {
+            setStartingSprintId(null);
         }
     };
 
@@ -164,6 +170,7 @@ export default function SprintPlanningPage() {
             return;
         }
 
+        setCompletingSprintId(sprintId);
         try {
             const res = await completeSprint(sprintId);
             toast.success(`Sprint completed! Returned ${res.movedTasksCount} tasks to backlog.`);
@@ -171,6 +178,8 @@ export default function SprintPlanningPage() {
         } catch (error) {
             console.error('Sprint completion failed:', error);
             toast.error('Failed to complete sprint');
+        } finally {
+            setCompletingSprintId(null);
         }
     };
 
@@ -194,6 +203,7 @@ export default function SprintPlanningPage() {
         if (!confirm(`Are you sure you want to delete the sprint "${name}"? all tasks will return to backlog.`)) {
             return;
         }
+        setDeletingSprintId(id);
         try {
             await deleteSprint(id);
             toast.success('Sprint deleted');
@@ -201,6 +211,8 @@ export default function SprintPlanningPage() {
         } catch (error) {
             console.error('Failed to delete sprint:', error);
             toast.error('Failed to delete sprint');
+        } finally {
+            setDeletingSprintId(null);
         }
     };
 
@@ -289,10 +301,20 @@ export default function SprintPlanningPage() {
                                     {activeSprint && (isAdmin || isManager) && (
                                         <button
                                             onClick={() => handleCompleteSprint(activeSprint.id)}
-                                            className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 text-blue-600 text-xs font-bold rounded-2xl hover:bg-blue-50/50 transition cursor-pointer"
+                                            disabled={completingSprintId === activeSprint.id}
+                                            className="flex items-center gap-1.5 px-4 py-2 border border-blue-200 text-blue-600 text-xs font-bold rounded-2xl hover:bg-blue-50/50 transition cursor-pointer disabled:opacity-50"
                                         >
-                                            <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                                            Complete Sprint
+                                            {completingSprintId === activeSprint.id ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Completing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                                    Complete Sprint
+                                                </>
+                                            )}
                                         </button>
                                     )}
                                 </div>
@@ -365,18 +387,33 @@ export default function SprintPlanningPage() {
                                                             {!activeSprint && (
                                                                 <button
                                                                     onClick={() => handleStartSprint(fs.id)}
-                                                                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer"
+                                                                    disabled={startingSprintId === fs.id}
+                                                                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer disabled:opacity-50"
                                                                 >
-                                                                    <Play className="w-3 h-3 fill-white" />
-                                                                    Start Sprint
+                                                                    {startingSprintId === fs.id ? (
+                                                                        <>
+                                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                                            Starting...
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <Play className="w-3 h-3 fill-white" />
+                                                                            Start Sprint
+                                                                        </>
+                                                                    )}
                                                                 </button>
                                                             )}
                                                             <button
                                                                     onClick={() => handleDeleteSprintClick(fs.id, fs.name)}
-                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition"
+                                                                    disabled={deletingSprintId === fs.id}
+                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition disabled:opacity-50"
                                                                     title="Delete Sprint"
                                                             >
-                                                                <AlertCircle className="w-4 h-4" />
+                                                                {deletingSprintId === fs.id ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <AlertCircle className="w-4 h-4" />
+                                                                )}
                                                             </button>
                                                         </>
                                                     )}

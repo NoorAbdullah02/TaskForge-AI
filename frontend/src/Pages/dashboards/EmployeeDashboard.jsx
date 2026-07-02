@@ -29,6 +29,7 @@ export default function EmployeeDashboard({ user }) {
   const [standup,  setStandup]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [standupLoading, setStandupLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const headerRef = useRef(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -57,17 +58,39 @@ export default function EmployeeDashboard({ user }) {
     finally  { setLoading(false); }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [s, t] = await Promise.allSettled([
+        getDashboardStats(),
+        getTasks({ assignedToMe: true, limit: 10, sort: 'priority' }),
+      ]);
+      if (s.status === 'fulfilled') setStats(s.value);
+      if (t.status === 'fulfilled') {
+        const tasks = Array.isArray(t.value) ? t.value : (t.value?.tasks || []);
+        setMyTasks(tasks.slice(0, 6));
+      }
+      toast.success('Dashboard refreshed');
+    } catch {
+      toast.error('Could not refresh your dashboard');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const fetchStandup = async () => {
     setStandupLoading(true);
     try {
       const data = await getDailyStandup();
       setStandup(data);
+      toast.success('Daily standup generated');
     } catch {
       setStandup({
         summary: "You have 5 tasks in progress today. Focus on completing the API integration subtask first — it's blocking 2 team members. Your attendance rate this month is excellent at 96%. Keep up the great work!",
         priorities: ['Complete API integration', 'Review PR #42', 'Update documentation'],
         mood: 'productive',
       });
+      toast.error('Could not generate live standup — showing a fallback summary');
     } finally { setStandupLoading(false); }
   };
 
@@ -184,8 +207,12 @@ export default function EmployeeDashboard({ user }) {
               {myBlocked} Blocked
             </Badge>
           )}
-          <button onClick={fetchAll} className="p-2 rounded-xl bg-white border border-line hover:bg-surface-2 transition-colors">
-            <RefreshCw className="h-4 w-4 text-ink-soft" />
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-xl bg-white border border-line hover:bg-surface-2 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 text-ink-soft ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>

@@ -4,7 +4,7 @@ import {
   ArrowRight, Building, Key, Zap, Users, GitBranch, Brain,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
@@ -13,6 +13,7 @@ import { checkEmailExists, registerUser, getSetupStatus } from '../Services/auth
 import { createWorkspace, joinWorkspace } from '../Services/workspaceApi';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '../design-system/primitives';
+import { isPasswordStrong, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 
 /* ── 3D: distorted orb ── */
 function Orb({ position, color, scale = 1, speed = 1.5, distort = 0.35 }) {
@@ -88,17 +89,31 @@ function Particles({ count = 120 }) {
   );
 }
 
+/* ── 3D: cursor-reactive parallax group ── */
+function ParallaxGroup({ children }) {
+  const group = useRef(null);
+  const { pointer } = useThree();
+  useFrame(() => {
+    if (!group.current) return;
+    group.current.rotation.y += (pointer.x * 0.3 - group.current.rotation.y) * 0.04;
+    group.current.rotation.x += (-pointer.y * 0.2 - group.current.rotation.x) * 0.04;
+  });
+  return <group ref={group}>{children}</group>;
+}
+
 /* ── 3D: scene for register ── */
 function RegScene() {
   return (
     <>
       <ambientLight intensity={0.65} />
       <directionalLight position={[3, 7, 3]} intensity={0.85} />
-      <Orb position={[1.6, 1.8, 0]} color="#8b5cf6" scale={2.2} speed={1.0} distort={0.4} />
-      <Orb position={[-1.9, -0.7, -1]} color="#10b981" scale={1.5} speed={1.6} distort={0.32} />
-      <Orb position={[0.1, -2.3, 0.4]} color="#6366f1" scale={1.0} speed={2.0} distort={0.48} />
-      <WireKnot />
-      <Particles count={120} />
+      <ParallaxGroup>
+        <Orb position={[1.6, 1.8, 0]} color="#8b5cf6" scale={2.2} speed={1.0} distort={0.4} />
+        <Orb position={[-1.9, -0.7, -1]} color="#10b981" scale={1.5} speed={1.6} distort={0.32} />
+        <Orb position={[0.1, -2.3, 0.4]} color="#e11d48" scale={1.0} speed={2.0} distort={0.48} />
+        <WireKnot />
+        <Particles count={120} />
+      </ParallaxGroup>
     </>
   );
 }
@@ -214,6 +229,7 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (emailError) { toast.error('Please fix the email error'); return; }
+    if (!isPasswordStrong(password)) { toast.error(PASSWORD_POLICY_MESSAGE); return; }
     if (!passwordsMatch) { toast.error('Passwords do not match!'); return; }
     setIsLoading(true);
     try {
@@ -572,6 +588,11 @@ const RegisterPage = () => {
                       />
                     ))}
                   </div>
+                  {!isPasswordStrong(password) && (
+                    <p className="text-[10px] text-gray-400 leading-relaxed pt-1">
+                      Needs 8+ characters with uppercase, lowercase, a number, and a special character.
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -681,6 +702,7 @@ const RegisterPage = () => {
                 disabled={
                   isLoading ||
                   !passwordsMatch ||
+                  !isPasswordStrong(password) ||
                   !name ||
                   !isEmailValid ||
                   !password ||

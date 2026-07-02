@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import Header from './Components/Header.jsx'
 import DesignSystemProviderWrapper from './design-system/DesignSystemProviderWrapper.jsx'
 import DSAppShell from './design-system/DSAppShell.jsx'
+import useLenisSmoothScroll from './hooks/useLenisSmoothScroll.js'
 
 import LoginPage from './Pages/LoginPage.jsx'
 import RegisterPage from './Pages/RegisterPage.jsx'
@@ -56,6 +57,7 @@ const ProtectedRoute = ({ children }) => {
 const App = () => {
   const { isLoggedIn, loading } = useAuth();
   const location = useLocation();
+  useLenisSmoothScroll();
 
   const authPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password',
     '/after-register', '/verify-email-token', '/verify-email-result'];

@@ -27,6 +27,8 @@ const ChatHub = () => {
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [selectedAddMemberIds, setSelectedAddMemberIds] = useState([]);
     const [addingMembers, setAddingMembers] = useState(false);
+    const [sendingMessage, setSendingMessage] = useState(false);
+    const [creatingRoom, setCreatingRoom] = useState(false);
 
     const messagesEndRef = useRef(null);
 
@@ -121,14 +123,17 @@ const ChatHub = () => {
         e.preventDefault();
         if (!inputText.trim() || !selectedRoom) return;
 
+        const text = inputText;
+        setInputText('');
+        setSendingMessage(true);
         try {
-            const text = inputText;
-            setInputText('');
             // REST call stores it in Postgres and broadcasts to Socket.IO room
             await sendMessage(selectedRoom.id, text);
         } catch (error) {
             console.error('Failed to send message:', error);
             toast.error('Failed to transmit message.');
+        } finally {
+            setSendingMessage(false);
         }
     };
 
@@ -154,6 +159,7 @@ const ChatHub = () => {
             payload.userIds = [parseInt(selectedMemberId, 10)];
         }
 
+        setCreatingRoom(true);
         try {
             const newRoom = await createRoom(payload);
             toast.success(newRoomType === 'group' ? 'Channel created!' : 'Conversation initialized!');
@@ -161,11 +167,11 @@ const ChatHub = () => {
             setNewRoomName('');
             setSelectedMemberId('');
             setSelectedGroupMemberIds([]);
-            
+
             // Reload all rooms
             const updatedRooms = await getRooms();
             setRooms(updatedRooms);
-            
+
             // Select the newly created/retrieved room
             const foundRoom = updatedRooms.find(r => r.id === newRoom.id);
             if (foundRoom) {
@@ -174,6 +180,8 @@ const ChatHub = () => {
         } catch (error) {
             console.error('Failed to create room:', error);
             toast.error('Could not initialize chat room.');
+        } finally {
+            setCreatingRoom(false);
         }
     };
 
@@ -397,10 +405,10 @@ const ChatHub = () => {
                                     />
                                     <button
                                         type="submit"
-                                        disabled={!inputText.trim()}
+                                        disabled={!inputText.trim() || sendingMessage}
                                         className="p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:shadow-blue-500/20"
                                     >
-                                        <Send className="w-4 h-4" />
+                                        {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                     </button>
                                 </form>
                             </>
@@ -547,9 +555,11 @@ const ChatHub = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer"
+                                    disabled={creatingRoom}
+                                    className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Initialize
+                                    {creatingRoom && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    {creatingRoom ? 'Initializing...' : 'Initialize'}
                                 </button>
                             </div>
                         </form>

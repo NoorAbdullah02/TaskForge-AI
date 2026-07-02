@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Check, Trash2, Archive, Inbox, Bell, Search, CheckSquare, ArrowRight, UserCheck, UserX } from 'lucide-react';
+import { X, Check, Trash2, Archive, Inbox, Bell, Search, CheckSquare, ArrowRight, UserCheck, UserX, Loader2 } from 'lucide-react';
 import {
   getNotifications,
   markAsRead,
@@ -33,6 +33,10 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   const [actionLoading, setActionLoading] = useState({});
   /* Set of notif IDs that have been actioned (shows "Done" state) */
   const [actedUpon, setActedUpon] = useState(new Set());
+  /* Per-row loading state for the hover action bar (mark read / archive / delete) */
+  const [markingReadId, setMarkingReadId] = useState(null);
+  const [archivingId, setArchivingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -128,6 +132,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
 
   // Actions
   const handleMarkAsRead = async (id) => {
+    setMarkingReadId(id);
     try {
       await markAsRead(id);
       setNotifications((prev) =>
@@ -143,6 +148,8 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       });
     } catch {
       toast.error('Failed to mark read');
+    } finally {
+      setMarkingReadId((prev) => (prev === id ? null : prev));
     }
   };
 
@@ -158,6 +165,7 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
   };
 
   const handleArchive = async (id) => {
+    setArchivingId(id);
     try {
       await archiveNotification(id);
       setNotifications((prev) =>
@@ -166,16 +174,21 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       toast.success('Notification archived');
     } catch {
       toast.error('Failed to archive');
+    } finally {
+      setArchivingId((prev) => (prev === id ? null : prev));
     }
   };
 
   const handleDelete = async (id) => {
+    setDeletingId(id);
     try {
       await deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       toast.success('Notification deleted');
     } catch {
       toast.error('Failed to delete');
+    } finally {
+      setDeletingId((prev) => (prev === id ? null : prev));
     }
   };
 
@@ -560,27 +573,42 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
                       {!notif.isRead && (
                         <button
                           onClick={() => handleMarkAsRead(notif.id)}
-                          className="p-1 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded transition cursor-pointer"
+                          disabled={markingReadId === notif.id}
+                          className="p-1 hover:bg-green-50 text-slate-400 hover:text-green-600 rounded transition cursor-pointer disabled:opacity-50"
                           title="Mark Read"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          {markingReadId === notif.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       )}
                       {!notif.isArchived && (
                         <button
                           onClick={() => handleArchive(notif.id)}
-                          className="p-1 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded transition cursor-pointer"
+                          disabled={archivingId === notif.id}
+                          className="p-1 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded transition cursor-pointer disabled:opacity-50"
                           title="Archive"
                         >
-                          <Archive className="w-3.5 h-3.5" />
+                          {archivingId === notif.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Archive className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(notif.id)}
-                        className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition cursor-pointer"
+                        disabled={deletingId === notif.id}
+                        className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition cursor-pointer disabled:opacity-50"
                         title="Delete"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {deletingId === notif.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
                   </div>

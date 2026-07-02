@@ -26,7 +26,8 @@ import {
     QrCode,
     Scan,
     Camera,
-    RefreshCw
+    RefreshCw,
+    Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -527,13 +528,22 @@ const AttendancePage = () => {
                                                 </div>
                                             )}
 
-                                            <button 
+                                            <button
                                                 onClick={handleGenerateQR}
                                                 disabled={qrLoading}
                                                 className="py-2.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold rounded-xl shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                             >
-                                                <RefreshCw className="w-3.5 h-3.5" />
-                                                Regenerate Badge
+                                                {qrLoading ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        Regenerating...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <RefreshCw className="w-3.5 h-3.5" />
+                                                        Regenerate Badge
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     ) : (
@@ -593,13 +603,22 @@ const AttendancePage = () => {
                                                     </div>
                                                 </div>
 
-                                                <button 
+                                                <button
                                                     onClick={handleVerifyQR}
                                                     disabled={actionLoading || (!scannedToken && !qrToken)}
                                                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-extrabold rounded-2xl shadow-lg hover:shadow-emerald-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                                 >
-                                                    <Scan className="w-4 h-4" />
-                                                    Submit Scanned Badge
+                                                    {actionLoading ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            Verifying...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Scan className="w-4 h-4" />
+                                                            Submit Scanned Badge
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>

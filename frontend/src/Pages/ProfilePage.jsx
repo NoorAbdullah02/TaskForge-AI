@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import { useAuth } from '../context/AuthContext';
 import { 
     Mail, Lock, CheckCircle, X, Camera, Edit2, Save, User, Shield, 
     Bell, Paintbrush, Globe, Cpu, Key, Activity, Trash2, Plus, 
     AlertTriangle, RefreshCw, ShieldCheck, Laptop, Chrome, 
-    LogOut, Check, ChevronRight, Settings, Eye, EyeOff, ShieldAlert
+    LogOut, Check, ChevronRight, Settings, Eye, EyeOff, ShieldAlert, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ import {
 } from '../Services/authApi';
 import { uploadFile } from '../Services/uploadApi';
 import { getWorkspaceInfo } from '../Services/workspaceApi';
+import { isPasswordStrong, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 
 export default function ProfilePage() {
     const { user, login } = useAuth();
@@ -29,6 +31,15 @@ export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState('profile');
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
+    const headerRef = useRef(null);
+
+    useEffect(() => {
+        if (!loading && headerRef.current) {
+            gsap.from([...headerRef.current.children], {
+                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+            });
+        }
+    }, [loading]);
     
     // Data List States
     const [sessions, setSessions] = useState([]);
@@ -43,6 +54,11 @@ export default function ProfilePage() {
     const [copiedKey, setCopiedKey] = useState('');
     const [newKeyName, setNewKeyName] = useState('');
     const [justCreatedKey, setJustCreatedKey] = useState(null);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const [isVerifyingToken, setIsVerifyingToken] = useState(false);
+    const [isTogglingTwoFa, setIsTogglingTwoFa] = useState(false);
+    const [revokingSessionId, setRevokingSessionId] = useState(null);
+    const [revokingKeyId, setRevokingKeyId] = useState(null);
 
     // Passwords Form
     const [passwordData, setPasswordData] = useState({
@@ -165,6 +181,7 @@ export default function ProfilePage() {
         }
 
         const toastId = toast.loading('Uploading avatar...');
+        setIsUploadingAvatar(true);
         try {
             const res = await uploadFile(file, 'avatars');
             const fileUrlWithId = `${res.url}#${res.fileId}`;
@@ -175,6 +192,8 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to upload image', { id: toastId });
+        } finally {
+            setIsUploadingAvatar(false);
         }
     };
 
@@ -214,8 +233,8 @@ export default function ProfilePage() {
             toast.error('New passwords do not match');
             return;
         }
-        if (passwordData.newPassword.length < 8) {
-            toast.error('New password must be at least 8 characters');
+        if (!isPasswordStrong(passwordData.newPassword)) {
+            toast.error(PASSWORD_POLICY_MESSAGE);
             return;
         }
 
@@ -254,6 +273,7 @@ export default function ProfilePage() {
             toast.error('Please enter the verification code');
             return;
         }
+        setIsVerifyingToken(true);
         try {
             await verifyEmailToken({ email: profileData.email, token: verifyTokenInput.trim() });
             toast.success('Email verified successfully! 🎉');
@@ -263,11 +283,14 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || 'Failed to verify email code');
+        } finally {
+            setIsVerifyingToken(false);
         }
     };
 
     const handleToggle2FA = async (checked) => {
         const toastId = toast.loading(`${checked ? 'Enabling' : 'Disabling'} 2FA...`);
+        setIsTogglingTwoFa(true);
         try {
             const res = await toggle2Fa(checked);
             setProfileData(prev => ({ ...prev, is2faEnabled: res.is2faEnabled }));
@@ -276,11 +299,14 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to change 2FA setting', { id: toastId });
+        } finally {
+            setIsTogglingTwoFa(false);
         }
     };
 
     const handleRevokeSession = async (id) => {
         if (!confirm('Are you sure you want to log out of this device?')) return;
+        setRevokingSessionId(id);
         try {
             await revokeSession(id);
             toast.success('Device session revoked successfully');
@@ -288,6 +314,8 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to revoke session');
+        } finally {
+            setRevokingSessionId(null);
         }
     };
 
@@ -311,6 +339,7 @@ export default function ProfilePage() {
 
     const handleRevokeApiKey = async (id) => {
         if (!confirm('Are you sure you want to revoke this API key? Applications using it will break.')) return;
+        setRevokingKeyId(id);
         try {
             await revokeApiKey(id);
             toast.success('API key revoked successfully');
@@ -318,6 +347,8 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to revoke API key');
+        } finally {
+            setRevokingKeyId(null);
         }
     };
 
@@ -393,10 +424,12 @@ export default function ProfilePage() {
         }`}>
             <div className="max-w-6xl mx-auto">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/60 pb-6 mb-8">
+                <div ref={headerRef} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/60 pb-6 mb-8">
                     <div>
                         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                            <Settings className="w-7 h-7 text-blue-500" />
+                            <span className="p-1.5 rounded-lg bg-gradient-member shadow-md shadow-glow-teal">
+                                <Settings className="w-5 h-5 text-white" />
+                            </span>
                             {getSettingsTitle()}
                         </h1>
                         <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink-soft'}`}>
@@ -474,9 +507,9 @@ export default function ProfilePage() {
                                                         profileData.name.charAt(0).toUpperCase()
                                                     )}
                                                 </div>
-                                                <label className="absolute inset-0 bg-surface-2 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                                                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                                                    <Camera className="w-5 h-5 text-ink" />
+                                                <label className={`absolute inset-0 bg-surface-2 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity ${isUploadingAvatar ? 'opacity-100 pointer-events-none' : ''}`}>
+                                                    <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={isUploadingAvatar} className="hidden" />
+                                                    {isUploadingAvatar ? <Loader2 className="w-5 h-5 text-ink animate-spin" /> : <Camera className="w-5 h-5 text-ink" />}
                                                 </label>
                                             </div>
                                             <div className="text-center sm:text-left">
@@ -608,6 +641,11 @@ export default function ProfilePage() {
                                                         {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
                                                 </div>
+                                                {passwordData.newPassword && !isPasswordStrong(passwordData.newPassword) && (
+                                                    <p className="text-[10px] text-ink-faint leading-relaxed mt-1.5">
+                                                        {PASSWORD_POLICY_MESSAGE}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {/* Confirm Pass */}
@@ -703,9 +741,12 @@ export default function ProfilePage() {
                                                             />
                                                             <button
                                                                 onClick={handleVerifyToken}
-                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                                                                disabled={isVerifyingToken}
+                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
                                                             >
-                                                                Verify Code
+                                                                {isVerifyingToken ? (
+                                                                    <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Verifying...</span>
+                                                                ) : 'Verify Code'}
                                                             </button>
                                                         </div>
                                                     )}
@@ -747,12 +788,13 @@ export default function ProfilePage() {
                                                         <h4 className="text-xs font-extrabold">Two-Factor Authentication (2FA)</h4>
                                                         <p className="text-[10px] text-ink-soft font-medium mt-1">Requires an OTP sent to your verified email address on login.</p>
                                                     </div>
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={!!profileData.is2faEnabled} 
+                                                    <label className={`relative inline-flex items-center ${isTogglingTwoFa ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!profileData.is2faEnabled}
                                                             onChange={(e) => handleToggle2FA(e.target.checked)}
-                                                            className="sr-only peer" 
+                                                            disabled={isTogglingTwoFa}
+                                                            className="sr-only peer"
                                                         />
                                                         <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
@@ -904,10 +946,11 @@ export default function ProfilePage() {
                                                             <td className="px-6 py-4 text-right">
                                                                 <button
                                                                     onClick={() => handleRevokeSession(sess.id)}
-                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                                                                    disabled={revokingSessionId === sess.id}
+                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer disabled:opacity-50"
                                                                     title="Revoke Session"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    {revokingSessionId === sess.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                                 </button>
                                                             </td>
                                                         </tr>

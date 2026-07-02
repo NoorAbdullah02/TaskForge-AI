@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { gsap } from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -18,7 +19,7 @@ import KanbanBoard from '../Components/KanbanBoard';
 
 import {
     CheckSquare, Plus, LayoutGrid, List, Filter, Calendar, AlertCircle,
-    Loader, Trophy, ArrowRight, ChevronDown, Trash2, Copy, Archive,
+    Loader, Loader2, Trophy, ArrowRight, ChevronDown, Trash2, Copy, Archive,
     RefreshCw, LayoutTemplate, Tag, Layers, Users, CheckCircle2,
     SlidersHorizontal, Search, X, Star, Lock, Eye, Clock, Zap
 } from 'lucide-react';
@@ -50,10 +51,15 @@ const STATUS_COLORS = {
 };
 
 // ─── Bulk Toolbar ──────────────────────────────────────────────────────────
-const BulkToolbar = ({ selectedIds, tasks, onBulkStatusChange, onBulkDelete, onBulkArchive, onBulkDuplicate, onClear }) => {
+const BulkToolbar = ({
+    selectedIds, tasks, onBulkStatusChange, onBulkDelete, onBulkArchive, onBulkDuplicate, onClear,
+    isBulkChangingStatus, isBulkDeleting, isBulkArchiving, isBulkDuplicating,
+}) => {
     const [statusDropdown, setStatusDropdown] = useState(false);
 
     if (selectedIds.length === 0) return null;
+
+    const anyBulkActionInFlight = isBulkChangingStatus || isBulkDeleting || isBulkArchiving || isBulkDuplicating;
 
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-800 text-white rounded-3xl shadow-2xl px-6 py-3.5 flex items-center gap-4 animate-slide-up">
@@ -64,17 +70,19 @@ const BulkToolbar = ({ selectedIds, tasks, onBulkStatusChange, onBulkDelete, onB
             <div className="relative">
                 <button
                     onClick={() => setStatusDropdown(p => !p)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                    disabled={anyBulkActionInFlight}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <RefreshCw className="w-3.5 h-3.5" /> Change Status <ChevronDown className="w-3 h-3" />
+                    {isBulkChangingStatus ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Change Status <ChevronDown className="w-3 h-3" />
                 </button>
                 {statusDropdown && (
                     <div className="absolute bottom-full mb-2 left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[140px] z-50">
                         {STATUS_STATES.map(s => (
                             <button
                                 key={s}
-                                onClick={() => { onBulkStatusChange(s); setStatusDropdown(false); }}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-700 transition cursor-pointer text-white"
+                                onClick={() => { setStatusDropdown(false); onBulkStatusChange(s); }}
+                                disabled={anyBulkActionInFlight}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-slate-700 transition cursor-pointer text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {STATUS_LABELS[s]}
                             </button>
@@ -85,23 +93,26 @@ const BulkToolbar = ({ selectedIds, tasks, onBulkStatusChange, onBulkDelete, onB
 
             <button
                 onClick={onBulkDuplicate}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                disabled={anyBulkActionInFlight}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <Copy className="w-3.5 h-3.5" /> Duplicate
+                {isBulkDuplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />} Duplicate
             </button>
 
             <button
                 onClick={onBulkArchive}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-amber-900/60 rounded-xl text-xs font-bold transition cursor-pointer"
+                disabled={anyBulkActionInFlight}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-amber-900/60 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <Archive className="w-3.5 h-3.5 text-amber-400" /> Archive
+                {isBulkArchiving ? <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" /> : <Archive className="w-3.5 h-3.5 text-amber-400" />} Archive
             </button>
 
             <button
                 onClick={onBulkDelete}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/60 hover:bg-red-950 rounded-xl text-xs font-bold transition text-red-300 cursor-pointer"
+                disabled={anyBulkActionInFlight}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/60 hover:bg-red-950 rounded-xl text-xs font-bold transition text-red-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
+                {isBulkDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Delete
             </button>
 
             <div className="w-px h-5 bg-slate-800" />
@@ -117,6 +128,26 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState('');
+    const [applyingTemplateId, setApplyingTemplateId] = useState(null);
+    const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+
+    const handleApplyClick = async (templateId) => {
+        setApplyingTemplateId(templateId);
+        try {
+            await onApply(templateId, selectedProjectId);
+        } finally {
+            setApplyingTemplateId(null);
+        }
+    };
+
+    const handleCreateClick = async () => {
+        setIsCreatingTemplate(true);
+        try {
+            await onCreateTemplate({ title: newName, description: newDesc });
+        } finally {
+            setIsCreatingTemplate(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -139,7 +170,7 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
                                 {templates.map(t => (
                                     <div key={t.id} className="flex items-center justify-between p-3.5 bg-surface-2/40 rounded-xl border border-line">
                                         <div>
-                                            <p className="font-bold text-sm text-ink">{t.name}</p>
+                                            <p className="font-bold text-sm text-ink">{t.title}</p>
                                             {t.description && <p className="text-xs text-ink-soft font-medium mt-0.5">{t.description}</p>}
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -153,9 +184,11 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
                                                 ))}
                                             </select>
                                             <button
-                                                onClick={() => selectedProjectId && onApply(t.id, selectedProjectId)}
-                                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                                                onClick={() => selectedProjectId && handleApplyClick(t.id)}
+                                                disabled={applyingTemplateId === t.id}
+                                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                                             >
+                                                {applyingTemplateId === t.id && <Loader2 className="w-3 h-3 animate-spin" />}
                                                 Apply
                                             </button>
                                         </div>
@@ -184,11 +217,11 @@ const TemplatePanel = ({ templates, onApply, onCreateTemplate, projects, onClose
                                 className="w-full p-4 bg-surface-2 border border-line rounded-2xl text-xs font-semibold focus:outline-none focus:border-blue-500 text-ink leading-normal resize-none h-20"
                             />
                             <button
-                                onClick={() => onCreateTemplate({ name: newName, description: newDesc })}
-                                disabled={!newName.trim()}
+                                onClick={handleCreateClick}
+                                disabled={!newName.trim() || isCreatingTemplate}
                                 className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl text-xs transition hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/10"
                             >
-                                <Plus className="w-4 h-4 inline mr-1 text-white" /> Save Template
+                                {isCreatingTemplate ? <Loader2 className="w-4 h-4 inline mr-1 text-white animate-spin" /> : <Plus className="w-4 h-4 inline mr-1 text-white" />} Save Template
                             </button>
                         </div>
                     </div>
@@ -324,6 +357,10 @@ const TasksPage = () => {
 
     // Bulk selection
     const [selectedIds, setSelectedIds] = useState([]);
+    const [isBulkChangingStatus, setIsBulkChangingStatus] = useState(false);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+    const [isBulkArchiving, setIsBulkArchiving] = useState(false);
+    const [isBulkDuplicating, setIsBulkDuplicating] = useState(false);
 
     // Panels
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -332,22 +369,30 @@ const TasksPage = () => {
     const [showFilters, setShowFilters] = useState(false);
 
     const navigate = useNavigate();
+    const headerRef = useRef(null);
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) navigate('/login');
     }, [isLoggedIn, authLoading, navigate]);
 
-    const fetchFiltersData = useCallback(async () => {
-        try {
-            const [projectsList, templatesList] = await Promise.all([
-                getProjects(),
-                getTemplates(),
-            ]);
-            setProjects(projectsList);
-            setTemplates(templatesList);
-        } catch (error) {
-            console.error('Error fetching filter data:', error);
+    useEffect(() => {
+        if (!isLoading && headerRef.current) {
+            gsap.from([...headerRef.current.children], {
+                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+            });
         }
+    }, [isLoading]);
+
+    const fetchFiltersData = useCallback(async () => {
+        const [projectsResult, templatesResult] = await Promise.allSettled([
+            getProjects(),
+            getTemplates(),
+        ]);
+        if (projectsResult.status === 'fulfilled') setProjects(projectsResult.value);
+        else console.error('Error fetching projects:', projectsResult.reason);
+
+        if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value);
+        else console.error('Error fetching templates:', templatesResult.reason);
     }, []);
 
     const fetchTasksList = useCallback(async () => {
@@ -393,40 +438,60 @@ const TasksPage = () => {
 
     // ─── Bulk Actions ──────────────────────────────────────────────────────
     const handleBulkStatusChange = async (status) => {
+        setIsBulkChangingStatus(true);
         try {
             await bulkUpdateTasks(selectedIds, { status });
             toast.success(`${selectedIds.length} tasks updated to ${STATUS_LABELS[status]}`);
             setSelectedIds([]);
             fetchTasksList();
-        } catch { toast.error('Bulk status update failed'); }
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Bulk status update failed');
+        } finally {
+            setIsBulkChangingStatus(false);
+        }
     };
 
     const handleBulkDelete = async () => {
         if (!window.confirm(`Delete ${selectedIds.length} tasks permanently?`)) return;
+        setIsBulkDeleting(true);
         try {
             await bulkDeleteTasks(selectedIds);
             toast.success(`${selectedIds.length} tasks deleted`);
             setSelectedIds([]);
             fetchTasksList();
-        } catch { toast.error('Bulk delete failed'); }
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Bulk delete failed');
+        } finally {
+            setIsBulkDeleting(false);
+        }
     };
 
     const handleBulkArchive = async () => {
+        setIsBulkArchiving(true);
         try {
             await Promise.all(selectedIds.map(id => archiveTask(id)));
             toast.success(`${selectedIds.length} tasks archived`);
             setSelectedIds([]);
             fetchTasksList();
-        } catch { toast.error('Bulk archive failed'); }
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Bulk archive failed');
+        } finally {
+            setIsBulkArchiving(false);
+        }
     };
 
     const handleBulkDuplicate = async () => {
+        setIsBulkDuplicating(true);
         try {
             await Promise.all(selectedIds.map(id => duplicateTask(id)));
             toast.success(`${selectedIds.length} tasks duplicated`);
             setSelectedIds([]);
             fetchTasksList();
-        } catch { toast.error('Bulk duplicate failed'); }
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Bulk duplicate failed');
+        } finally {
+            setIsBulkDuplicating(false);
+        }
     };
 
     // ─── Templates ─────────────────────────────────────────────────────────
@@ -444,7 +509,9 @@ const TasksPage = () => {
             await createTemplate(data);
             toast.success('Template saved!');
             fetchFiltersData();
-        } catch { toast.error('Failed to create template'); }
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to create template');
+        }
     };
 
     // ─── Filtered tasks ────────────────────────────────────────────────────
@@ -484,11 +551,13 @@ const TasksPage = () => {
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col relative z-10">
 
                 {/* ─── Header ─── */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div ref={headerRef} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
-                            <CheckSquare className="w-8 h-8 text-blue-500" />
-                            Task Workspace
+                        <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
+                            <span className="p-2 rounded-xl bg-gradient-member shadow-lg shadow-glow-teal">
+                                <CheckSquare className="w-6 h-6 text-white" />
+                            </span>
+                            <span className="bg-gradient-member bg-clip-text text-transparent">Task Workspace</span>
                         </h1>
                         <p className="text-ink-soft mt-1 font-medium font-sans">Enterprise task management — Jira-level power.</p>
                     </div>
@@ -671,6 +740,10 @@ const TasksPage = () => {
                     onBulkArchive={handleBulkArchive}
                     onBulkDuplicate={handleBulkDuplicate}
                     onClear={() => setSelectedIds([])}
+                    isBulkChangingStatus={isBulkChangingStatus}
+                    isBulkDeleting={isBulkDeleting}
+                    isBulkArchiving={isBulkArchiving}
+                    isBulkDuplicating={isBulkDuplicating}
                 />
 
                 {/* ─── Modals ─── */}

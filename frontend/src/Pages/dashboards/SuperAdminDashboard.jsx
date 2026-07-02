@@ -27,6 +27,7 @@ export default function SuperAdminDashboard({ user }) {
   const [dashStats,  setDashStats]  = useState(null);
   const [auditLogs,  setAuditLogs]  = useState([]);
   const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const headerRef = useRef(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -52,6 +53,25 @@ export default function SuperAdminDashboard({ user }) {
       if (al.status === 'fulfilled') setAuditLogs((al.value || []).slice(0, 14));
     } catch { toast.error('Could not load some platform data'); }
     finally  { setLoading(false); }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [ws, u, an, ds, al] = await Promise.allSettled([
+        getWorkspaces(), getUsers(), getAnalytics(), getDashboardStats(), getAuditLogs(),
+      ]);
+      if (ws.status === 'fulfilled') setWorkspaces(ws.value || []);
+      if (u.status  === 'fulfilled') setAllUsers(u.value || []);
+      if (an.status === 'fulfilled') setAnalytics(an.value);
+      if (ds.status === 'fulfilled') setDashStats(ds.value);
+      if (al.status === 'fulfilled') setAuditLogs((al.value || []).slice(0, 14));
+      toast.success('Dashboard refreshed');
+    } catch {
+      toast.error('Could not refresh platform data');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // ── Derived chart data ─────────────────────────────────────────────────────
@@ -155,10 +175,11 @@ export default function SuperAdminDashboard({ user }) {
               {totalWs} Workspaces Active
             </Badge>
             <button
-              onClick={fetchAll}
-              className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="h-4 w-4 text-ink-soft" />
+              <RefreshCw className={`h-4 w-4 text-ink-soft ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

@@ -23,6 +23,7 @@ import { socket } from '../Services/socket';
 
 import {
     Loader,
+    Loader2,
     Calendar,
     Users,
     Settings,
@@ -97,6 +98,14 @@ const ProjectDetailsPage = () => {
     const [editEnd, setEditEnd] = useState('');
     const [isSavingProject, setIsSavingProject] = useState(false);
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [isDeletingProject, setIsDeletingProject] = useState(false);
+    const [removingMemberId, setRemovingMemberId] = useState(null);
+    const [updatingTaskStatusId, setUpdatingTaskStatusId] = useState(null);
+    const [deletingTaskId, setDeletingTaskId] = useState(null);
+    const [deletingDocumentId, setDeletingDocumentId] = useState(null);
+    const [loadingVersionsId, setLoadingVersionsId] = useState(null);
+    const [loadingDownloadsId, setLoadingDownloadsId] = useState(null);
 
     // Redirect if unauthorized
     useEffect(() => {
@@ -250,6 +259,7 @@ const ProjectDetailsPage = () => {
 
     const handleUpdateStatus = async (newStatus) => {
         try {
+            setIsUpdatingStatus(true);
             await updateProject(id, {
                 name: project.name,
                 description: project.description || '',
@@ -261,6 +271,8 @@ const ProjectDetailsPage = () => {
             fetchDetails();
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to update status');
+        } finally {
+            setIsUpdatingStatus(false);
         }
     };
 
@@ -270,11 +282,14 @@ const ProjectDetailsPage = () => {
             return;
         }
         try {
+            setIsDeletingProject(true);
             await deleteProject(id);
             toast.success('Project deleted successfully');
             navigate('/projects');
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to delete project');
+        } finally {
+            setIsDeletingProject(false);
         }
     };
 
@@ -300,11 +315,14 @@ const ProjectDetailsPage = () => {
     const handleRemoveMember = async (userId) => {
         if (!window.confirm('Remove this member from the project?')) return;
         try {
+            setRemovingMemberId(userId);
             await removeMember(id, userId);
             toast.success('Member removed successfully');
             fetchDetails();
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to remove member');
+        } finally {
+            setRemovingMemberId(null);
         }
     };
 
@@ -342,11 +360,14 @@ const ProjectDetailsPage = () => {
     // Handle task status update
     const handleUpdateTaskStatus = async (taskId, newStatus) => {
         try {
+            setUpdatingTaskStatusId(taskId);
             await updateTask(id, taskId, { status: newStatus });
             toast.success('Task status updated');
             fetchDetails();
         } catch (error) {
             toast.error('Failed to update task status');
+        } finally {
+            setUpdatingTaskStatusId(null);
         }
     };
 
@@ -354,11 +375,14 @@ const ProjectDetailsPage = () => {
     const handleDeleteTask = async (taskId) => {
         if (!window.confirm('Delete this task?')) return;
         try {
+            setDeletingTaskId(taskId);
             await deleteTask(id, taskId);
             toast.success('Task deleted successfully');
             fetchDetails();
         } catch (error) {
             toast.error('Failed to delete task');
+        } finally {
+            setDeletingTaskId(null);
         }
     };
 
@@ -426,11 +450,12 @@ const ProjectDetailsPage = () => {
                                             {['planning', 'active', 'completed', 'on-hold'].map((st) => (
                                                 <button
                                                     key={st}
+                                                    disabled={isUpdatingStatus}
                                                     onClick={() => {
                                                         handleUpdateStatus(st);
                                                         setStatusDropdownOpen(false);
                                                     }}
-                                                    className="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center justify-between capitalize cursor-pointer"
+                                                    className="w-full text-left px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition flex items-center justify-between capitalize cursor-pointer disabled:opacity-50"
                                                 >
                                                     <span>{st.replace('-', ' ')}</span>
                                                     {project.status === st && <Check className="w-3.5 h-3.5 text-blue-400" />}
@@ -726,9 +751,10 @@ const ProjectDetailsPage = () => {
                                                                         e.stopPropagation();
                                                                         handleDeleteTask(t.id);
                                                                     }}
-                                                                    className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition"
+                                                                    disabled={deletingTaskId === t.id}
+                                                                    className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    {deletingTaskId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                                 </button>
                                                             </div>
 
@@ -764,9 +790,10 @@ const ProjectDetailsPage = () => {
                                                                             e.stopPropagation();
                                                                             handleUpdateTaskStatus(t.id, columnStatus === 'done' ? 'in-progress' : 'todo');
                                                                         }}
-                                                                        className="flex-1 py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xxs rounded transition text-center"
+                                                                        disabled={updatingTaskStatusId === t.id}
+                                                                        className="flex-1 py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xxs rounded transition text-center disabled:opacity-50"
                                                                     >
-                                                                        ◀ Back
+                                                                        {updatingTaskStatusId === t.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : '◀ Back'}
                                                                     </button>
                                                                 )}
                                                                 {columnStatus !== 'done' && (
@@ -775,9 +802,10 @@ const ProjectDetailsPage = () => {
                                                                             e.stopPropagation();
                                                                             handleUpdateTaskStatus(t.id, columnStatus === 'todo' ? 'in-progress' : 'done');
                                                                         }}
-                                                                        className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xxs rounded transition text-center"
+                                                                        disabled={updatingTaskStatusId === t.id}
+                                                                        className="flex-1 py-1 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xxs rounded transition text-center disabled:opacity-50"
                                                                     >
-                                                                        Move Forward ▶
+                                                                        {updatingTaskStatusId === t.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : 'Move Forward ▶'}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -819,10 +847,11 @@ const ProjectDetailsPage = () => {
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={() => handleUpdateTaskStatus(m.id, m.status === 'done' ? 'todo' : 'done')}
-                                                    className={`p-1.5 rounded-full transition ${m.status === 'done' ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-gray-400 hover:text-blue-600'
+                                                    disabled={updatingTaskStatusId === m.id}
+                                                    className={`p-1.5 rounded-full transition disabled:opacity-50 ${m.status === 'done' ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-gray-400 hover:text-blue-600'
                                                         }`}
                                                 >
-                                                    {m.status === 'done' ? <CheckCircle className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
+                                                    {updatingTaskStatusId === m.id ? <Loader2 className="w-6 h-6 animate-spin" /> : (m.status === 'done' ? <CheckCircle className="w-6 h-6" /> : <Circle className="w-6 h-6" />)}
                                                 </button>
                                                 <div>
                                                     <h4 className={`font-bold text-lg ${m.status === 'done' ? 'line-through text-gray-500' : 'text-gray-800'}`}>
@@ -836,9 +865,10 @@ const ProjectDetailsPage = () => {
 
                                             <button
                                                 onClick={() => handleDeleteTask(m.id)}
-                                                className="text-gray-400 hover:text-red-600 transition p-2"
+                                                disabled={deletingTaskId === m.id}
+                                                className="text-gray-400 hover:text-red-600 transition p-2 disabled:opacity-50"
                                             >
-                                                <Trash2 className="w-5 h-5" />
+                                                {deletingTaskId === m.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                                             </button>
                                         </div>
                                     ))}

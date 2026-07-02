@@ -68,21 +68,22 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
                 {task.projectName}
             </p>
 
-            <div className="flex justify-between items-center pt-3 text-xxs border-t border-line">
-                <div className="flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase border text-[9px] ${priorityColors[task.priority] || priorityColors.medium}`}>
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-3 text-xxs border-t border-line">
+                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase border text-[9px] shrink-0 ${priorityColors[task.priority] || priorityColors.medium}`}>
                         {task.priority}
                     </span>
                     {task.assigneeName && (
-                        <span className="bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full text-[9px] flex items-center gap-0.5 border border-blue-500/20">
-                            👤 {task.assigneeName}
+                        <span className="bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full text-[9px] flex items-center gap-0.5 border border-blue-500/20 min-w-0 max-w-[110px]">
+                            <span className="shrink-0">👤</span>
+                            <span className="truncate">{task.assigneeName}</span>
                         </span>
                     )}
                 </div>
                 {task.dueDate && (
-                    <span className="text-ink-soft font-semibold flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-ink-faint" />
-                        {new Date(task.dueDate).toLocaleDateString()}
+                    <span className="text-ink-soft font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap ml-auto">
+                        <Calendar className="w-3.5 h-3.5 text-ink-faint shrink-0" />
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
                 )}
             </div>
@@ -241,14 +242,14 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
                             {activeTask.projectName}
                         </p>
 
-                        <div className="flex justify-between items-center pt-2 text-xxs border-t border-line">
-                            <span className={`px-2 py-0.5 rounded font-extrabold uppercase border ${priorityColors[activeTask.priority] || priorityColors.medium}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-2 text-xxs border-t border-line">
+                            <span className={`px-2 py-0.5 rounded font-extrabold uppercase border shrink-0 ${priorityColors[activeTask.priority] || priorityColors.medium}`}>
                                 {activeTask.priority}
                             </span>
                             {activeTask.dueDate && (
-                                <span className="text-ink-soft font-semibold flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    {new Date(activeTask.dueDate).toLocaleDateString()}
+                                <span className="text-ink-soft font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap ml-auto">
+                                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                    {new Date(activeTask.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                 </span>
                             )}
                         </div>

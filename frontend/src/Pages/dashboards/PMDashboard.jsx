@@ -55,6 +55,7 @@ export default function PMDashboard({ user }) {
   const [projects, setProjects] = useState([]);
   const [execData, setExecData] = useState(null);
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const headerRef = useRef(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -78,6 +79,23 @@ export default function PMDashboard({ user }) {
       if (e.status === 'fulfilled') setExecData(e.value);
     } catch { toast.error('Could not load PM data'); }
     finally  { setLoading(false); }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [s, p, e] = await Promise.allSettled([
+        getDashboardStats(), getProjects(), getExecutiveStats(),
+      ]);
+      if (s.status === 'fulfilled') setStats(s.value);
+      if (p.status === 'fulfilled') setProjects(p.value || []);
+      if (e.status === 'fulfilled') setExecData(e.value);
+      toast.success('Dashboard refreshed');
+    } catch {
+      toast.error('Could not refresh PM data');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // ── Derived chart data ──────────────────────────────────────────────────────
@@ -196,8 +214,12 @@ export default function PMDashboard({ user }) {
             <Badge status="danger" pulse={taskStatusPie.find(t => t.name === 'blocked')?.value > 0}>
               {taskStatusPie.find(t => t.name === 'blocked')?.value || 0} Blocked
             </Badge>
-            <button onClick={fetchAll} className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors">
-              <RefreshCw className="h-4 w-4 text-ink-soft" />
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 text-ink-soft ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

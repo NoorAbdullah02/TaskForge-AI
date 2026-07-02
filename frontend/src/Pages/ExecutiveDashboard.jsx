@@ -6,8 +6,8 @@ import {
 import { motion } from 'framer-motion';
 import { 
     TrendingUp, AlertTriangle, Users, CheckCircle2, Clock, 
-    ShieldAlert, Sparkles, RefreshCw, Briefcase, Zap, 
-    Calendar, Flame
+    ShieldAlert, Sparkles, RefreshCw, Briefcase, Zap,
+    Calendar, Flame, Loader2
 } from 'lucide-react';
 import { getExecutiveStats, predictProjectSuccess, getResourcePlanner } from '../Services/aiApi';
 import { getProjects } from '../Services/projectApi';
@@ -21,9 +21,10 @@ const ExecutiveDashboard = () => {
     const [projectSuccessData, setProjectSuccessData] = useState(null);
     const [resourceData, setResourceData] = useState(null);
     const [loadingProjectDetails, setLoadingProjectDetails] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const fetchDashboardData = async () => {
-        setLoading(true);
+    const fetchDashboardData = async ({ silent = false } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const data = await getExecutiveStats();
             setStats(data);
@@ -36,7 +37,19 @@ const ExecutiveDashboard = () => {
             console.error('Failed to fetch executive stats:', err);
             toast.error('Failed to load dashboard metrics');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
+        }
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await fetchDashboardData({ silent: true });
+            toast.success('Dashboard intelligence refreshed');
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Failed to refresh dashboard intelligence');
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -111,12 +124,22 @@ const ExecutiveDashboard = () => {
                     <p className="text-xs text-ink-soft font-medium">Real-time workspace success forecasting, team allocation modeling, and risk optimization.</p>
                 </div>
 
-                <button 
-                    onClick={fetchDashboardData}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-surface-3 border border-line rounded-xl text-xs font-black text-ink transition-all cursor-pointer shadow-sm active:scale-95"
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-surface-3 border border-line rounded-xl text-xs font-black text-ink transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
                 >
-                    <RefreshCw className="w-3.5 h-3.5 text-indigo-500" />
-                    Refresh Intelligence
+                    {isRefreshing ? (
+                        <>
+                            <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+                            Refreshing...
+                        </>
+                    ) : (
+                        <>
+                            <RefreshCw className="w-3.5 h-3.5 text-indigo-500" />
+                            Refresh Intelligence
+                        </>
+                    )}
                 </button>
             </div>
 

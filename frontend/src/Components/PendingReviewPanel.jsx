@@ -20,9 +20,10 @@ export default function PendingReviewPanel({ reviewQueue = [], pendingReview = 0
         try {
             const data = await getTaskDetails(task.id);
             setDetail(data);
-        } catch {
+        } catch (e) {
             // Fall back to the summary row if full details fail to load
             setDetail(null);
+            toast.error(e?.response?.data?.message || 'Failed to load task details');
         } finally {
             setLoadingDetail(false);
         }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { gsap } from 'gsap';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -46,6 +47,7 @@ export default function OwnerDashboard({ user }) {
   const [workspaceInfo, setWorkspaceInfo] = useState(null);
   const [copiedType, setCopiedType] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const headerRef = useRef(null);
 
   const handleCopy = (text, type) => {
@@ -75,6 +77,33 @@ export default function OwnerDashboard({ user }) {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [s, p, w] = await Promise.allSettled([
+        getDashboardStats(),
+        getProjects(),
+        getWorkspaceInfo()
+      ]);
+      if (s.status === 'fulfilled') setStats(s.value);
+      if (p.status === 'fulfilled') setProjects(p.value || []);
+      if (w.status === 'fulfilled') setWorkspaceInfo(w.value);
+      toast.success('Dashboard refreshed');
+    } catch {
+      toast.error('Could not refresh workspace data');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && headerRef.current) {
+      gsap.from([...headerRef.current.children], {
+        y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+      });
+    }
+  }, [loading]);
 
 
   // ── Chart data ──────────────────────────────────────────────────────────────
@@ -115,15 +144,15 @@ export default function OwnerDashboard({ user }) {
       <div ref={headerRef} className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25">
+            <div className="p-2 rounded-xl bg-gradient-owner shadow-lg shadow-glow-teal">
               <Building2 className="h-4 w-4 text-white" />
             </div>
-            <span className="text-[11px] font-black text-violet-400 tracking-[0.35em] uppercase">
+            <span className="text-[11px] font-black text-teal-600 tracking-[0.35em] uppercase">
               {authUser?.workspaceName || 'Workspace'} · Owner
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-owner bg-clip-text text-transparent">
               Workspace Dashboard
             </span>
           </h1>
@@ -140,10 +169,11 @@ export default function OwnerDashboard({ user }) {
             <Settings className="h-3.5 w-3.5" /> Settings
           </button>
           <button
-            onClick={fetchAll}
-            className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-xl bg-surface-2 border border-line hover:bg-surface-2 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4 text-ink-soft" />
+            <RefreshCw className={`h-4 w-4 text-ink-soft ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -28,6 +29,15 @@ const ProjectsPage = () => {
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 6, pages: 1 });
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const headerRef = useRef(null);
+
+    useEffect(() => {
+        if (!isLoading && headerRef.current) {
+            gsap.from([...headerRef.current.children], {
+                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+            });
+        }
+    }, [isLoading]);
     const navigate = useNavigate();
 
     // Search & Filter state
@@ -56,6 +66,12 @@ const ProjectsPage = () => {
     // Dropdown state
     const [menuOpenProjectId, setMenuOpenProjectId] = useState(null);
     const [workspaceMembersList, setWorkspaceMembersList] = useState([]);
+
+    // Per-item async action loading state
+    const [archivingId, setArchivingId] = useState(null);
+    const [restoringId, setRestoringId] = useState(null);
+    const [exportingId, setExportingId] = useState(null);
+    const [importingId, setImportingId] = useState(null);
 
     const isWorkspaceOwner = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'super_admin';
 
@@ -139,6 +155,7 @@ const ProjectsPage = () => {
 
     // Export Projects
     const handleExport = async () => {
+        setExportingId('export');
         try {
             const blob = await exportProjects();
             const url = window.URL.createObjectURL(new Blob([blob]));
@@ -152,6 +169,8 @@ const ProjectsPage = () => {
         } catch (error) {
             console.error('Export failed:', error);
             toast.error('Failed to export projects');
+        } finally {
+            setExportingId(null);
         }
     };
 
@@ -169,37 +188,52 @@ const ProjectsPage = () => {
                     toast.error('No projects found in the selected file');
                     return;
                 }
+                setImportingId('import');
                 const toastId = toast.loading('Importing projects...');
-                await importProjects(array);
-                toast.success(`Successfully imported projects!`, { id: toastId });
-                fetchProjects();
+                try {
+                    await importProjects(array);
+                    toast.success(`Successfully imported projects!`, { id: toastId });
+                    fetchProjects();
+                } catch (err) {
+                    console.error(err);
+                    toast.error(err.response?.data?.message || 'Failed to import projects', { id: toastId });
+                } finally {
+                    setImportingId(null);
+                }
             } catch (err) {
                 console.error(err);
                 toast.error('Failed to parse file. Make sure it is valid JSON.');
             }
         };
         reader.readAsText(file);
+        e.target.value = '';
     };
 
     // Archive Project
     const handleArchiveProject = async (id) => {
+        setArchivingId(id);
         try {
             await archiveProject(id);
             toast.success('Project archived successfully');
             fetchProjects();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to archive project');
+        } finally {
+            setArchivingId(null);
         }
     };
 
     // Restore Project
     const handleRestoreProject = async (id) => {
+        setRestoringId(id);
         try {
             await restoreProject(id);
             toast.success('Project restored successfully');
             fetchProjects();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to restore project');
+        } finally {
+            setRestoringId(null);
         }
     };
 
@@ -277,10 +311,12 @@ const ProjectsPage = () => {
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                <div ref={headerRef} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
                     <div>
-                        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-2 flex items-center gap-3">
-                            <FolderKanban className="w-10 h-10 text-blue-600 animate-pulse" />
+                        <h1 className="text-4xl font-extrabold bg-gradient-member bg-clip-text text-transparent mb-2 flex items-center gap-3">
+                            <span className="p-2 rounded-xl bg-gradient-member shadow-lg shadow-glow-teal">
+                                <FolderKanban className="w-7 h-7 text-white" />
+                            </span>
                             Project Hub
                         </h1>
                         <p className="text-gray-600 font-medium">Coordinate your team, milestones, credentials, and task deliverables.</p>
@@ -299,20 +335,40 @@ const ProjectsPage = () => {
                             <>
                                 <button
                                     onClick={handleExport}
-                                    className="px-5 py-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-2xl transition shadow-sm flex items-center gap-2 cursor-pointer"
+                                    disabled={exportingId === 'export'}
+                                    className="px-5 py-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-2xl transition shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
                                 >
-                                    <Download className="w-5 h-5" />
-                                    Export
+                                    {exportingId === 'export' ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Exporting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Download className="w-5 h-5" />
+                                            Export
+                                        </>
+                                    )}
                                 </button>
 
-                                <label className="px-5 py-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-2xl transition shadow-sm flex items-center gap-2 cursor-pointer">
-                                    <FolderInput className="w-5 h-5" />
-                                    Import
-                                    <input 
-                                        type="file" 
-                                        accept=".json" 
-                                        onChange={handleImport} 
-                                        className="hidden" 
+                                <label className={`px-5 py-3 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-2xl transition shadow-sm flex items-center gap-2 cursor-pointer ${importingId === 'import' ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    {importingId === 'import' ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Importing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FolderInput className="w-5 h-5" />
+                                            Import
+                                        </>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={handleImport}
+                                        disabled={importingId === 'import'}
+                                        className="hidden"
                                     />
                                 </label>
                             </>
@@ -461,10 +517,20 @@ const ProjectsPage = () => {
                                                                                 handleRestoreProject(project.id);
                                                                                 setMenuOpenProjectId(null);
                                                                             }}
-                                                                            className="w-full px-4 py-2 hover:bg-amber-50 text-left flex items-center gap-2 cursor-pointer text-amber-700"
+                                                                            disabled={restoringId === project.id}
+                                                                            className="w-full px-4 py-2 hover:bg-amber-50 text-left flex items-center gap-2 cursor-pointer text-amber-700 disabled:opacity-50"
                                                                         >
-                                                                            <RefreshCw className="w-4 h-4" />
-                                                                            Restore Project
+                                                                            {restoringId === project.id ? (
+                                                                                <>
+                                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                                    Restoring...
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <RefreshCw className="w-4 h-4" />
+                                                                                    Restore Project
+                                                                                </>
+                                                                            )}
                                                                         </button>
                                                                     ) : (
                                                                         <button
@@ -472,10 +538,20 @@ const ProjectsPage = () => {
                                                                                 handleArchiveProject(project.id);
                                                                                 setMenuOpenProjectId(null);
                                                                             }}
-                                                                            className="w-full px-4 py-2 hover:bg-amber-50 text-left flex items-center gap-2 cursor-pointer text-amber-600"
+                                                                            disabled={archivingId === project.id}
+                                                                            className="w-full px-4 py-2 hover:bg-amber-50 text-left flex items-center gap-2 cursor-pointer text-amber-600 disabled:opacity-50"
                                                                         >
-                                                                            <Archive className="w-4 h-4" />
-                                                                            Archive Project
+                                                                            {archivingId === project.id ? (
+                                                                                <>
+                                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                                    Archiving...
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <Archive className="w-4 h-4" />
+                                                                                    Archive Project
+                                                                                </>
+                                                                            )}
                                                                         </button>
                                                                     )}
 

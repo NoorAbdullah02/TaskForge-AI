@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { gsap } from 'gsap';
 import {
     Building2, Calendar, ClipboardList, Settings, Plus, Edit2, Trash2,
     Search, ShieldAlert, Check, X, Clock, HelpCircle, Save, Loader2,
@@ -67,6 +68,7 @@ export default function AdminSettingsPage() {
 
     // Loading States
     const [loading, setLoading] = useState(true);
+    const headerRef = useRef(null);
     const [savingSettings, setSavingSettings] = useState(false);
     const [submittingDept, setSubmittingDept] = useState(false);
 
@@ -119,6 +121,7 @@ export default function AdminSettingsPage() {
     const [editingUser, setEditingUser] = useState(null);
     const [userForm, setUserForm] = useState({ role: 'employee', departmentId: '', position: '', phone: '' });
     const [userUpdatingId, setUserUpdatingId] = useState(null);
+    const [deletingDeptId, setDeletingDeptId] = useState(null);
 
     // Search and Filter states
     const [userSearch, setUserSearch] = useState('');
@@ -191,6 +194,14 @@ export default function AdminSettingsPage() {
         }
         loadAllData();
     }, [user, navigate]);
+
+    useEffect(() => {
+        if (!loading && headerRef.current) {
+            gsap.from([...headerRef.current.children], {
+                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+            });
+        }
+    }, [loading]);
 
     // Handle regenerating workspace invite code
     const handleRegenerateInvite = async () => {
@@ -457,6 +468,7 @@ export default function AdminSettingsPage() {
             }
         }
 
+        setDeletingDeptId(id);
         try {
             await deleteDepartment(id);
             toast.success('Department deleted successfully');
@@ -464,6 +476,8 @@ export default function AdminSettingsPage() {
         } catch (error) {
             console.error('Department deletion failed:', error);
             toast.error(error.response?.data?.message || 'Failed to delete department');
+        } finally {
+            setDeletingDeptId(null);
         }
     };
 
@@ -539,11 +553,13 @@ export default function AdminSettingsPage() {
             <div className="max-w-7xl mx-auto">
 
                 {/* Header Title */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 border-b border-gray-200/60 pb-6">
+                <div ref={headerRef} className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 border-b border-gray-200/60 pb-6">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-                            <Settings className="w-8 h-8 text-blue-600 animate-spin-slow" />
-                            Admin & Settings Control Panel
+                        <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
+                            <span className="p-2 rounded-xl bg-gradient-admin shadow-lg shadow-glow-rose">
+                                <Settings className="w-6 h-6 text-white animate-spin-slow" />
+                            </span>
+                            <span className="bg-gradient-admin bg-clip-text text-transparent">Admin & Settings Control Panel</span>
                         </h1>
                         <p className="text-gray-500 mt-1 font-medium">
                             Configure workspace rules, manage organizational divisions, schedule operating calendar, and monitor audit tracks.
@@ -680,10 +696,15 @@ export default function AdminSettingsPage() {
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDeleteDept(dept.id, dept.name, dept.employeeCount)}
-                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition"
+                                                                    disabled={deletingDeptId === dept.id}
+                                                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition disabled:opacity-50"
                                                                     title="Delete Department"
                                                                 >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                    {deletingDeptId === dept.id ? (
+                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    )}
                                                                 </button>
                                                             </div>
                                                         )}
@@ -1391,7 +1412,12 @@ export default function AdminSettingsPage() {
                                                     disabled={sendingInvites || !inviteEmails.trim()}
                                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
                                                 >
-                                                    {sendingInvites ? 'Sending invites...' : 'Send workspace invitations'}
+                                                    {sendingInvites ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            Sending invites...
+                                                        </>
+                                                    ) : 'Send workspace invitations'}
                                                 </button>
                                                 {inviteResultMessage && (
                                                     <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-sm text-blue-700">
@@ -1537,7 +1563,7 @@ export default function AdminSettingsPage() {
                                                     </button>
                                                     <button
                                                         onClick={handleAssignPmSave}
-                                                        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition shadow flex items-center gap-2 cursor-pointer"
+                                                        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition shadow flex items-center gap-2 cursor-pointer disabled:opacity-50"
                                                         disabled={assigningPm || !selectedProjectIdForPm}
                                                     >
                                                         {assigningPm ? (

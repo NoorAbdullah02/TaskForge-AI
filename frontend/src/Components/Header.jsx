@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Bell, Search, Building2, ChevronDown, Menu, X } from 'lucide-react';
+import { LogOut, Settings, Bell, Search, Building2, ChevronDown, Menu, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import { logoutUser } from '../Services/authApi.js';
@@ -20,6 +20,8 @@ const Header = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [switchingWorkspaceId, setSwitchingWorkspaceId] = useState(null);
     const navigate = useNavigate();
 
     // Banglish: ekta jaygate nav links rakhi, mobile + desktop duitatei use korbo
@@ -80,6 +82,7 @@ const Header = () => {
     }, [isLoggedIn, user?.activeWorkspaceId]);
 
     const handleLogout = async () => {
+        setIsLoggingOut(true);
         try {
             await logoutUser();
             logout();
@@ -89,27 +92,31 @@ const Header = () => {
             setShowLogoutConfirm(false);
         } catch (err) {
             console.error('Logout error:', err);
-            toast.error('Logout failed');
+            toast.error(err.response?.data?.message || 'Logout failed');
+        } finally {
+            setIsLoggingOut(false);
         }
     };
 
     const handleSwitch = async (workspaceId) => {
         if (workspaceId === user?.activeWorkspaceId) return;
         setWorkspaceMenuOpen(false);
+        setSwitchingWorkspaceId(workspaceId);
         try {
             const res = await switchWorkspace(workspaceId);
             toast.success(res.message || 'Switched workspace!');
-            
+
             // Re-fetch current user profile to update AuthContext state and re-render pages!
             const meRes = await api.get('/users/me');
             if (meRes?.data?.user) {
-                login(meRes.data.user); 
+                login(meRes.data.user);
                 navigate('/dashboard');
                 window.location.reload(); // Full reload to reset all query and socket contexts
             }
         } catch (err) {
             console.error('Switch error:', err);
             toast.error(err.response?.data?.message || 'Failed to switch workspace');
+            setSwitchingWorkspaceId(null);
         }
     };
 
@@ -254,14 +261,19 @@ const Header = () => {
                                                         <button
                                                             key={w.id}
                                                             onClick={() => handleSwitch(w.id)}
-                                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition ${
+                                                            disabled={switchingWorkspaceId != null}
+                                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition disabled:opacity-50 disabled:cursor-not-allowed ${
                                                                 w.id === user?.activeWorkspaceId
                                                                     ? 'bg-blue-50 text-blue-600 font-extrabold'
                                                                     : 'text-ink-soft hover:bg-slate-50 font-bold'
                                                             }`}
                                                         >
                                                             <span className="truncate pr-2">{w.name}</span>
-                                                            <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200/50">/{w.slug}</span>
+                                                            {switchingWorkspaceId === w.id ? (
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />
+                                                            ) : (
+                                                                <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200/50">/{w.slug}</span>
+                                                            )}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -451,16 +463,23 @@ const Header = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setShowLogoutConfirm(false)}
-                                                                className="flex-1 py-3 bg-surface-2 hover:bg-surface-3 border border-line text-xs font-bold rounded-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-ink"
+                                                                disabled={isLoggingOut}
+                                                                className="flex-1 py-3 bg-surface-2 hover:bg-surface-3 border border-line text-xs font-bold rounded-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-ink disabled:opacity-50 disabled:cursor-not-allowed"
                                                             >
                                                                 Cancel
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={handleLogout}
-                                                                className="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-red-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                                                                disabled={isLoggingOut}
+                                                                className="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-red-500/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                                                             >
-                                                                Logout
+                                                                {isLoggingOut ? (
+                                                                    <>
+                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                        Logging out...
+                                                                    </>
+                                                                ) : 'Logout'}
                                                             </button>
                                                         </div>
                                                     </div>

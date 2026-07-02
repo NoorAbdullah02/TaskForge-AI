@@ -114,33 +114,42 @@ const LeavePage = () => {
     };
 
     // Action handlers (Approve / Reject)
+    const [processingApprovalId, setProcessingApprovalId] = useState(null);
+    const [processingRejectionId, setProcessingRejectionId] = useState(null);
+
     const handleApprove = async (id) => {
         try {
+            setProcessingApprovalId(id);
             // Optimistic update
             setAllRequests(prev => prev.map(req => req.id === id ? { ...req, status: 'approved' } : req));
             setHistory(prev => prev.map(req => req.id === id ? { ...req, status: 'approved', approverName: user?.name } : req));
-            
+
             await approveLeave(id);
             toast.success('Leave request approved! 👍');
             fetchLeavesData();
         } catch {
             toast.error('Approval failed');
             fetchLeavesData();
+        } finally {
+            setProcessingApprovalId(null);
         }
     };
 
     const handleReject = async (id) => {
         try {
+            setProcessingRejectionId(id);
             // Optimistic update
             setAllRequests(prev => prev.map(req => req.id === id ? { ...req, status: 'rejected' } : req));
             setHistory(prev => prev.map(req => req.id === id ? { ...req, status: 'rejected', approverName: user?.name } : req));
-            
+
             await rejectLeave(id);
             toast.success('Leave request rejected! 👎');
             fetchLeavesData();
         } catch {
             toast.error('Rejection failed');
             fetchLeavesData();
+        } finally {
+            setProcessingRejectionId(null);
         }
     };
 
@@ -387,17 +396,27 @@ const LeavePage = () => {
                                                                 <div className="flex gap-2">
                                                                     <button
                                                                         onClick={() => handleApprove(req.id)}
-                                                                        className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer"
+                                                                        disabled={processingApprovalId === req.id || processingRejectionId === req.id}
+                                                                        className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer disabled:opacity-50"
                                                                         title="Approve Leave"
                                                                     >
-                                                                        <ThumbsUp className="w-3.5 h-3.5" /> Approve
+                                                                        {processingApprovalId === req.id ? (
+                                                                            <><Loader className="w-3.5 h-3.5 animate-spin" /> Approving...</>
+                                                                        ) : (
+                                                                            <><ThumbsUp className="w-3.5 h-3.5" /> Approve</>
+                                                                        )}
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleReject(req.id)}
-                                                                        className="p-1.5 bg-rose-50 text-rose-700 border border-rose-100 hover:bg-rose-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer"
+                                                                        disabled={processingApprovalId === req.id || processingRejectionId === req.id}
+                                                                        className="p-1.5 bg-rose-50 text-rose-700 border border-rose-100 hover:bg-rose-100 transition rounded-xl flex items-center gap-1 text-xxs font-bold cursor-pointer disabled:opacity-50"
                                                                         title="Reject Leave"
                                                                     >
-                                                                        <ThumbsDown className="w-3.5 h-3.5" /> Reject
+                                                                        {processingRejectionId === req.id ? (
+                                                                            <><Loader className="w-3.5 h-3.5 animate-spin" /> Rejecting...</>
+                                                                        ) : (
+                                                                            <><ThumbsDown className="w-3.5 h-3.5" /> Reject</>
+                                                                        )}
                                                                     </button>
                                                                 </div>
                                                             ) : (

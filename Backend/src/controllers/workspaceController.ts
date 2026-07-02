@@ -8,6 +8,7 @@ import { EmailTriggerService } from '../services/emailTrigger.service';
 import { socketService } from '../services/socket.service';
 import { env } from '../config/env';
 import { NotificationService } from '../services/notification.service';
+import { validatePasswordStrength } from '../validations/validinputs';
 
 function normalizeUrl(url: string) {
     return url.replace(/\/+$/, '');
@@ -42,6 +43,11 @@ export class WorkspaceController {
             const { name, email, password, workspaceName, workspaceSlug } = req.body;
             if (!name || !email || !password) {
                 return res.status(400).json({ message: 'Name, email, and password are required' });
+            }
+
+            const passwordError = validatePasswordStrength(password);
+            if (passwordError) {
+                return res.status(400).json({ message: passwordError });
             }
 
             // Check if user already exists
@@ -204,6 +210,11 @@ export class WorkspaceController {
                     verificationSent = true;
                 }
             } else {
+                const passwordError = validatePasswordStrength(password);
+                if (passwordError) {
+                    return res.status(400).json({ message: passwordError });
+                }
+
                 const hashedPassword = await bcrypt.hash(password, 10);
                 [user] = await db.insert(users).values({
                     name,

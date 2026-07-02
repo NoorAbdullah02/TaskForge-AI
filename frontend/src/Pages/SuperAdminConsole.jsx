@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -40,6 +41,7 @@ const SuperAdminConsole = () => {
 
     const [activeTab, setActiveTab] = useState('workspaces');
     const [loading, setLoading] = useState(true);
+    const headerRef = useRef(null);
 
     // Data States
     const [workspaces, setWorkspaces] = useState([]);
@@ -60,6 +62,14 @@ const SuperAdminConsole = () => {
     const [emailLogsLoading, setEmailLogsLoading] = useState(false);
     const [automationLogsLoading, setAutomationLogsLoading] = useState(false);
 
+    // Async action loading states
+    const [isSyncingRegistry, setIsSyncingRegistry] = useState(false);
+    const [retryingEmailId, setRetryingEmailId] = useState(null);
+    const [suspendingWorkspaceId, setSuspendingWorkspaceId] = useState(null);
+    const [deletingWorkspaceId, setDeletingWorkspaceId] = useState(null);
+    const [banningUserId, setBanningUserId] = useState(null);
+    const [resettingWorkspaceId, setResettingWorkspaceId] = useState(null);
+
     // Redirect if not super admin
     useEffect(() => {
         if (!authLoading) {
@@ -75,6 +85,7 @@ const SuperAdminConsole = () => {
     const loadData = async () => {
         try {
             setLoading(true);
+            setIsSyncingRegistry(true);
             const [wData, uData, pData, aData, lData] = await Promise.all([
                 getWorkspaces(),
                 getUsers(),
@@ -92,6 +103,7 @@ const SuperAdminConsole = () => {
             toast.error('Could not retrieve administrative console data.');
         } finally {
             setLoading(false);
+            setIsSyncingRegistry(false);
         }
     };
 
@@ -100,6 +112,14 @@ const SuperAdminConsole = () => {
             loadData();
         }
     }, [isLoggedIn, user]);
+
+    useEffect(() => {
+        if (!loading && headerRef.current) {
+            gsap.from([...headerRef.current.children], {
+                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
+            });
+        }
+    }, [loading]);
 
     // Fetch Email Logs & Automation Logs when email-logs tab is activated
     useEffect(() => {
@@ -139,6 +159,7 @@ const SuperAdminConsole = () => {
     };
 
     const handleRetryEmail = async (logId) => {
+        setRetryingEmailId(logId);
         try {
             toast.loading('Enqueuing email retry...', { id: 'retry-email' });
             await retryEmailLog(logId);
@@ -146,6 +167,8 @@ const SuperAdminConsole = () => {
             fetchEmailLogs();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to retry email delivery', { id: 'retry-email' });
+        } finally {
+            setRetryingEmailId(null);
         }
     };
 
@@ -153,6 +176,7 @@ const SuperAdminConsole = () => {
         const actionText = currentStatus === 'active' ? 'suspend' : 'reactivate';
         if (!window.confirm(`Are you sure you want to ${actionText} this workspace?`)) return;
 
+        setSuspendingWorkspaceId(workspaceId);
         try {
             await toggleSuspendWorkspace(workspaceId);
             toast.success(`Workspace successfully ${actionText}ed.`);
@@ -164,12 +188,15 @@ const SuperAdminConsole = () => {
         } catch (error) {
             console.error('Failed to toggle suspend status:', error);
             toast.error('Workspace moderation failed');
+        } finally {
+            setSuspendingWorkspaceId(null);
         }
     };
 
     const handleDeleteWorkspace = async (workspaceId, name) => {
         if (!window.confirm(`CRITICAL WARNING: This will permanently DELETE the workspace "${name}" and all its related databases (members, projects, tasks, leaves, files). This action is irreversible. Proceed?`)) return;
 
+        setDeletingWorkspaceId(workspaceId);
         try {
             await deleteWorkspace(workspaceId);
             toast.success('Workspace permanently expunged.');
@@ -183,6 +210,8 @@ const SuperAdminConsole = () => {
         } catch (error) {
             console.error('Failed to delete workspace:', error);
             toast.error('Expunge operation failed');
+        } finally {
+            setDeletingWorkspaceId(null);
         }
     };
 
@@ -191,6 +220,7 @@ const SuperAdminConsole = () => {
         const actionText = isBanned ? 'unban' : 'ban';
         if (!window.confirm(`Are you sure you want to ${actionText} user "${name}"?`)) return;
 
+        setBanningUserId(userId);
         try {
             await toggleBanUser(userId);
             toast.success(`User successfully ${actionText}ned.`);
@@ -202,12 +232,15 @@ const SuperAdminConsole = () => {
         } catch (error) {
             console.error('Failed to toggle ban status:', error);
             toast.error('User moderation failed');
+        } finally {
+            setBanningUserId(null);
         }
     };
 
     const handleResetWorkspace = async (workspaceId, name) => {
         if (!window.confirm(`CRITICAL WARNING: This will permanently DELETE all projects, tasks, comments, and attachments in workspace "${name}". Organization records and members will be preserved. Proceed?`)) return;
 
+        setResettingWorkspaceId(workspaceId);
         try {
             await resetWorkspace(workspaceId);
             toast.success('Workspace successfully reset.');
@@ -219,6 +252,8 @@ const SuperAdminConsole = () => {
         } catch (error) {
             console.error('Failed to reset workspace:', error);
             toast.error('Workspace reset failed');
+        } finally {
+            setResettingWorkspaceId(null);
         }
     };
 
@@ -264,21 +299,33 @@ const SuperAdminConsole = () => {
 
             <div className="max-w-7xl mx-auto relative z-10">
                 {/* Header */}
-                <div className="pb-6 border-b border-line mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div ref={headerRef} className="pb-6 border-b border-line mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-ink flex items-center gap-3">
-                            <Building2 className="w-8 h-8 text-blue-400" />
-                            System Moderator Portal
+                        <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
+                            <span className="p-2 rounded-xl bg-gradient-admin shadow-lg shadow-glow-rose">
+                                <Building2 className="w-6 h-6 text-white" />
+                            </span>
+                            <span className="bg-gradient-admin bg-clip-text text-transparent">System Moderator Portal</span>
                         </h1>
                         <p className="text-ink-soft mt-1 font-medium font-sans">Global Platform Oversight, Workspace Moderation, Resource Metrics, and System Integrity Audits.</p>
                     </div>
 
                     <button
                         onClick={loadData}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 transition cursor-pointer"
+                        disabled={isSyncingRegistry}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 transition cursor-pointer disabled:opacity-50"
                     >
-                        <RefreshCw className="w-4 h-4 text-ink" />
-                        Sync Registry
+                        {isSyncingRegistry ? (
+                            <>
+                                <Loader className="w-4 h-4 text-ink animate-spin" />
+                                Syncing...
+                            </>
+                        ) : (
+                            <>
+                                <RefreshCw className="w-4 h-4 text-ink" />
+                                Sync Registry
+                            </>
+                        )}
                     </button>
                 </div>
 
@@ -432,28 +479,58 @@ const SuperAdminConsole = () => {
                                                 <td className="py-3.5 text-right flex items-center justify-end gap-2.5">
                                                     <button
                                                         onClick={() => handleToggleSuspend(w.id, w.status)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer ${
+                                                        disabled={suspendingWorkspaceId === w.id}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer disabled:opacity-50 ${
                                                             w.status === 'active'
                                                                 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 hover:bg-yellow-500/20'
                                                                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                                                         }`}
                                                     >
-                                                        {w.status === 'active' ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                                                        {w.status === 'active' ? 'Suspend' : 'Reactivate'}
+                                                        {suspendingWorkspaceId === w.id ? (
+                                                            <>
+                                                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                                                                {w.status === 'active' ? 'Suspending...' : 'Reactivating...'}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {w.status === 'active' ? <ShieldAlert className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                                                                {w.status === 'active' ? 'Suspend' : 'Reactivate'}
+                                                            </>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleResetWorkspace(w.id, w.name)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition cursor-pointer"
+                                                        disabled={resettingWorkspaceId === w.id}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition cursor-pointer disabled:opacity-50"
                                                     >
-                                                        <RefreshCw className="w-3.5 h-3.5" />
-                                                        Reset
+                                                        {resettingWorkspaceId === w.id ? (
+                                                            <>
+                                                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                                                                Resetting...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                                Reset
+                                                            </>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteWorkspace(w.id, w.name)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition cursor-pointer"
+                                                        disabled={deletingWorkspaceId === w.id}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition cursor-pointer disabled:opacity-50"
                                                     >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                        Expunge
+                                                        {deletingWorkspaceId === w.id ? (
+                                                            <>
+                                                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                                                                Expunging...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Expunge
+                                                            </>
+                                                        )}
                                                     </button>
                                                 </td>
                                             </tr>
@@ -507,13 +584,21 @@ const SuperAdminConsole = () => {
                                                     {u.role !== 'super_admin' && (
                                                         <button
                                                             onClick={() => handleToggleBanUser(u.id, u.name, u.role)}
-                                                            className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer ${
+                                                            disabled={banningUserId === u.id}
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer disabled:opacity-50 ${
                                                                 u.role === 'banned'
                                                                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                                                                     : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
                                                             }`}
                                                         >
-                                                            {u.role === 'banned' ? 'Unban' : 'Ban User'}
+                                                            {banningUserId === u.id ? (
+                                                                <>
+                                                                    <Loader className="w-3 h-3 animate-spin" />
+                                                                    {u.role === 'banned' ? 'Unbanning...' : 'Banning...'}
+                                                                </>
+                                                            ) : (
+                                                                u.role === 'banned' ? 'Unban' : 'Ban User'
+                                                            )}
                                                         </button>
                                                     )}
                                                 </td>
@@ -763,9 +848,17 @@ const SuperAdminConsole = () => {
                                                                 {log.status === 'failed' && (
                                                                     <button
                                                                         onClick={() => handleRetryEmail(log.id)}
-                                                                        className="px-2 py-1 rounded bg-blue-600/20 border border-blue-500/30 text-[9px] font-bold text-blue-400 hover:bg-blue-600 hover:text-white transition cursor-pointer"
+                                                                        disabled={retryingEmailId === log.id}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-600/20 border border-blue-500/30 text-[9px] font-bold text-blue-400 hover:bg-blue-600 hover:text-white transition cursor-pointer disabled:opacity-50"
                                                                     >
-                                                                        Retry
+                                                                        {retryingEmailId === log.id ? (
+                                                                            <>
+                                                                                <Loader className="w-3 h-3 animate-spin" />
+                                                                                Retrying...
+                                                                            </>
+                                                                        ) : (
+                                                                            'Retry'
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </td>
@@ -882,9 +975,17 @@ const SuperAdminConsole = () => {
                                                 handleRetryEmail(selectedEmail.id);
                                                 setSelectedEmail(null);
                                             }}
-                                            className="px-4 py-2 bg-blue-600 text-white font-extrabold rounded-xl text-xs hover:shadow-lg transition cursor-pointer"
+                                            disabled={retryingEmailId === selectedEmail.id}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white font-extrabold rounded-xl text-xs hover:shadow-lg transition cursor-pointer disabled:opacity-50"
                                         >
-                                            Retry Sending Email
+                                            {retryingEmailId === selectedEmail.id ? (
+                                                <>
+                                                    <Loader className="w-3.5 h-3.5 animate-spin" />
+                                                    Retrying...
+                                                </>
+                                            ) : (
+                                                'Retry Sending Email'
+                                            )}
                                         </button>
                                     )}
                                     <button

@@ -246,8 +246,17 @@ const TimeTracker = () => {
                                         disabled={submitting}
                                         className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] transition cursor-pointer"
                                     >
-                                        <Play className="w-4 h-4 text-ink" />
-                                        Initialize Tracker
+                                        {submitting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Starting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play className="w-4 h-4 text-ink" />
+                                                Initialize Tracker
+                                            </>
+                                        )}
                                     </button>
                                 </form>
                             )}
@@ -265,8 +274,17 @@ const TimeTracker = () => {
                                     disabled={submitting}
                                     className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-xs font-bold cursor-pointer"
                                 >
-                                    <Square className="w-4 h-4" />
-                                    Halt Tracker
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Stopping...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Square className="w-4 h-4" />
+                                            Halt Tracker
+                                        </>
+                                    )}
                                 </button>
                             )}
                         </div>
@@ -420,9 +438,16 @@ const TimeTracker = () => {
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] transition cursor-pointer"
+                                    className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.01] transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    Log Record
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        'Log Record'
+                                    )}
                                 </button>
                             </div>
                         </form>

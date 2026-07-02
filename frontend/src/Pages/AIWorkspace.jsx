@@ -475,6 +475,7 @@ const AIWorkspace = () => {
         } catch (error) {
             console.error('Copilot error:', error);
             setChatHistory(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error retrieving my response. Please try again.' }]);
+            toast.error(error?.response?.data?.message || 'Failed to get Copilot response');
         } finally {
             setSendingChat(false);
         }

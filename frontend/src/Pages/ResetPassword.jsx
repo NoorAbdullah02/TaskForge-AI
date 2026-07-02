@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { confirmResetPassword } from '../Services/authApi';
 import { GlassCard, Button } from '../design-system/primitives';
+import { isPasswordStrong, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
@@ -61,8 +62,8 @@ const ResetPassword = () => {
             toast.error('Passwords do not match');
             return;
         }
-        if (newPassword.length < 8) {
-            toast.error('Password must be at least 8 characters');
+        if (!isPasswordStrong(newPassword)) {
+            toast.error(PASSWORD_POLICY_MESSAGE);
             return;
         }
 
@@ -255,7 +256,7 @@ const ResetPassword = () => {
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={isLoading || newPassword !== confirmPassword || !newPassword || !confirmPassword || !email || !token}
+                                disabled={isLoading || newPassword !== confirmPassword || !isPasswordStrong(newPassword) || !confirmPassword || !email || !token}
                                 isLoading={isLoading}
                                 icon={isLoading ? undefined : Shield}
                                 iconPosition="left"

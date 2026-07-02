@@ -31,6 +31,9 @@ export default function TeamsPage() {
 
     const [memberSearch, setMemberSearch] = useState('');
     const [selectedNewMember, setSelectedNewMember] = useState('');
+    const [deletingTeamId, setDeletingTeamId] = useState(null);
+    const [addingMember, setAddingMember] = useState(false);
+    const [removingMemberId, setRemovingMemberId] = useState(null);
 
     const loadData = async () => {
         setLoading(true);
@@ -135,6 +138,7 @@ export default function TeamsPage() {
             return;
         }
 
+        setDeletingTeamId(id);
         try {
             await deleteTeam(id);
             toast.success('Team deleted successfully');
@@ -142,7 +146,9 @@ export default function TeamsPage() {
             loadData();
         } catch (error) {
             console.error('Team deletion failed:', error);
-            toast.error('Failed to delete team');
+            toast.error(error.response?.data?.message || 'Failed to delete team');
+        } finally {
+            setDeletingTeamId(null);
         }
     };
 
@@ -154,6 +160,7 @@ export default function TeamsPage() {
             return;
         }
 
+        setAddingMember(true);
         try {
             await addTeamMember(selectedTeam.id, selectedNewMember);
             toast.success('Member assigned to team');
@@ -166,7 +173,9 @@ export default function TeamsPage() {
             if (teamRefreshed) setSelectedTeam(teamRefreshed);
         } catch (error) {
             console.error('Failed to add member:', error);
-            toast.error('Failed to add member to team');
+            toast.error(error.response?.data?.message || 'Failed to add member to team');
+        } finally {
+            setAddingMember(false);
         }
     };
 
@@ -176,6 +185,7 @@ export default function TeamsPage() {
             return;
         }
 
+        setRemovingMemberId(userId);
         try {
             await removeTeamMember(selectedTeam.id, userId);
             toast.success('Member unassigned from team');
@@ -187,7 +197,9 @@ export default function TeamsPage() {
             if (teamRefreshed) setSelectedTeam(teamRefreshed);
         } catch (error) {
             console.error('Failed to remove member:', error);
-            toast.error('Failed to remove member');
+            toast.error(error.response?.data?.message || 'Failed to remove member');
+        } finally {
+            setRemovingMemberId(null);
         }
     };
 
@@ -308,10 +320,15 @@ export default function TeamsPage() {
                                                     {isAdmin && (
                                                         <button
                                                             onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
-                                                            className="p-2 border border-red-100 hover:bg-red-50 text-red-600 rounded-xl transition cursor-pointer"
+                                                            disabled={deletingTeamId === selectedTeam.id}
+                                                            className="p-2 border border-red-100 hover:bg-red-50 text-red-600 rounded-xl transition cursor-pointer disabled:opacity-50"
                                                             title="Delete Team"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            {deletingTeamId === selectedTeam.id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <Trash2 className="w-4 h-4" />
+                                                            )}
                                                         </button>
                                                     )}
                                                 </>
@@ -364,9 +381,16 @@ export default function TeamsPage() {
                                             </div>
                                             <button
                                                 type="submit"
-                                                className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer self-end"
+                                                disabled={addingMember}
+                                                className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition cursor-pointer self-end disabled:opacity-50"
                                             >
-                                                Add to Team
+                                                {addingMember ? (
+                                                    <span className="flex items-center gap-1.5 justify-center">
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding...
+                                                    </span>
+                                                ) : (
+                                                    'Add to Team'
+                                                )}
                                             </button>
                                         </form>
                                     )}
@@ -423,10 +447,15 @@ export default function TeamsPage() {
                                                                     <td className="px-6 py-3.5 whitespace-nowrap text-right">
                                                                         <button
                                                                             onClick={() => handleRemoveMember(m.id)}
-                                                                            className="p-1 hover:bg-red-50 text-red-600 rounded-lg transition cursor-pointer"
+                                                                            disabled={removingMemberId === m.id}
+                                                                            className="p-1 hover:bg-red-50 text-red-600 rounded-lg transition cursor-pointer disabled:opacity-50"
                                                                             title="Remove from Team"
                                                                         >
-                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                            {removingMemberId === m.id ? (
+                                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                            ) : (
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                            )}
                                                                         </button>
                                                                     </td>
                                                                 )}

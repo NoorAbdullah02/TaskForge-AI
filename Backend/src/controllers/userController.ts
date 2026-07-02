@@ -8,7 +8,7 @@ import { workspaceMembers, workspaces, users, sessionTable, apiKeys, activityLog
 import { eq, and, desc } from 'drizzle-orm';
 
 
-import { RegisterCheckValid } from '../validations/validinputs'
+import { RegisterCheckValid, validatePasswordStrength } from '../validations/validinputs'
 
 import { LoginValidationSchema } from '../validations/validinputs'
 
@@ -421,8 +421,9 @@ export const resetUserPassword = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Email, token and new password are required' });
         }
 
-        if (typeof newPassword !== 'string' || newPassword.length < 8) {
-            return res.status(400).json({ message: 'New password must be at least 8 characters' });
+        const passwordError = validatePasswordStrength(newPassword);
+        if (passwordError) {
+            return res.status(400).json({ message: passwordError });
         }
 
         const user = await queries.getUserByEmail(email);
@@ -549,6 +550,11 @@ export const changeUserPassword = async (req: Request, res: Response) => {
         const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordValid) {
             return res.status(400).json({ message: "Current password is incorrect" });
+        }
+
+        const passwordError = validatePasswordStrength(newPassword);
+        if (passwordError) {
+            return res.status(400).json({ message: passwordError });
         }
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);

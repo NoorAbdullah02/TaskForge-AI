@@ -145,7 +145,7 @@ const AICopilot = () => {
                     </div>
 
                     {/* Messages Body */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+                    <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
                         {messages.map((msg, index) => {
                             const isAI = msg.role === 'assistant';
                             return (
