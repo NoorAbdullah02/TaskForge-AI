@@ -226,15 +226,9 @@ const NotificationCenter = ({ isOpen, onClose, onUnreadCountChange }) => {
       await clearAllNotifications();
       setNotifications([]);
       if (onUnreadCountChange) onUnreadCountChange(0);
-<<<<<<< HEAD
-      toast.success('All cleared');
-    } catch {
-      toast.error('Failed to clear');
-=======
       toast.success('All notifications cleared');
     } catch (err) {
       toast.error('Failed to clear notifications');
->>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
     }
   };
 

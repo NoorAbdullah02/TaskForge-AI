@@ -1,51 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { gsap } from 'gsap';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
     Mail, Lock, CheckCircle, X, Camera, Edit2, Save, User, Shield, 
     Bell, Paintbrush, Globe, Cpu, Key, Activity, Trash2, Plus, 
     AlertTriangle, RefreshCw, ShieldCheck, Laptop, Chrome, 
-    LogOut, Check, ChevronRight, Settings, Eye, EyeOff, ShieldAlert, Loader2
+    LogOut, Check, ChevronRight, Settings, Eye, EyeOff, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import {
-    getUserProfile, sendVerificationEmail, verifyEmailToken,
-    updateUserPassword, updateUserAvatar,
+import { 
+    getUserProfile, sendVerificationEmail, verifyEmailToken, 
+    updateUserName, updateUserPassword, updateUserAvatar, 
     updateUserProfile, getDepartments, toggle2Fa,
     getUserSessions, revokeSession, getUserActivityLogs,
     getApiKeys, createApiKey, revokeApiKey
 } from '../Services/authApi';
 import { uploadFile } from '../Services/uploadApi';
-import { getWorkspaceInfo } from '../Services/workspaceApi';
-import { isPasswordStrong, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
+import { getWorkspaceInfo, regenerateInviteCode } from '../Services/workspaceApi';
 
 export default function ProfilePage() {
     const { user, login } = useAuth();
     const [profileData, setProfileData] = useState(null);
     const [profileImage, setProfileImage] = useState(null);
-    const [, setEditingProfile] = useState(false);
+    const [editingProfile, setEditingProfile] = useState(false);
     const [editData, setEditData] = useState({});
     
     // Tab States
     const [activeTab, setActiveTab] = useState('profile');
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
-    const headerRef = useRef(null);
-
-    useEffect(() => {
-        if (!loading && headerRef.current) {
-            gsap.from([...headerRef.current.children], {
-                y: -28, opacity: 0, stagger: 0.1, duration: 0.85, ease: 'power3.out',
-            });
-        }
-    }, [loading]);
     
     // Data List States
     const [sessions, setSessions] = useState([]);
     const [activityLogs, setActivityLogs] = useState([]);
     const [apiKeysList, setApiKeysList] = useState([]);
-    const [, setWorkspaceInfo] = useState(null);
+    const [workspaceInfo, setWorkspaceInfo] = useState(null);
 
     // Form Loading States
     const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -54,11 +43,6 @@ export default function ProfilePage() {
     const [copiedKey, setCopiedKey] = useState('');
     const [newKeyName, setNewKeyName] = useState('');
     const [justCreatedKey, setJustCreatedKey] = useState(null);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const [isVerifyingToken, setIsVerifyingToken] = useState(false);
-    const [isTogglingTwoFa, setIsTogglingTwoFa] = useState(false);
-    const [revokingSessionId, setRevokingSessionId] = useState(null);
-    const [revokingKeyId, setRevokingKeyId] = useState(null);
 
     // Passwords Form
     const [passwordData, setPasswordData] = useState({
@@ -181,7 +165,6 @@ export default function ProfilePage() {
         }
 
         const toastId = toast.loading('Uploading avatar...');
-        setIsUploadingAvatar(true);
         try {
             const res = await uploadFile(file, 'avatars');
             const fileUrlWithId = `${res.url}#${res.fileId}`;
@@ -192,8 +175,6 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to upload image', { id: toastId });
-        } finally {
-            setIsUploadingAvatar(false);
         }
     };
 
@@ -233,8 +214,8 @@ export default function ProfilePage() {
             toast.error('New passwords do not match');
             return;
         }
-        if (!isPasswordStrong(passwordData.newPassword)) {
-            toast.error(PASSWORD_POLICY_MESSAGE);
+        if (passwordData.newPassword.length < 8) {
+            toast.error('New password must be at least 8 characters');
             return;
         }
 
@@ -273,7 +254,6 @@ export default function ProfilePage() {
             toast.error('Please enter the verification code');
             return;
         }
-        setIsVerifyingToken(true);
         try {
             await verifyEmailToken({ email: profileData.email, token: verifyTokenInput.trim() });
             toast.success('Email verified successfully! 🎉');
@@ -283,14 +263,11 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || 'Failed to verify email code');
-        } finally {
-            setIsVerifyingToken(false);
         }
     };
 
     const handleToggle2FA = async (checked) => {
         const toastId = toast.loading(`${checked ? 'Enabling' : 'Disabling'} 2FA...`);
-        setIsTogglingTwoFa(true);
         try {
             const res = await toggle2Fa(checked);
             setProfileData(prev => ({ ...prev, is2faEnabled: res.is2faEnabled }));
@@ -299,14 +276,11 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to change 2FA setting', { id: toastId });
-        } finally {
-            setIsTogglingTwoFa(false);
         }
     };
 
     const handleRevokeSession = async (id) => {
         if (!confirm('Are you sure you want to log out of this device?')) return;
-        setRevokingSessionId(id);
         try {
             await revokeSession(id);
             toast.success('Device session revoked successfully');
@@ -314,8 +288,6 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to revoke session');
-        } finally {
-            setRevokingSessionId(null);
         }
     };
 
@@ -339,7 +311,6 @@ export default function ProfilePage() {
 
     const handleRevokeApiKey = async (id) => {
         if (!confirm('Are you sure you want to revoke this API key? Applications using it will break.')) return;
-        setRevokingKeyId(id);
         try {
             await revokeApiKey(id);
             toast.success('API key revoked successfully');
@@ -347,8 +318,6 @@ export default function ProfilePage() {
         } catch (err) {
             console.error(err);
             toast.error('Failed to revoke API key');
-        } finally {
-            setRevokingKeyId(null);
         }
     };
 
@@ -424,15 +393,13 @@ export default function ProfilePage() {
         }`}>
             <div className="max-w-6xl mx-auto">
                 {/* Header Section */}
-                <div ref={headerRef} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/60 pb-6 mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/60 pb-6 mb-8">
                     <div>
                         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                            <span className="p-1.5 rounded-lg bg-gradient-member shadow-md shadow-glow-teal">
-                                <Settings className="w-5 h-5 text-white" />
-                            </span>
+                            <Settings className="w-7 h-7 text-blue-500" />
                             {getSettingsTitle()}
                         </h1>
-                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink-soft'}`}>
+                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink0'}`}>
                             Adjust role settings, manage active login tokens, generate API access codes, and customize workspace viewports.
                         </p>
                     </div>
@@ -505,14 +472,14 @@ export default function ProfilePage() {
                                                         profileData.name.charAt(0).toUpperCase()
                                                     )}
                                                 </div>
-                                                <label className={`absolute inset-0 bg-surface-2 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity ${isUploadingAvatar ? 'opacity-100 pointer-events-none' : ''}`}>
-                                                    <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={isUploadingAvatar} className="hidden" />
-                                                    {isUploadingAvatar ? <Loader2 className="w-5 h-5 text-ink animate-spin" /> : <Camera className="w-5 h-5 text-ink" />}
+                                                <label className="absolute inset-0 bg-surface-2 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                                                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                                                    <Camera className="w-5 h-5 text-ink" />
                                                 </label>
                                             </div>
                                             <div className="text-center sm:text-left">
                                                 <h3 className="text-lg font-bold">{profileData.name}</h3>
-                                                <p className="text-xs text-ink-soft mt-1">{profileData.position || 'Professional Specialist'}</p>
+                                                <p className="text-xs text-ink0 mt-1">{profileData.position || 'Professional Specialist'}</p>
                                                 <div className="mt-2">{getRoleBadge(profileData.role)}</div>
                                             </div>
                                         </div>
@@ -591,7 +558,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Credentials</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Change your login passcode to keep your active workspace secure.</p>
+                                            <p className="text-xs text-ink0 mt-1">Change your login passcode to keep your active workspace secure.</p>
                                         </div>
 
                                         <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
@@ -611,7 +578,7 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -634,16 +601,11 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
                                                 </div>
-                                                {passwordData.newPassword && !isPasswordStrong(passwordData.newPassword) && (
-                                                    <p className="text-[10px] text-ink-faint leading-relaxed mt-1.5">
-                                                        {PASSWORD_POLICY_MESSAGE}
-                                                    </p>
-                                                )}
                                             </div>
 
                                             {/* Confirm Pass */}
@@ -662,7 +624,7 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
                                                     >
                                                         {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -688,7 +650,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Email Address & Verification</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Check email delivery configurations or verify your communication channel.</p>
+                                            <p className="text-xs text-ink0 mt-1">Check email delivery configurations or verify your communication channel.</p>
                                         </div>
 
                                         <div className={`p-5 rounded-2xl border ${
@@ -739,12 +701,9 @@ export default function ProfilePage() {
                                                             />
                                                             <button
                                                                 onClick={handleVerifyToken}
-                                                                disabled={isVerifyingToken}
-                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-50"
+                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
                                                             >
-                                                                {isVerifyingToken ? (
-                                                                    <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Verifying...</span>
-                                                                ) : 'Verify Code'}
+                                                                Verify Code
                                                             </button>
                                                         </div>
                                                     )}
@@ -759,7 +718,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Center</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Configure advanced identity verification features to protect against spoofing.</p>
+                                            <p className="text-xs text-ink0 mt-1">Configure advanced identity verification features to protect against spoofing.</p>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -786,13 +745,12 @@ export default function ProfilePage() {
                                                         <h4 className="text-xs font-extrabold">Two-Factor Authentication (2FA)</h4>
                                                         <p className="text-[10px] text-ink-soft font-medium mt-1">Requires an OTP sent to your verified email address on login.</p>
                                                     </div>
-                                                    <label className={`relative inline-flex items-center ${isTogglingTwoFa ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!profileData.is2faEnabled}
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={!!profileData.is2faEnabled} 
                                                             onChange={(e) => handleToggle2FA(e.target.checked)}
-                                                            disabled={isTogglingTwoFa}
-                                                            className="sr-only peer"
+                                                            className="sr-only peer" 
                                                         />
                                                         <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
@@ -807,7 +765,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Notification Channels</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
+                                            <p className="text-xs text-ink0 mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
                                         </div>
 
                                         <div className="space-y-3">
@@ -843,50 +801,12 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
-<<<<<<< HEAD
-                                {/* TAB 6: THEME & STYLE */}
-                                {activeTab === 'theme' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Theme Preference</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Adjust workspace theme styling to protect eye health during extended operations.</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4 max-w-sm">
-                                            <button
-                                                onClick={() => handleToggleTheme('light')}
-                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
-                                                    settings.theme === 'light' 
-                                                        ? 'border-blue-500 bg-blue-500/10 text-blue-500 font-extrabold shadow-md' 
-                                                        : 'border-gray-300/40 text-ink-soft'
-                                                }`}
-                                            >
-                                                <Paintbrush className="w-6 h-6" />
-                                                <span className="text-xs font-bold">Light Aesthetic</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleToggleTheme('dark')}
-                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition cursor-pointer ${
-                                                    settings.theme === 'dark' 
-                                                        ? 'border-blue-400 bg-blue-400/10 text-blue-400 font-extrabold shadow-md' 
-                                                        : 'border-line text-ink-soft'
-                                                }`}
-                                            >
-                                                <Paintbrush className="w-6 h-6" />
-                                                <span className="text-xs font-bold">Dark Aesthetic</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-=======
->>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
                                 {/* TAB 7: LANGUAGE */}
                                 {activeTab === 'language' && (
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Language Preferences</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Choose your preferred localized interface dialect.</p>
+                                            <p className="text-xs text-ink0 mt-1">Choose your preferred localized interface dialect.</p>
                                         </div>
 
                                         <div className="max-w-xs">
@@ -916,17 +836,17 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Active Token Sessions</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Manage active device connections authorized to request workspace information.</p>
+                                            <p className="text-xs text-ink0 mt-1">Manage active device connections authorized to request workspace information.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
                                                 <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Device / Agent</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">IP Location</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Established</th>
-                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink-soft">Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Device / Agent</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">IP Location</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Established</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink0">Action</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -947,11 +867,10 @@ export default function ProfilePage() {
                                                             <td className="px-6 py-4 text-right">
                                                                 <button
                                                                     onClick={() => handleRevokeSession(sess.id)}
-                                                                    disabled={revokingSessionId === sess.id}
-                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer disabled:opacity-50"
+                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
                                                                     title="Revoke Session"
                                                                 >
-                                                                    {revokingSessionId === sess.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                    <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -970,126 +889,22 @@ export default function ProfilePage() {
                                     </div>
                                 )}
 
-<<<<<<< HEAD
-                                {/* TAB 9: DEVELOPER API KEYS */}
-                                {activeTab === 'api' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Developer API Integrations</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Provision neural tokens to make programatic calls directly into TaskForge pipelines.</p>
-                                        </div>
-
-                                        {/* Generation Form */}
-                                        <form onSubmit={handleCreateApiKey} className="flex gap-2 max-w-md bg-surface-2 border border-line p-4 rounded-2xl">
-                                            <input
-                                                type="text"
-                                                value={newKeyName}
-                                                onChange={(e) => setNewKeyName(e.target.value)}
-                                                placeholder="e.g. CI/CD Deployment Token"
-                                                className={`flex-1 px-4 py-2.5 rounded-xl border text-xs font-semibold focus:outline-none focus:border-blue-500 ${
-                                                    settings.theme === 'dark' ? 'bg-surface-2 border-line text-ink' : 'bg-white border-blue-100 text-ink-faint'
-                                                }`}
-                                                required
-                                            />
-                                            <button
-                                                type="submit"
-                                                disabled={isCreatingKey || !newKeyName.trim()}
-                                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-500 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1 shrink-0"
-                                            >
-                                                {isCreatingKey ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                                Generate Key
-                                            </button>
-                                        </form>
-
-                                        {/* Display key immediately on creation */}
-                                        {justCreatedKey && (
-                                            <div className="p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-xs font-medium text-emerald-400 space-y-2">
-                                                <p className="font-bold flex items-center gap-1">
-                                                    <Check className="w-4 h-4" />
-                                                    Copy key immediately. For security, it will not be shown again.
-                                                </p>
-                                                <div className="flex items-center gap-2 bg-surface-2 border border-emerald-500/20 p-2 rounded-xl">
-                                                    <span className="font-mono flex-1 select-all select-none truncate text-[10px] tracking-wider font-extrabold">{justCreatedKey}</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(justCreatedKey);
-                                                            setCopiedKey('just');
-                                                            toast.success('API Key copied to clipboard');
-                                                            setTimeout(() => setCopiedKey(''), 2000);
-                                                        }}
-                                                        className="p-1.5 hover:bg-emerald-500/25 rounded-lg text-emerald-400 transition"
-                                                    >
-                                                        {copiedKey === 'just' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* API Keys List */}
-                                        <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
-                                            <table className="min-w-full divide-y divide-gray-100/10 text-xs">
-                                                <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
-                                                    <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Token Description</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Key Hash Preview</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Provisioned</th>
-                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink-soft">Revocation</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100/10 font-medium">
-                                                    {apiKeysList.map((key) => (
-                                                        <tr key={key.id} className="hover:bg-blue-50/10 transition-colors">
-                                                            <td className="px-6 py-4 font-bold">{key.name}</td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink-soft">
-                                                                {key.key ? `${key.key.substring(0, 12)}...` : 'tf_live_************************'}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-ink-soft">
-                                                                {new Date(key.createdAt).toLocaleDateString()}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-right">
-                                                                <button
-                                                                    onClick={() => handleRevokeApiKey(key.id)}
-                                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
-                                                                    title="Revoke Key"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-
-                                                    {apiKeysList.length === 0 && (
-                                                        <tr>
-                                                            <td colSpan={4} className="px-6 py-8 text-center text-ink-soft italic font-medium">
-                                                                No authorized API keys retrieved.
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* TAB 10: ACTIVITY LOGS */}
-=======
                                 {/* TAB 9: ACTIVITY LOGS */}
->>>>>>> bc9044b (PMS 100: Notification pannel fixed, and optimized the full website also)
                                 {activeTab === 'logs' && (
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">User Audit Tracker</h3>
-                                            <p className="text-xs text-ink-soft mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
+                                            <p className="text-xs text-ink0 mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
                                                 <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Operation Action</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Execution Description</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Client IP</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-soft">Timestamp</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Operation Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Execution Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Client IP</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Timestamp</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -1101,7 +916,7 @@ export default function ProfilePage() {
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4 text-ink-soft font-semibold">{log.details}</td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink-soft">{log.ipAddress || 'Loopback'}</td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink0">{log.ipAddress || 'Loopback'}</td>
                                                             <td className="px-6 py-4 text-ink-soft">{new Date(log.createdAt).toLocaleString()}</td>
                                                         </tr>
                                                     ))}
