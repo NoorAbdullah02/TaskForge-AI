@@ -481,9 +481,6 @@ const AIWorkspace = () => {
         }
     };
 
-    // ==========================================
-    // WEEKLY REPORT EMAIL TRIGGER
-    // ==========================================
     const [sendingWeeklyEmail, setSendingWeeklyEmail] = useState(false);
 
     const handleSendWeeklyEmail = async () => {
@@ -499,9 +496,7 @@ const AIWorkspace = () => {
         }
     };
 
-    // ==========================================
-    // DAILY STANDUP GENERATOR
-    // ==========================================
+
     const [dailyStandupData, setDailyStandupData] = useState(null);
     const [loadingStandup, setLoadingStandup] = useState(false);
     const [regeneratingStandup, setRegeneratingStandup] = useState(false);
@@ -522,9 +517,7 @@ const AIWorkspace = () => {
         }
     };
 
-    // ==========================================
-    // AI SPRINT PLANNER (BLUEPRINT GENERATOR)
-    // ==========================================
+
     const [sprintPlannerMode, setSprintPlannerMode] = useState('blueprint'); // 'blueprint' | 'agile'
     const [projectDescBlueprint, setProjectDescBlueprint] = useState('');
     const [generatingBlueprint, setGeneratingBlueprint] = useState(false);
@@ -585,12 +578,12 @@ const AIWorkspace = () => {
                     <button
                         onClick={handleSendWeeklyEmail}
                         disabled={sendingWeeklyEmail}
-                        className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 active:bg-surface-2 transition shadow-lg text-indigo-300 disabled:opacity-50 cursor-pointer"
+                        className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 active:bg-surface-2 transition shadow-lg text-indigo-600 disabled:opacity-50 cursor-pointer"
                     >
                         {sendingWeeklyEmail ? (
-                            <Loader className="w-4 h-4 animate-spin text-indigo-400" />
+                            <Loader className="w-4 h-4 animate-spin text-indigo-600" />
                         ) : (
-                            <Mail className="w-4 h-4 text-indigo-400" />
+                            <Mail className="w-4 h-4 text-indigo-600" />
                         )}
                         Email Weekly Summary Report
                     </button>
@@ -706,7 +699,7 @@ const AIWorkspace = () => {
                                                             <Wand2 className="w-5 h-5 text-indigo-400" />
                                                             Roadmap Generated
                                                         </h4>
-                                                        <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full uppercase">
+                                                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full uppercase">
                                                             {generatedRoadmap.tasks?.length || 0} Road Tasks
                                                         </span>
                                                     </div>
@@ -1124,15 +1117,15 @@ const AIWorkspace = () => {
                                                 {!generatingBlueprint && blueprintResult && (
                                                     <div className="space-y-6">
                                                         {/* Timeline info */}
-                                                        <div className="bg-gradient-to-br from-indigo-950/30 to-blue-950/30 border border-[#2e375e] p-6 rounded-3xl flex items-center justify-between">
+                                                        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-6 rounded-3xl flex items-center justify-between">
                                                             <div>
-                                                                <span className="text-[9px] font-black text-indigo-300 uppercase tracking-wider block">PROJECTED TIMELINE</span>
+                                                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider block">PROJECTED TIMELINE</span>
                                                                 <p className="text-sm font-black text-ink mt-1">
                                                                     {blueprintResult.timeline?.startDate} — {blueprintResult.timeline?.endDate}
                                                                 </p>
                                                             </div>
-                                                            <div className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-center">
-                                                                <span className="text-lg font-black text-indigo-300">{blueprintResult.timeline?.totalDurationDays}</span>
+                                                            <div className="px-4 py-2 bg-white border border-indigo-100 rounded-xl text-center shadow-sm">
+                                                                <span className="text-lg font-black text-indigo-600">{blueprintResult.timeline?.totalDurationDays}</span>
                                                                 <span className="text-[9px] font-bold text-ink-soft block tracking-wider uppercase">Days</span>
                                                             </div>
                                                         </div>
@@ -1145,7 +1138,7 @@ const AIWorkspace = () => {
                                                                     <div className="flex justify-between items-start">
                                                                         <div>
                                                                             <h5 className="font-black text-ink text-sm">{sprint.sprintName}</h5>
-                                                                            <p className="text-xxs text-indigo-300 font-bold mt-0.5">Goal: {sprint.goal}</p>
+                                                                            <p className="text-xxs text-indigo-600 font-bold mt-0.5">Goal: {sprint.goal}</p>
                                                                         </div>
                                                                         <span className="text-[10px] font-bold text-ink-soft bg-surface-2 px-2 py-0.5 rounded border border-line">{sprint.durationDays} Days</span>
                                                                     </div>
@@ -1325,7 +1318,7 @@ const AIWorkspace = () => {
                                                     <div className="space-y-6">
                                                         <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md space-y-4">
                                                             <div>
-                                                                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest block mb-1">Coaches Recommendation</span>
+                                                                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Coaches Recommendation</span>
                                                                 <h4 className="font-extrabold text-ink text-lg flex items-center gap-2">
                                                                     <Sparkles className="w-5 h-5 text-yellow-400" />
                                                                     Sprint Target: {sprintPlanResult.goalRecommendation}
@@ -1343,7 +1336,7 @@ const AIWorkspace = () => {
                                                                         <p className="text-xxs text-ink-soft mt-1 font-sans">{item.reason}</p>
                                                                     </div>
                                                                     <div className="flex flex-col items-center justify-center px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex-shrink-0">
-                                                                        <span className="text-lg font-extrabold text-indigo-300">{item.recommendedPoints}</span>
+                                                                        <span className="text-lg font-extrabold text-indigo-600">{item.recommendedPoints}</span>
                                                                         <span className="text-[8px] font-bold text-ink-soft uppercase tracking-wider mt-0.5">Points</span>
                                                                     </div>
                                                                 </div>
@@ -1467,7 +1460,7 @@ const AIWorkspace = () => {
                                                                             {item.severity}
                                                                         </span>
                                                                     </div>
-                                                                    <p className="text-xs text-indigo-300 mt-1 font-semibold font-sans">{item.riskType}</p>
+                                                                    <p className="text-xs text-indigo-600 mt-1 font-semibold font-sans">{item.riskType}</p>
                                                                     <p className="text-xs text-ink-soft mt-1.5 leading-relaxed font-sans">{item.description}</p>
                                                                 </div>
                                                             </div>
@@ -1617,12 +1610,12 @@ const AIWorkspace = () => {
                                         <button
                                             onClick={() => handleFetchDailyStandup(true)}
                                             disabled={loadingStandup || regeneratingStandup}
-                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 active:bg-surface-2 transition shadow-lg text-indigo-300 disabled:opacity-50 cursor-pointer"
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 active:bg-surface-2 transition shadow-lg text-indigo-600 disabled:opacity-50 cursor-pointer"
                                         >
                                             {regeneratingStandup ? (
-                                                <Loader className="w-4 h-4 animate-spin text-indigo-400" />
+                                                <Loader className="w-4 h-4 animate-spin text-indigo-600" />
                                             ) : (
-                                                <Flame className="w-4 h-4 text-indigo-400" />
+                                                <Flame className="w-4 h-4 text-indigo-600" />
                                             )}
                                             {regeneratingStandup ? 'Updating...' : 'Regenerate Standup'}
                                         </button>

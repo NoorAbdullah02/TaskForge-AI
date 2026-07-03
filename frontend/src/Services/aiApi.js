@@ -1,32 +1,32 @@
 import api from './api';
 
 export const generateTasks = async (projectDescription) => {
-    const response = await api.post('/ai/generate-tasks', { projectDescription });
+    const response = await api.post('/ai/generate-tasks', { projectDescription }, { timeout: 60000 });
     return response.data;
 };
 
 export const summarizeMeeting = async (meetingNotes) => {
-    const response = await api.post('/ai/summarize-meeting', { meetingNotes });
+    const response = await api.post('/ai/summarize-meeting', { meetingNotes }, { timeout: 60000 });
     return response.data;
 };
 
 export const askCopilot = async (message, history = []) => {
-    const response = await api.post('/ai/copilot', { message, history });
+    const response = await api.post('/ai/copilot', { message, history }, { timeout: 60000 });
     return response.data;
 };
 
 export const planSprint = async (sprintName, goal, tasksList) => {
-    const response = await api.post('/ai/plan-sprint', { sprintName, goal, tasksList });
+    const response = await api.post('/ai/plan-sprint', { sprintName, goal, tasksList }, { timeout: 60000 });
     return response.data;
 };
 
 export const generateDocs = async (docType, topicDescription) => {
-    const response = await api.post('/ai/generate-docs', { docType, topicDescription });
+    const response = await api.post('/ai/generate-docs', { docType, topicDescription }, { timeout: 60000 });
     return response.data;
 };
 
 export const analyzeRisks = async (projectId) => {
-    const response = await api.post('/ai/analyze-risks', { projectId });
+    const response = await api.post('/ai/analyze-risks', { projectId }, { timeout: 60000 });
     return response.data;
 };
 
@@ -37,7 +37,7 @@ export const sendWeeklySummary = async () => {
 
 // New AI & ML Sprint endpoints
 export const planSprintV2 = async (projectDescription) => {
-    const response = await api.post('/ai/plan-sprint-v2', { projectDescription });
+    const response = await api.post('/ai/plan-sprint-v2', { projectDescription }, { timeout: 60000 });
     return response.data;
 };
 
@@ -62,7 +62,7 @@ export const predictProductivity = async (userId) => {
 };
 
 export const getDailyStandup = async (regenerate = false) => {
-    const response = await api.get(`/ai/daily-standup${regenerate ? '?regenerate=true' : ''}`);
+    const response = await api.get(`/ai/daily-standup${regenerate ? '?regenerate=true' : ''}`, { timeout: 60000 });
     return response.data;
 };
 
@@ -72,7 +72,7 @@ export const getExecutiveStats = async () => {
 };
 
 export const askEnterpriseCopilot = async (message, history = []) => {
-    const response = await api.post('/ai/enterprise/copilot', { message, history });
+    const response = await api.post('/ai/enterprise/copilot', { message, history }, { timeout: 60000 });
     return response.data;
 };
 
@@ -92,7 +92,7 @@ export const getHealthScore = async (type, id) => {
 };
 
 export const emailAssist = async (context, tone) => {
-    const response = await api.post('/ai/enterprise/email-assist', { context, tone });
+    const response = await api.post('/ai/enterprise/email-assist', { context, tone }, { timeout: 60000 });
     return response.data;
 };
 

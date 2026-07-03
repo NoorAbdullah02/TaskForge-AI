@@ -33,7 +33,12 @@ export async function generateJSONResponse<T = any>(prompt: string): Promise<T> 
             throw new Error('Mistral API returned an empty completion response.');
         }
 
-        return JSON.parse(responseText) as T;
+        let cleanText = responseText.trim();
+        if (cleanText.startsWith('```')) {
+            cleanText = cleanText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/, '').trim();
+        }
+
+        return JSON.parse(cleanText) as T;
     } catch (error) {
         console.error('Error in generateJSONResponse (Mistral):', error);
         throw error;
