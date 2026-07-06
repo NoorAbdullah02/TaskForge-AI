@@ -14,6 +14,6 @@ export default function BackgroundLayer({ mode = 'app', className = '' }) {
         )
     }
 
-    // Default: light premium (app + auth).
+    
     return <LightPremiumBackground mode={mode} className={className} />
 }
