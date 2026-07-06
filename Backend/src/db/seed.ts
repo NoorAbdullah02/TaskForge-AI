@@ -4,7 +4,7 @@ import * as schema from './schema';
 async function main() {
     console.log('🌱 Starting clean database seeding...');
 
-    // 1. Clear existing data in correct dependency order
+    
     console.log('🧹 Cleaning all existing records...');
     await db.delete(schema.activityLogs);
     await db.delete(schema.aiRequests);
@@ -26,7 +26,7 @@ async function main() {
     await db.delete(schema.systemSettings);
     console.log('✅ Clean complete.');
 
-    // 2. Seed Default System Settings
+ 
     console.log('⚙️ Seeding default system settings...');
     await db.insert(schema.systemSettings).values({
         orgName: 'TaskForge AI',
