@@ -77,7 +77,7 @@ export const verifyEmailTable = pgTable("verify_email", {
 
 
 
-// one user have multiple sessions 
+
 export const usersRelation = relations(users, ({ one, many }) => ({
     session: many(sessionTable),
     team: one(teams, {
@@ -89,7 +89,7 @@ export const usersRelation = relations(users, ({ one, many }) => ({
 
 export const sessionsRelation = relations(sessionTable, ({ one }) => ({
     user: one(users, {
-        fields: [sessionTable.userId], // foreign key
+        fields: [sessionTable.userId],
         references: [users.id]
     })
 }))
