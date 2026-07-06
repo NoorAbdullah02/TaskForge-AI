@@ -8,7 +8,7 @@ class Settings:
     HOST: str = os.getenv("HOST", "127.0.0.1")
     PORT: int = int(os.getenv("PORT", 8000))
     
-    # Allow CORS origins
+    
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:4000")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
 

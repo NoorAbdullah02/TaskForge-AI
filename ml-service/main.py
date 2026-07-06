@@ -8,9 +8,9 @@ from services.predictor import PredictorService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load the ML models on startup
+    
     print("Starting TaskForge AI ML Service...")
-    # Initialize PredictorService to trigger model load
+    
     PredictorService()
     yield
     print("Stopping TaskForge AI ML Service...")
@@ -21,7 +21,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Set up CORS middleware
+
 origins = [
     settings.FRONTEND_URL,
     settings.BACKEND_URL,
@@ -39,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
+
 app.include_router(delay.router, prefix=settings.API_V1_STR)
 app.include_router(attendance.router, prefix=settings.API_V1_STR)
 app.include_router(productivity.router, prefix=settings.API_V1_STR)

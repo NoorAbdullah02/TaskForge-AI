@@ -55,7 +55,7 @@ def test_delay_prediction():
 def test_attendance_prediction():
     print("\n--- Testing Attendance Prediction Endpoint ---")
     payload = {
-        "day_of_week": 0, # Monday
+        "day_of_week": 0, 
         "month": 6,
         "historical_attendance_rate": 0.90,
         "leave_days_taken_last_30d": 2.0,
@@ -135,7 +135,7 @@ def test_resource_recommendation():
     print("Payload:", json.dumps(payload, indent=2))
     response = make_post_request("/api/predict/resource", payload)
     print("Response (Truncated Member List):")
-    # Truncate recommended members print for brevity, print first 2
+    
     response_copy = response.copy()
     if "recommended_members" in response_copy:
         response_copy["recommended_members"] = response_copy["recommended_members"][:2]
