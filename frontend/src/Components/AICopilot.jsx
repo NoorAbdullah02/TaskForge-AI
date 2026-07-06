@@ -219,7 +219,7 @@ const AICopilot = () => {
                         <div ref={chatEndRef} />
                     </div>
 
-                    {/* Footer Input Bar */}
+                    
                     <div className="p-3 border-t border-gray-200 bg-white flex gap-2 items-center">
                         <textarea
                             ref={inputRef}
