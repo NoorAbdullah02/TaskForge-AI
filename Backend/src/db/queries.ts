@@ -12,12 +12,10 @@ import { sendMail } from '../lib/send-email';
 import { verifyEmailTemplate } from '../emails/verifyEmailTemplate';
 import { passwordResetTemplate } from '../emails/passwordResetTemplate';
 
-//import { sendMail } from '../lib/nodemailer';
 
-//user queri
 
 export const createUser = async (data: NewUser) => {
-    // Check if this is the first user in the database to bootstrap as admin
+
     const allUsers = await db.select().from(users).limit(1);
     const isFirstUser = allUsers.length === 0;
 
@@ -63,12 +61,11 @@ export const createSession = async (data: newSession) => {
     return session;
 }
 
-// Create Access Token - accepts arbitrary payload (user info/session)
+
 export const createAccessToken = (payload: Record<string, unknown>) => {
     return jwt.sign(payload, env.JWT_SECRET, { expiresIn: '15m' });
 }
 
-// Create Refresh Token - accepts arbitrary payload
 export const refressAccessToken = (payload: Record<string, unknown>) => {
     return jwt.sign(payload, env.JWT_SECRET, { expiresIn: '15d' });
 }
@@ -80,7 +77,6 @@ export const findSessionById = async (id: number) => {
     return session;
 }
 
-//find user by id
 export const findUserById = async (id: number) => {
     const [user] = await db.select()
         .from(users)
@@ -88,7 +84,7 @@ export const findUserById = async (id: number) => {
     return user;
 }
 
-// Refress Token
+
 export const refressTokens = async (token: string) => {
 
     try {
