@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
-    "rootDir": "./src", // Where your source files are
-    "outDir": "./dist", // Where compiled JS goes
-    "module": "commonjs", // Output format (require/module.exports)
-    "target": "es2022", // JS version to compile to (modern)
-    "esModuleInterop": true, // Allows `import x from 'y'` syntax with CommonJS modules
-    "strict": true, // Enables all strict type-checking
-    "skipLibCheck": true, // Skips type-checking .d.ts files (faster builds)
-    "moduleResolution": "node", // How TS finds modules (node_modules lookup)
-    "resolveJsonModule": true, // Allows importing .json files
-    "forceConsistentCasingInFileNames": true // Prevents case-sensitivity bugs
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "module": "commonjs",
+    "target": "es2022",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "src/**/*.ts",
-    "src/middleware"
-  ], // Which files to compile
+    "src/**/*.ts"
+  ],
   "exclude": [
     "node_modules"
-  ] // Which files to ignore
+  ]
 }

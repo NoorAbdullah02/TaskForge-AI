@@ -13,68 +13,63 @@ export const verifyEmailTemplate = ({
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>Verify Your Email - TaskForge AI</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body {
       margin: 0;
       padding: 0;
-      background-color: #030712;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
     .email-container {
-      max-width: 540px;
+      max-width: 560px;
       margin: 40px auto;
-      background-color: #0b0f19;
-      border: 1px solid #1f2937;
-      border-radius: 24px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     .header {
-      background: linear-gradient(180deg, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
-      padding: 48px 32px 32px;
+      background-color: #2563eb;
+      padding: 40px 32px;
       text-align: center;
-      border-bottom: 1px solid rgba(31, 41, 55, 0.5);
     }
     .logo-glow {
       display: inline-block;
       width: 64px;
       height: 64px;
       line-height: 64px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
-      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 18px;
+      background-color: rgba(255, 255, 255, 0.15);
       font-size: 28px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       text-align: center;
     }
     .title {
       margin: 0;
-      color: #f3f4f6;
+      color: #ffffff;
       font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
     }
     .brand {
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: #3b82f6;
+      color: #bfdbfe;
     }
     .content {
       padding: 40px 32px;
     }
     .greeting {
-      color: #f3f4f6;
+      color: #0f172a;
       font-size: 18px;
       font-weight: 700;
       margin-top: 0;
       margin-bottom: 12px;
     }
     .text {
-      color: #9ca3af;
+      color: #475569;
       font-size: 15px;
       line-height: 1.6;
       margin-top: 0;
@@ -86,50 +81,31 @@ export const verifyEmailTemplate = ({
     }
     .cta-button {
       display: inline-block;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      background-color: #2563eb;
       color: #ffffff !important;
       text-decoration: none;
       padding: 18px 48px;
-      border-radius: 14px;
+      border-radius: 12px;
       font-weight: 700;
       font-size: 16px;
       letter-spacing: 0.3px;
-      box-shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.5);
     }
     .cta-subtext {
-      color: #6b7280;
+      color: #94a3b8;
       font-size: 13px;
       margin-top: 12px;
       margin-bottom: 0;
     }
-    .divider-container {
-      display: flex;
-      align-items: center;
-      margin: 28px 0;
-    }
-    .divider-line {
-      flex: 1;
-      height: 1px;
-      background-color: #1f2937;
-    }
-    .divider-text {
-      color: #4b5563;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 0 16px;
-    }
     .code-container {
-      background: #111827;
-      border: 1px dashed rgba(59, 130, 246, 0.3);
-      border-radius: 16px;
+      background-color: #f8fafc;
+      border: 1px dashed #93c5fd;
+      border-radius: 14px;
       padding: 20px;
       margin-bottom: 28px;
       text-align: center;
     }
     .code-label {
-      color: #6b7280;
+      color: #64748b;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
@@ -142,42 +118,42 @@ export const verifyEmailTemplate = ({
       font-size: 32px;
       font-weight: 800;
       letter-spacing: 6px;
-      color: #60a5fa;
+      color: #2563eb;
       margin: 0;
       padding: 4px 0;
     }
     .security-notice {
-      background-color: rgba(245, 158, 11, 0.05);
-      border: 1px solid rgba(245, 158, 11, 0.15);
+      background-color: #fffbeb;
+      border: 1px solid #fde68a;
       border-radius: 12px;
       padding: 14px 18px;
       margin-bottom: 28px;
     }
     .security-text {
-      color: #f59e0b;
+      color: #b45309;
       font-size: 13px;
       line-height: 1.5;
       margin: 0;
     }
     .link-fallback {
-      color: #4b5563;
+      color: #94a3b8;
       font-size: 12px;
       line-height: 1.5;
       margin: 16px 0 0;
       word-break: break-all;
     }
     .link-fallback a {
-      color: #60a5fa;
+      color: #2563eb;
       text-decoration: underline;
     }
     .footer {
-      background-color: #080c14;
+      background-color: #f8fafc;
       padding: 32px;
       text-align: center;
-      border-top: 1px solid #1f2937;
+      border-top: 1px solid #e2e8f0;
     }
     .footer-text {
-      color: #4b5563;
+      color: #94a3b8;
       font-size: 12px;
       line-height: 1.5;
       margin: 0;
@@ -186,7 +162,7 @@ export const verifyEmailTemplate = ({
       margin-top: 12px;
     }
     .footer-link {
-      color: #6b7280;
+      color: #64748b;
       text-decoration: none;
       font-size: 12px;
       margin: 0 8px;
@@ -198,7 +174,7 @@ export const verifyEmailTemplate = ({
     <tr>
       <td align="center" style="padding: 20px 10px;">
         <div class="email-container">
-          
+
           <!-- Header -->
           <div class="header">
             <div class="logo-glow">🤖</div>
@@ -221,11 +197,11 @@ export const verifyEmailTemplate = ({
             <!-- Divider -->
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="height: 1px; background-color: #1f2937; width: 40%;"></td>
+                <td style="height: 1px; background-color: #e2e8f0; width: 40%;"></td>
                 <td style="text-align: center; padding: 0 16px;">
-                  <span style="color: #4b5563; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">or enter code manually</span>
+                  <span style="color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">or enter code manually</span>
                 </td>
-                <td style="height: 1px; background-color: #1f2937; width: 40%;"></td>
+                <td style="height: 1px; background-color: #e2e8f0; width: 40%;"></td>
               </tr>
             </table>
 
@@ -248,13 +224,13 @@ export const verifyEmailTemplate = ({
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px;">
-              <tr><td style="height: 1px; background-color: #1f2937;"></td></tr>
+              <tr><td style="height: 1px; background-color: #e2e8f0;"></td></tr>
             </table>
 
             <!-- Signature -->
             <div style="margin-top: 28px;">
-              <p style="color: #9ca3af; font-size: 14px; margin: 0 0 4px;">Best regards,</p>
-              <p style="color: #f3f4f6; font-size: 15px; font-weight: 700; margin: 0;">TaskForge AI Assistant</p>
+              <p style="color: #475569; font-size: 14px; margin: 0 0 4px;">Best regards,</p>
+              <p style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 0;">TaskForge AI Assistant</p>
             </div>
           </div>
 
