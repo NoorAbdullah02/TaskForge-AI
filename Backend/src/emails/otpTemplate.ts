@@ -11,83 +11,78 @@ export const otpTemplate = ({
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>Your OTP Verification Code - TaskForge AI</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body {
       margin: 0;
       padding: 0;
-      background-color: #030712;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
     .email-container {
-      max-width: 540px;
+      max-width: 560px;
       margin: 40px auto;
-      background-color: #0b0f19;
-      border: 1px solid #1f2937;
-      border-radius: 24px;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     .header {
-      background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
-      padding: 48px 32px 32px;
+      background-color: #7c3aed;
+      padding: 40px 32px;
       text-align: center;
-      border-bottom: 1px solid rgba(31, 41, 55, 0.5);
     }
     .logo-glow {
       display: inline-block;
       width: 64px;
       height: 64px;
       line-height: 64px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%);
-      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 18px;
+      background-color: rgba(255, 255, 255, 0.15);
       font-size: 28px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       text-align: center;
     }
     .title {
       margin: 0;
-      color: #f3f4f6;
+      color: #ffffff;
       font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
     }
     .brand {
-      background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: #8b5cf6;
+      color: #ddd6fe;
     }
     .content {
       padding: 40px 32px;
     }
     .greeting {
-      color: #f3f4f6;
+      color: #0f172a;
       font-size: 18px;
       font-weight: 700;
       margin-top: 0;
       margin-bottom: 12px;
     }
     .text {
-      color: #9ca3af;
+      color: #475569;
       font-size: 15px;
       line-height: 1.6;
       margin-top: 0;
       margin-bottom: 28px;
     }
     .code-container {
-      background: #111827;
-      border: 1px dashed rgba(139, 92, 246, 0.3);
-      border-radius: 16px;
+      background-color: #f8fafc;
+      border: 1px dashed #c4b5fd;
+      border-radius: 14px;
       padding: 24px;
       margin-bottom: 28px;
       text-align: center;
     }
     .code-label {
-      color: #6b7280;
+      color: #64748b;
       font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
@@ -96,26 +91,27 @@ export const otpTemplate = ({
       margin-bottom: 8px;
     }
     .code-value {
+      font-family: 'Courier New', Courier, monospace;
       font-size: 38px;
       font-weight: 800;
       letter-spacing: 6px;
-      color: #a78bfa;
+      color: #7c3aed;
       margin: 0;
     }
     .warning {
-      color: #ef4444;
+      color: #dc2626;
       font-size: 13px;
       font-weight: 500;
       margin-bottom: 28px;
     }
     .footer {
-      background-color: #070a13;
+      background-color: #f8fafc;
       padding: 32px;
       text-align: center;
-      border-top: 1px solid rgba(31, 41, 55, 0.5);
+      border-top: 1px solid #e2e8f0;
     }
     .footer-text {
-      color: #4b5563;
+      color: #94a3b8;
       font-size: 12px;
       line-height: 1.5;
       margin: 0;
@@ -127,19 +123,19 @@ export const otpTemplate = ({
     <div class="header">
       <div class="logo-glow">🔒</div>
       <h1 class="title">Verify Your Login</h1>
-      <p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">Two-Factor Authentication (2FA)</p>
+      <p style="color: #ddd6fe; font-size: 14px; margin: 8px 0 0 0;">Two-Factor Authentication (2FA)</p>
     </div>
     <div class="content">
       <h2 class="greeting">Hello,</h2>
-      <p class="text">We received a request to log in to your <span class="brand">TaskForge AI</span> account. Please use the following verification code to complete your sign-in process.</p>
-      
+      <p class="text">We received a request to log in to your <span style="color: #7c3aed; font-weight: 600;">TaskForge AI</span> account. Please use the following verification code to complete your sign-in process.</p>
+
       <div class="code-container">
         <h3 class="code-label">Verification Code</h3>
         <p class="code-value">${token}</p>
       </div>
-      
+
       <p class="warning">⚠️ This code is only valid for 5 minutes. Do not share this code with anyone.</p>
-      
+
       <p class="text" style="margin-bottom: 0;">If you did not request this login, please change your account password immediately to secure your workspace.</p>
     </div>
     <div class="footer">

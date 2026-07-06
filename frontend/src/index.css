@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  /* Custom breakpoints */
+  --breakpoint-3xl: 1750px;
+
   /* Custom font sizes */
   --font-size-xxs: 0.625rem;       /* 10px — used as text-xxs across the app */
   --font-size-xxs--line-height: 1rem;
