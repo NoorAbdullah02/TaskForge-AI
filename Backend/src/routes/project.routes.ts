@@ -21,16 +21,13 @@ router.post('/:id/duplicate', checkValiditi, ProjectController.duplicateProject)
 router.put('/:id/move', checkValiditi, ProjectController.moveProject);
 router.put('/:id/transfer-ownership', checkValiditi, ProjectController.transferOwnership);
 
-// Members Management
 router.post('/:id/members', checkValiditi, ProjectController.assignMember);
 router.delete('/:id/members/:userId', checkValiditi, ProjectController.removeMember);
 
-// Tasks & Milestones Management inside a Project
 router.post('/:id/tasks', checkValiditi, ProjectController.createTask);
 router.put('/:id/tasks/:taskId', checkValiditi, ProjectController.updateTask);
 router.delete('/:id/tasks/:taskId', checkValiditi, ProjectController.deleteTask);
 
-// Project Documents
 router.get('/:id/documents', checkValiditi, ProjectController.getProjectDocuments);
 router.post('/:id/documents', checkValiditi, ProjectController.addProjectDocument);
 router.delete('/:id/documents/:docId', checkValiditi, ProjectController.deleteProjectDocument);
