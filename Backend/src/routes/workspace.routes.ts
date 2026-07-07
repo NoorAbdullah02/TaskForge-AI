@@ -4,11 +4,9 @@ import { WorkspaceController } from '../controllers/workspaceController';
 
 const router = Router();
 
-// Public routes for workspace onboarding
 router.post('/create', WorkspaceController.createWorkspace);
 router.post('/join', WorkspaceController.joinWorkspace);
 
-// Authenticated routes
 router.use(checkValiditi);
 
 router.get('/user-workspaces', WorkspaceController.getUserWorkspaces);

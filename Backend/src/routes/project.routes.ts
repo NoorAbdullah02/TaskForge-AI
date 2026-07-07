@@ -4,7 +4,6 @@ import { checkValiditi } from '../middleware/checkValidUser';
 
 const router = Router();
 
-// Projects REST API
 router.get('/export', checkValiditi, ProjectController.exportProjects);
 router.post('/import', checkValiditi, ProjectController.importProjects);
 router.post('/join', checkValiditi, ProjectController.joinProject);
