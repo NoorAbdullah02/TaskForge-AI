@@ -399,7 +399,7 @@ export default function ProfilePage() {
                             <Settings className="w-7 h-7 text-blue-500" />
                             {getSettingsTitle()}
                         </h1>
-                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink0'}`}>
+                        <p className={`text-xs mt-1 font-medium ${settings.theme === 'dark' ? 'text-ink-soft' : 'text-ink-faint'}`}>
                             Adjust role settings, manage active login tokens, generate API access codes, and customize workspace viewports.
                         </p>
                     </div>
@@ -479,7 +479,7 @@ export default function ProfilePage() {
                                             </div>
                                             <div className="text-center sm:text-left">
                                                 <h3 className="text-lg font-bold">{profileData.name}</h3>
-                                                <p className="text-xs text-ink0 mt-1">{profileData.position || 'Professional Specialist'}</p>
+                                                <p className="text-xs text-ink-faint mt-1">{profileData.position || 'Professional Specialist'}</p>
                                                 <div className="mt-2">{getRoleBadge(profileData.role)}</div>
                                             </div>
                                         </div>
@@ -558,7 +558,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Credentials</h3>
-                                            <p className="text-xs text-ink0 mt-1">Change your login passcode to keep your active workspace secure.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Change your login passcode to keep your active workspace secure.</p>
                                         </div>
 
                                         <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
@@ -578,7 +578,7 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
                                                     >
                                                         {showPasswords.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -601,7 +601,7 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
                                                     >
                                                         {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -624,7 +624,7 @@ export default function ProfilePage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink0"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
                                                     >
                                                         {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </button>
@@ -650,7 +650,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Email Address & Verification</h3>
-                                            <p className="text-xs text-ink0 mt-1">Check email delivery configurations or verify your communication channel.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Check email delivery configurations or verify your communication channel.</p>
                                         </div>
 
                                         <div className={`p-5 rounded-2xl border ${
@@ -718,7 +718,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Security Center</h3>
-                                            <p className="text-xs text-ink0 mt-1">Configure advanced identity verification features to protect against spoofing.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Configure advanced identity verification features to protect against spoofing.</p>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -765,7 +765,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Notification Channels</h3>
-                                            <p className="text-xs text-ink0 mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Toggle which delivery mechanisms receive system status alerts.</p>
                                         </div>
 
                                         <div className="space-y-3">
@@ -806,7 +806,7 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Language Preferences</h3>
-                                            <p className="text-xs text-ink0 mt-1">Choose your preferred localized interface dialect.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Choose your preferred localized interface dialect.</p>
                                         </div>
 
                                         <div className="max-w-xs">
@@ -836,17 +836,17 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">Active Token Sessions</h3>
-                                            <p className="text-xs text-ink0 mt-1">Manage active device connections authorized to request workspace information.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Manage active device connections authorized to request workspace information.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
                                                 <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Device / Agent</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">IP Location</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Established</th>
-                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink0">Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Device / Agent</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">IP Location</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Established</th>
+                                                        <th className="px-6 py-3.5 text-right font-extrabold text-ink-faint">Action</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -894,17 +894,17 @@ export default function ProfilePage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h3 className="text-sm font-extrabold uppercase tracking-wider text-blue-500">User Audit Tracker</h3>
-                                            <p className="text-xs text-ink0 mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
+                                            <p className="text-xs text-ink-faint mt-1">Audit trail tracking all account edits, authentication triggers, and workspace sessions.</p>
                                         </div>
 
                                         <div className="overflow-hidden rounded-2xl border border-gray-100/10 shadow-md">
                                             <table className="min-w-full divide-y divide-gray-100/10 text-xs">
                                                 <thead className={settings.theme === 'dark' ? 'bg-surface-2' : 'bg-slate-50'}>
                                                     <tr>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Operation Action</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Execution Description</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Client IP</th>
-                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink0">Timestamp</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Operation Action</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Execution Description</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Client IP</th>
+                                                        <th className="px-6 py-3.5 text-left font-extrabold text-ink-faint">Timestamp</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100/10 font-medium">
@@ -916,7 +916,7 @@ export default function ProfilePage() {
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4 text-ink-soft font-semibold">{log.details}</td>
-                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink0">{log.ipAddress || 'Loopback'}</td>
+                                                            <td className="px-6 py-4 font-mono text-[10px] text-ink-faint">{log.ipAddress || 'Loopback'}</td>
                                                             <td className="px-6 py-4 text-ink-soft">{new Date(log.createdAt).toLocaleString()}</td>
                                                         </tr>
                                                     ))}

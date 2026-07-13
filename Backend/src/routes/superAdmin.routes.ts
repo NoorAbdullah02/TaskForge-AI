@@ -34,5 +34,13 @@ router.get('/projects', SuperAdminController.getProjects);
 router.get('/analytics', SuperAdminController.getAnalytics);
 router.get('/audit-logs', SuperAdminController.getAuditLogs);
 
+// Billing / Payment Management Endpoints
+router.get('/payments', SuperAdminController.getPayments);
+router.post('/payments/:id/approve', SuperAdminController.approvePayment);
+router.post('/payments/:id/reject', SuperAdminController.rejectPayment);
+router.post('/payments/bulk-approve', SuperAdminController.bulkApprovePayments);
+router.post('/payments/bulk-reject', SuperAdminController.bulkRejectPayments);
+router.get('/billing-analytics', SuperAdminController.getBillingAnalytics);
+
 
 export default router;

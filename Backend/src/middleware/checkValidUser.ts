@@ -96,6 +96,9 @@ export async function checkValiditi(req: Request, res: Response, next: NextFunct
         }
     }
 
-    return next();
+    if (!(req as any).user && req.path !== '/me') {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
 
+    return next();
 }

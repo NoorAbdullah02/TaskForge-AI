@@ -53,6 +53,18 @@ export class NotificationService {
         return 'monthlyReport';
       case 'birthdayWish':
         return 'birthdayWish';
+      case 'workLog.submitted':
+      case 'workLog.approved':
+      case 'workLog.rejected':
+        return 'projectUpdate';
+      case 'timesheet.submitted':
+      case 'timesheet.approved':
+      case 'timesheet.rejected':
+        return 'projectUpdate';
+      case 'subscription.trialReminder':
+      case 'subscription.trialExpired':
+      case 'subscription.expired':
+        return 'projectUpdate';
       default:
         return null;
     }
@@ -215,6 +227,48 @@ export class NotificationService {
               break;
             case 'workspaceRejection':
               html = EmailTemplates.workspaceRejection(userName, data.workspaceName);
+              break;
+            case 'trialStarted':
+              html = EmailTemplates.trialStarted(userName, data.workspaceName, data.trialEndsAt, data.link);
+              break;
+            case 'trialReminder':
+              html = EmailTemplates.trialReminder(userName, data.workspaceName, data.daysLeft, data.link);
+              break;
+            case 'trialExpired':
+              html = EmailTemplates.trialExpired(userName, data.workspaceName, data.link);
+              break;
+            case 'paymentSubmitted':
+              html = EmailTemplates.paymentSubmitted(userName, data.workspaceName, data.plan, data.amountText, data.transactionId);
+              break;
+            case 'paymentApproved':
+              html = EmailTemplates.paymentApproved(userName, data.workspaceName, data.plan, data.link);
+              break;
+            case 'paymentRejected':
+              html = EmailTemplates.paymentRejected(userName, data.workspaceName, data.reason, data.link);
+              break;
+            case 'subscriptionRenewed':
+              html = EmailTemplates.subscriptionRenewed(userName, data.workspaceName, data.plan, data.periodEnd);
+              break;
+            case 'invoiceGenerated':
+              html = EmailTemplates.invoiceGenerated(userName, data.workspaceName, data.invoiceNumber, data.amountText, data.link);
+              break;
+            case 'workLogSubmitted':
+              html = EmailTemplates.workLogSubmitted(userName, data.employeeName, data.logTitle, data.logDate, data.hoursWorked, data.link);
+              break;
+            case 'workLogApproved':
+              html = EmailTemplates.workLogApproved(userName, data.logTitle, data.logDate, data.approvedBy, data.link);
+              break;
+            case 'workLogRejected':
+              html = EmailTemplates.workLogRejected(userName, data.logTitle, data.logDate, data.reviewedBy, data.reason, data.isChangesRequested, data.link);
+              break;
+            case 'timesheetSubmitted':
+              html = EmailTemplates.timesheetSubmitted(userName, data.employeeName, data.periodType, data.periodStart, data.periodEnd, data.totalHours, data.link);
+              break;
+            case 'timesheetApproved':
+              html = EmailTemplates.timesheetApproved(userName, data.periodType, data.periodStart, data.periodEnd, data.approvedBy, data.link);
+              break;
+            case 'timesheetRejected':
+              html = EmailTemplates.timesheetRejected(userName, data.periodType, data.periodStart, data.periodEnd, data.reviewedBy, data.reason, data.link);
               break;
           }
 

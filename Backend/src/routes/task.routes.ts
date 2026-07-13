@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TaskController } from '../controllers/task.controller';
 import { checkValiditi } from '../middleware/checkValidUser';
+import { subscriptionGate } from '../middleware/subscriptionGate.middleware';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.post('/templates/:templateId/apply', checkValiditi, TaskController.applyT
 
 // Tasks REST API
 router.get('/', checkValiditi, TaskController.getUserTasks);
-router.post('/', checkValiditi, TaskController.createTask);
+router.post('/', checkValiditi, subscriptionGate, TaskController.createTask);
 
 router.get('/:id', checkValiditi, TaskController.getTaskDetails);
 router.put('/:id', checkValiditi, TaskController.updateTask);

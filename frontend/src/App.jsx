@@ -33,9 +33,12 @@ const ExecutiveDashboard           = lazy(() => import('./Pages/ExecutiveDashboa
 const ChatHub                      = lazy(() => import('./Pages/ChatHub.jsx'))
 const KnowledgeBase                = lazy(() => import('./Pages/KnowledgeBase.jsx'))
 const TimeTracker                  = lazy(() => import('./Pages/TimeTracker.jsx'))
+const WorkLogPage                  = lazy(() => import('./Pages/WorkLogPage.jsx'))
+const TimesheetPage                = lazy(() => import('./Pages/TimesheetPage.jsx'))
 const WorkspaceCalendar            = lazy(() => import('./Pages/WorkspaceCalendar.jsx'))
 const AfterRegister                = lazy(() => import('./Pages/AfterRegister.jsx'))
 const SprintPlanningPage           = lazy(() => import('./Pages/SprintPlanningPage.jsx'))
+const BillingPage                  = lazy(() => import('./Pages/BillingPage.jsx'))
 
 /* ── Page loader: top progress bar + subtle fade, no layout-shifting spinner ── */
 const PageLoader = () => (
@@ -117,6 +120,8 @@ const App = () => {
             <Route path="/chat"                  element={<ProtectedRoute><ChatHub /></ProtectedRoute>} />
             <Route path="/kb"                    element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
             <Route path="/time-tracker"          element={<ProtectedRoute><TimeTracker /></ProtectedRoute>} />
+            <Route path="/work-log"              element={<ProtectedRoute><WorkLogPage /></ProtectedRoute>} />
+            <Route path="/timesheet"             element={<ProtectedRoute><TimesheetPage /></ProtectedRoute>} />
             <Route path="/calendar"              element={<ProtectedRoute><WorkspaceCalendar /></ProtectedRoute>} />
             <Route path="/ai-workspace"          element={<ProtectedRoute><AIWorkspace /></ProtectedRoute>} />
             <Route path="/enterprise-ai"         element={<ProtectedRoute><EnterpriseAIPage /></ProtectedRoute>} />
@@ -126,6 +131,7 @@ const App = () => {
             <Route path="/dashboard"             element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/executive-dashboard"   element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
             <Route path="/sprint-planning"       element={<ProtectedRoute><SprintPlanningPage /></ProtectedRoute>} />
+            <Route path="/billing"               element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
 
             <Route path="/"                      element={isLoggedIn ? <Dashboard /> : <LandingPage />} />
             <Route path="*"                      element={<Navigate to="/" />} />

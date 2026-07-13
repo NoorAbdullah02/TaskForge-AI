@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     getTasks,
-    updateTask,
     bulkUpdateTasks,
     bulkDeleteTasks,
     getTemplates,
@@ -16,9 +15,10 @@ import {
 import { getProjects } from '../Services/projectApi';
 import TaskModal from '../Components/TaskModal';
 import KanbanBoard from '../Components/KanbanBoard';
+import { Modal } from '../design-system/primitives';
 
 import {
-    CheckSquare, Plus, LayoutGrid, List, Filter, Calendar, AlertCircle,
+    CheckSquare, Plus, LayoutGrid, List, Table, Filter, Calendar, AlertCircle,
     Loader, Loader2, Trophy, ArrowRight, ChevronDown, Trash2, Copy, Archive,
     RefreshCw, LayoutTemplate, Tag, Layers, Users, CheckCircle2,
     SlidersHorizontal, Search, X, Star, Lock, Eye, Clock, Zap
@@ -35,9 +35,15 @@ const PRIORITY_COLORS = {
 const STATUS_LABELS = {
     backlog: 'Backlog',
     todo: 'To Do',
+    ready: 'Ready',
     'in-progress': 'In Progress',
-    review: 'In Review',
+    'code-review': 'Code Review',
+    testing: 'Testing',
+    qa: 'QA',
+    blocked: 'Blocked',
+    review: 'Review',
     done: 'Completed',
+    archived: 'Archived',
 };
 
 const STATUS_STATES = Object.keys(STATUS_LABELS);
@@ -45,9 +51,15 @@ const STATUS_STATES = Object.keys(STATUS_LABELS);
 const STATUS_COLORS = {
     backlog: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
     todo: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    ready: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
     'in-progress': 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    'code-review': 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+    testing: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20',
+    qa: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    blocked: 'bg-red-500/10 text-red-500 border border-red-500/20',
     review: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
     done: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    archived: 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20',
 };
 
 // ─── Bulk Toolbar ──────────────────────────────────────────────────────────
@@ -64,7 +76,7 @@ const BulkToolbar = ({
     return (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-800 text-white rounded-3xl shadow-2xl px-6 py-3.5 flex items-center gap-4 animate-slide-up">
             <span className="text-sm font-bold text-blue-400">{selectedIds.length} selected</span>
-            <div className="w-px h-5 bg-slate-850" />
+            <div className="w-px h-5 bg-slate-800" />
 
             {/* Status Change */}
             <div className="relative">
@@ -251,6 +263,16 @@ const TaskRow = ({ task, selected, onSelect, onNavigate, onEdit }) => (
                 {task.isLocked && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 {task.isRecurring && <RefreshCw className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
                 <span className="font-bold text-ink text-sm leading-tight">{task.title}</span>
+                {task.isTimerActive && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider animate-pulse">
+                        ⏱️ Tracking
+                    </span>
+                )}
+                {task.isPomodoroActive && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-black uppercase tracking-wider animate-pulse">
+                        🍅 Focus
+                    </span>
+                )}
             </div>
             {(task.labels || task.category) && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
@@ -339,6 +361,307 @@ const StatsBar = ({ tasks }) => {
     );
 };
 
+// ─── Table View ────────────────────────────────────────────────────────────
+const TableView = ({ tasks, selectedIds, toggleSelect, allVisibleSelected, selectAll, navigate }) => (
+    <div className="bg-card rounded-3xl shadow-soft border border-line overflow-hidden">
+        <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+                <thead className="bg-surface-2/40 border-b border-line">
+                    <tr>
+                        <th className="px-4 py-3.5 border-r border-line/50 w-12 text-center">
+                            <input
+                                type="checkbox"
+                                checked={allVisibleSelected}
+                                onChange={selectAll}
+                                className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                            />
+                        </th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">ID</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Task Title</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Project</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Priority</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Est. Hours</th>
+                        <th className="px-4 py-3.5 border-r border-line/50 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Actual Hours</th>
+                        <th className="px-4 py-3.5 text-left font-bold text-ink-soft text-xs uppercase tracking-wider">Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tasks.map(t => (
+                        <tr key={t.id} className="border-b border-line hover:bg-surface-2/30 transition text-sm cursor-pointer" onClick={() => navigate(`/tasks/${t.id}`)}>
+                            <td className="px-4 py-3 border-r border-line/50 text-center" onClick={e => e.stopPropagation()}>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedIds.includes(t.id)}
+                                    onChange={() => toggleSelect(t.id)}
+                                    className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                                />
+                            </td>
+                            <td className="px-4 py-3 border-r border-line/50 font-bold text-ink-soft text-xs">TSK-{t.id}</td>
+                            <td className="px-4 py-3 border-r border-line/50 font-bold text-ink text-sm">
+                                <div className="flex items-center gap-2">
+                                    {t.title}
+                                    {t.isTimerActive && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                            ⏱️ Tracking
+                                        </span>
+                                    )}
+                                    {t.isPomodoroActive && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                            🍅 Focus
+                                        </span>
+                                    )}
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 border-r border-line/50 text-ink-soft text-xs font-semibold">{t.projectName || '—'}</td>
+                            <td className="px-4 py-3 border-r border-line/50">
+                                <span className={`px-2 py-0.5 rounded-full text-xxs font-extrabold uppercase border ${STATUS_COLORS[t.status] || 'bg-slate-500/10 text-slate-400'}`}>
+                                    {STATUS_LABELS[t.status] || t.status}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3 border-r border-line/50">
+                                <span className={`px-2 py-0.5 rounded text-xxs font-extrabold uppercase border ${PRIORITY_COLORS[t.priority] || PRIORITY_COLORS.medium}`}>
+                                    {t.priority}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3 border-r border-line/50 font-bold text-ink-soft text-xs">{t.estimatedHours ? `${t.estimatedHours}h` : '—'}</td>
+                            <td className="px-4 py-3 border-r border-line/50 font-bold text-ink-soft text-xs">{t.actualHours ? `${t.actualHours}h` : '—'}</td>
+                            <td className="px-4 py-3 text-ink-soft font-semibold text-xs">{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+// ─── Calendar View ─────────────────────────────────────────────────────────
+const CalendarView = ({ tasks, navigate }) => {
+    const today = new Date();
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const monthStart = new Date(year, month, 1);
+    const startDay = monthStart.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells = [];
+    const prevDays = new Date(year, month, 0).getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+        cells.push({ day: prevDays - i, currentMonth: false, date: new Date(year, month - 1, prevDays - i) });
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+        cells.push({ day: i, currentMonth: true, date: new Date(year, month, i) });
+    }
+    let nextDay = 1;
+    while (cells.length % 7 !== 0) {
+        cells.push({ day: nextDay++, currentMonth: false, date: new Date(year, month + 1, nextDay - 1) });
+    }
+
+    const sameDay = (d1, d2) => {
+        return d1.getFullYear() === d2.getFullYear() &&
+               d1.getMonth() === d2.getMonth() &&
+               d1.getDate() === d2.getDate();
+    };
+
+    const getTasksForDate = (date) => {
+        return tasks.filter(t => t.dueDate && sameDay(new Date(t.dueDate), date));
+    };
+
+    return (
+        <div className="bg-card rounded-3xl border border-line p-6 shadow-soft">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-ink">
+                    {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                </h3>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                        className="px-3 py-1.5 border border-line rounded-xl bg-surface-2 hover:bg-line transition cursor-pointer text-xs font-bold text-ink"
+                    >
+                        Prev
+                    </button>
+                    <button
+                        onClick={() => setCurrentDate(new Date())}
+                        className="px-3 py-1.5 border border-line rounded-xl bg-surface-2 hover:bg-line transition cursor-pointer text-xs font-bold text-ink"
+                    >
+                        Today
+                    </button>
+                    <button
+                        onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                        className="px-3 py-1.5 border border-line rounded-xl bg-surface-2 hover:bg-line transition cursor-pointer text-xs font-bold text-ink"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-extrabold text-ink-soft uppercase border-b border-line pb-2 mb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d}>{d}</div>)}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+                {cells.map((cell, idx) => {
+                    const dateTasks = getTasksForDate(cell.date);
+                    const isToday = sameDay(cell.date, today);
+                    return (
+                        <div
+                            key={idx}
+                            className={`min-h-[100px] border border-line/40 rounded-2xl p-2 flex flex-col justify-between transition-colors ${
+                                cell.currentMonth ? 'bg-card' : 'bg-surface-2/20 text-ink-faint'
+                            } ${isToday ? 'border-blue-500 bg-blue-500/5' : ''}`}
+                        >
+                            <span className={`text-xs font-bold ${isToday ? 'text-blue-500' : 'text-ink-soft'}`}>{cell.day}</span>
+                            <div className="flex-1 mt-1 space-y-1 overflow-y-auto max-h-[80px] scrollbar-none">
+                                {dateTasks.map(t => (
+                                    <div
+                                        key={t.id}
+                                        onClick={() => navigate(`/tasks/${t.id}`)}
+                                        className="text-[9px] font-bold px-2 py-0.5 rounded-lg border border-line text-ink bg-surface-2 hover:border-blue-500 cursor-pointer truncate"
+                                    >
+                                        {t.title}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ─── Timeline View ─────────────────────────────────────────────────────────
+const TimelineView = ({ tasks, navigate }) => {
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    const days = [];
+    for (let i = 0; i < 30; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        days.push(d);
+    }
+
+    return (
+        <div className="bg-card rounded-3xl border border-line p-6 shadow-soft overflow-x-auto">
+            <div className="min-w-[1200px]">
+                <div className="flex border-b border-line pb-3 mb-4">
+                    <div className="w-1/4 font-extrabold text-xs text-ink-soft uppercase">Task</div>
+                    <div className="w-3/4 flex justify-between gap-1 text-[10px] font-bold text-ink-faint text-center">
+                        {days.map((d, i) => (
+                            <div key={i} className="flex-1 border-l border-line/30 min-w-[30px]">
+                                {d.getDate()} <br /> {d.toLocaleDateString(undefined, { weekday: 'short' })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    {tasks.map(t => {
+                        const taskStart = new Date(t.createdAt || new Date());
+                        const taskDue = t.dueDate ? new Date(t.dueDate) : new Date();
+                        const totalSpan = days[days.length - 1].getTime() - days[0].getTime();
+                        let leftPercent = ((taskStart.getTime() - days[0].getTime()) / totalSpan) * 100;
+                        let widthPercent = (((taskDue.getTime() - taskStart.getTime()) || (24 * 60 * 60 * 1000)) / totalSpan) * 100;
+
+                        leftPercent = Math.max(0, Math.min(100, leftPercent));
+                        widthPercent = Math.max(2, Math.min(100 - leftPercent, widthPercent));
+
+                        return (
+                            <div key={t.id} className="flex items-center hover:bg-surface-2/20 py-2 rounded-xl transition">
+                                <div className="w-1/4 font-bold text-xs text-ink truncate cursor-pointer hover:text-blue-500" onClick={() => navigate(`/tasks/${t.id}`)}>
+                                    {t.title}
+                                </div>
+                                <div className="w-3/4 relative h-6">
+                                    <div
+                                        onClick={() => navigate(`/tasks/${t.id}`)}
+                                        style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                                        className={`absolute h-full rounded-full flex items-center px-3 text-[10px] font-bold text-white shadow-sm cursor-pointer select-none truncate ${
+                                            t.status === 'done' ? 'bg-emerald-500' :
+                                            t.status === 'blocked' ? 'bg-red-500' :
+                                            'bg-blue-600'
+                                        }`}
+                                    >
+                                        TSK-{t.id}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Gantt View ────────────────────────────────────────────────────────────
+const GanttView = ({ tasks, navigate }) => {
+    const start = new Date();
+    start.setDate(start.getDate() - 3);
+    const days = [];
+    for (let i = 0; i < 21; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        days.push(d);
+    }
+
+    return (
+        <div className="bg-card rounded-3xl border border-line p-6 shadow-soft overflow-x-auto">
+            <div className="min-w-[1000px]">
+                <div className="flex border-b border-line pb-3 mb-4">
+                    <div className="w-1/4 font-extrabold text-xs text-ink-soft uppercase flex items-center">Gantt Tasks</div>
+                    <div className="w-3/4 flex justify-between gap-1 text-[10px] font-bold text-ink-faint text-center">
+                        {days.map((d, i) => (
+                            <div key={i} className="flex-1 border-l border-line/30">
+                                {d.getDate()} <br /> {d.toLocaleDateString(undefined, { weekday: 'narrow' })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {tasks.map(t => {
+                        const startD = new Date(t.createdAt);
+                        const endD = t.dueDate ? new Date(t.dueDate) : new Date(startD.getTime() + 48*60*60*1000);
+                        const totalSpan = days[days.length - 1].getTime() - days[0].getTime();
+                        let leftPercent = ((startD.getTime() - days[0].getTime()) / totalSpan) * 100;
+                        let widthPercent = ((endD.getTime() - startD.getTime()) / totalSpan) * 100;
+
+                        leftPercent = Math.max(0, Math.min(100, leftPercent));
+                        widthPercent = Math.max(3, Math.min(100 - leftPercent, widthPercent));
+
+                        return (
+                            <div key={t.id} className="flex items-center py-1">
+                                <div className="w-1/4 pr-4">
+                                    <div className="font-bold text-xs text-ink truncate cursor-pointer hover:text-blue-500" onClick={() => navigate(`/tasks/${t.id}`)}>
+                                        {t.title}
+                                    </div>
+                                    <span className="text-[9px] font-semibold text-ink-soft capitalize">{t.priority} priority</span>
+                                </div>
+                                <div className="w-3/4 relative h-7 bg-surface-2/20 border border-line/30 rounded-xl overflow-hidden">
+                                    <div
+                                        onClick={() => navigate(`/tasks/${t.id}`)}
+                                        style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                                        className={`absolute top-1 bottom-1 rounded-lg flex items-center justify-between px-2 text-[9px] font-black text-white cursor-pointer select-none truncate ${
+                                            t.status === 'done' ? 'bg-emerald-500 shadow-emerald-500/20' :
+                                            t.status === 'blocked' ? 'bg-rose-500 shadow-rose-500/20' :
+                                            'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/20'
+                                        }`}
+                                    >
+                                        <span className="truncate">{t.projectName}</span>
+                                        <span>🏁</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ─── Main Component ────────────────────────────────────────────────────────
 const TasksPage = () => {
     const { isLoggedIn, loading: authLoading } = useAuth();
@@ -347,6 +670,20 @@ const TasksPage = () => {
     const [templates, setTemplates] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState('kanban');
+    const [showColumnModal, setShowColumnModal] = useState(false);
+    const [columnsConfig, setColumnsConfig] = useState([
+        { key: 'backlog', label: 'Backlog', wipLimit: 20, visible: true, color: 'bg-slate-500' },
+        { key: 'todo', label: 'To Do', wipLimit: 10, visible: true, color: 'bg-blue-500' },
+        { key: 'ready', label: 'Ready', wipLimit: 5, visible: true, color: 'bg-teal-500' },
+        { key: 'in-progress', label: 'In Progress', wipLimit: 3, visible: true, color: 'bg-amber-500 animate-pulse' },
+        { key: 'code-review', label: 'Code Review', wipLimit: 3, visible: true, color: 'bg-indigo-500' },
+        { key: 'testing', label: 'Testing', wipLimit: 5, visible: true, color: 'bg-cyan-500' },
+        { key: 'qa', label: 'QA', wipLimit: 5, visible: true, color: 'bg-rose-500' },
+        { key: 'blocked', label: 'Blocked', wipLimit: 3, visible: true, color: 'bg-red-500' },
+        { key: 'review', label: 'Review', wipLimit: 5, visible: true, color: 'bg-purple-500' },
+        { key: 'done', label: 'Completed', wipLimit: 100, visible: true, color: 'bg-emerald-500' },
+        { key: 'archived', label: 'Archived', wipLimit: 100, visible: true, color: 'bg-zinc-500' }
+    ]);
 
     // Filters
     const [selectedProject, setSelectedProject] = useState('');
@@ -418,13 +755,6 @@ const TasksPage = () => {
     useEffect(() => { if (isLoggedIn) fetchTasksList(); }, [isLoggedIn, fetchTasksList]);
 
     const handleTaskSaved = () => { fetchTasksList(); setEditingTask(null); };
-
-    const handleUpdateTaskStatus = async (taskId, newStatus) => {
-        try {
-            await updateTask(taskId, { status: newStatus });
-            fetchTasksList();
-        } catch { toast.error('Failed to update status'); }
-    };
 
     // ─── Selection ─────────────────────────────────────────────────────────
     const toggleSelect = (id) => {
@@ -515,7 +845,7 @@ const TasksPage = () => {
     };
 
     // ─── Filtered tasks ────────────────────────────────────────────────────
-    const filteredTasks = tasks.filter(t => {
+    const filteredTasks = useMemo(() => tasks.filter(t => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
         return (
@@ -524,7 +854,7 @@ const TasksPage = () => {
             t.labels?.toLowerCase().includes(q) ||
             t.category?.toLowerCase().includes(q)
         );
-    });
+    }), [tasks, searchQuery]);
 
     // ─── Render ────────────────────────────────────────────────────────────
     if (authLoading || isLoading) {
@@ -565,7 +895,7 @@ const TasksPage = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => setShowTemplatePanel(true)}
-                            className="px-4 py-3 bg-surface-2 hover:bg-surface-3 border border-line text-ink font-bold rounded-2xl hover:border-blue-500/50 hover:text-blue-400 transition flex items-center gap-2 text-xs cursor-pointer shadow-sm active:scale-95"
+                            className="px-4 py-3 bg-surface-2 hover:bg-line border border-line text-ink font-bold rounded-2xl hover:border-blue-500/50 hover:text-blue-400 transition flex items-center gap-2 text-xs cursor-pointer shadow-sm active:scale-95"
                         >
                             <LayoutTemplate className="w-4.5 h-4.5 text-blue-400" /> Templates
                         </button>
@@ -614,19 +944,30 @@ const TasksPage = () => {
                                 <Archive className="w-3.5 h-3.5" /> {showArchived ? 'Archived' : 'Active'}
                             </button>
 
-                            <div className="flex bg-surface-2/60 p-1 rounded-xl border border-line">
-                                <button
-                                    onClick={() => setViewMode('kanban')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'kanban' ? 'bg-card text-blue-400 shadow-sm' : 'text-ink-soft hover:text-ink'}`}
-                                >
-                                    <LayoutGrid className="w-3.5 h-3.5" /> Board
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${viewMode === 'list' ? 'bg-card text-blue-400 shadow-sm' : 'text-ink-soft hover:text-ink'}`}
-                                >
-                                    <List className="w-3.5 h-3.5" /> List
-                                </button>
+                            <button
+                                onClick={() => setShowColumnModal(true)}
+                                className="flex items-center gap-1.5 px-4 py-2 border border-line text-ink-soft bg-surface-2 hover:border-line-active rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Columns
+                            </button>
+
+                            <div className="flex bg-surface-2/60 p-1 rounded-xl border border-line flex-wrap gap-1">
+                                {[
+                                    { mode: 'kanban', label: 'Board', icon: LayoutGrid },
+                                    { mode: 'list', label: 'List', icon: List },
+                                    { mode: 'table', label: 'Table', icon: Table },
+                                    { mode: 'calendar', label: 'Calendar', icon: Calendar },
+                                    { mode: 'timeline', label: 'Timeline', icon: Clock },
+                                    { mode: 'gantt', label: 'Gantt', icon: Layers }
+                                ].map(item => (
+                                    <button
+                                        key={item.mode}
+                                        onClick={() => setViewMode(item.mode)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${viewMode === item.mode ? 'bg-card text-blue-400 shadow-sm' : 'text-ink-soft hover:text-ink'}`}
+                                    >
+                                        <item.icon className="w-3.5 h-3.5" /> {item.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -666,7 +1007,7 @@ const TasksPage = () => {
                             {(selectedProject || selectedPriority || selectedStatus) && (
                                 <button
                                     onClick={() => { setSelectedProject(''); setSelectedPriority(''); setSelectedStatus(''); }}
-                                    className="px-3 py-2 bg-surface-2 hover:bg-surface-3 text-ink-soft font-bold rounded-xl text-xs transition border border-line flex items-center gap-1 cursor-pointer"
+                                    className="px-3 py-2 bg-surface-2 hover:bg-line text-ink-soft font-bold rounded-xl text-xs transition border border-line flex items-center gap-1 cursor-pointer"
                                 >
                                     <X className="w-3 h-3" /> Clear
                                 </button>
@@ -693,10 +1034,9 @@ const TasksPage = () => {
                         setTasks={setTasks}
                         onCardClick={(id) => navigate(`/tasks/${id}`)}
                         priorityColors={PRIORITY_COLORS}
-                        statusStates={STATUS_STATES}
-                        statusTitles={STATUS_LABELS}
+                        columnsConfig={columnsConfig}
                     />
-                ) : (
+                ) : viewMode === 'list' ? (
                     <div className="bg-card rounded-3xl shadow-soft border border-line overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -730,7 +1070,31 @@ const TasksPage = () => {
                             </table>
                         </div>
                     </div>
-                )}
+                ) : viewMode === 'table' ? (
+                    <TableView
+                        tasks={filteredTasks}
+                        selectedIds={selectedIds}
+                        toggleSelect={toggleSelect}
+                        allVisibleSelected={allVisibleSelected}
+                        selectAll={selectAll}
+                        navigate={navigate}
+                    />
+                ) : viewMode === 'calendar' ? (
+                    <CalendarView
+                        tasks={filteredTasks}
+                        navigate={navigate}
+                    />
+                ) : viewMode === 'timeline' ? (
+                    <TimelineView
+                        tasks={filteredTasks}
+                        navigate={navigate}
+                    />
+                ) : viewMode === 'gantt' ? (
+                    <GanttView
+                        tasks={filteredTasks}
+                        navigate={navigate}
+                    />
+                ) : null}
 
                 <BulkToolbar
                     selectedIds={selectedIds}
@@ -763,6 +1127,120 @@ const TasksPage = () => {
                         onClose={() => setShowTemplatePanel(false)}
                     />
                 )}
+
+                {/* Customize Columns Modal */}
+                <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Customize Columns & WIP Limits" size="lg">
+                    <div className="space-y-4">
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                            {columnsConfig.map((col, idx) => (
+                                <div key={col.key} className="flex items-center justify-between gap-3 p-3 bg-surface-2/40 border border-line rounded-xl">
+                                    <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={col.visible}
+                                            onChange={() => {
+                                                const updated = [...columnsConfig];
+                                                updated[idx].visible = !updated[idx].visible;
+                                                setColumnsConfig(updated);
+                                            }}
+                                            className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={col.label}
+                                            onChange={(e) => {
+                                                const updated = [...columnsConfig];
+                                                updated[idx].label = e.target.value;
+                                                setColumnsConfig(updated);
+                                            }}
+                                            className="bg-transparent font-bold text-sm text-ink border-b border-transparent focus:border-blue-500 focus:outline-none px-1 py-0.5"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xxs font-bold text-ink-soft">WIP:</span>
+                                        <input
+                                            type="number"
+                                            value={col.wipLimit || ''}
+                                            onChange={(e) => {
+                                                const updated = [...columnsConfig];
+                                                updated[idx].wipLimit = e.target.value ? parseInt(e.target.value, 10) : 0;
+                                                setColumnsConfig(updated);
+                                            }}
+                                            className="w-16 px-2 py-1 bg-surface-2 border border-line rounded-lg text-xs font-bold text-ink focus:outline-none focus:border-blue-500"
+                                        />
+                                        {col.key !== 'todo' && col.key !== 'done' && (
+                                            <button
+                                                onClick={() => {
+                                                    setColumnsConfig(columnsConfig.filter(c => c.key !== col.key));
+                                                }}
+                                                className="p-1 hover:text-red-500 text-ink-soft transition cursor-pointer"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Add Custom Column Form */}
+                        <div className="border-t border-line pt-4 flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="New column label..."
+                                id="newColLabel"
+                                className="flex-1 px-4 py-2.5 bg-surface-2 border border-line rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-500 text-ink"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const val = e.currentTarget.value.trim();
+                                        if (val) {
+                                            const key = val.toLowerCase().replace(/\s+/g, '-');
+                                            if (columnsConfig.some(c => c.key === key)) {
+                                                toast.error('Column key already exists');
+                                                return;
+                                            }
+                                            setColumnsConfig([...columnsConfig, {
+                                                key,
+                                                label: val,
+                                                wipLimit: 5,
+                                                visible: true,
+                                                color: 'bg-indigo-500'
+                                            }]);
+                                            e.currentTarget.value = '';
+                                            toast.success('Column added!');
+                                        }
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    const el = document.getElementById('newColLabel');
+                                    const val = el.value.trim();
+                                    if (val) {
+                                        const key = val.toLowerCase().replace(/\s+/g, '-');
+                                        if (columnsConfig.some(c => c.key === key)) {
+                                            toast.error('Column key already exists');
+                                            return;
+                                        }
+                                        setColumnsConfig([...columnsConfig, {
+                                            key,
+                                            label: val,
+                                            wipLimit: 5,
+                                            visible: true,
+                                            color: 'bg-indigo-500'
+                                        }]);
+                                        el.value = '';
+                                        toast.success('Column added!');
+                                    }
+                                }}
+                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                            >
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         </div>
     );

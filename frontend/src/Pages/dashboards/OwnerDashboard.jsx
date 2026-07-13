@@ -9,7 +9,7 @@ import {
   Users, Briefcase, CheckSquare, CalendarOff, TrendingUp, Activity,
   Building2, RefreshCw, BarChart3, Clock, Layers, Check, X,
   UserCheck, ChevronRight, Settings, Crown, Shield,
-  Copy, Link,
+  Copy, Link, Timer, Play,
 } from 'lucide-react';
 import AnimatedCounter from '../../Components/AnimatedCounter';
 import { ChartTooltip, CalendarHeatmap } from '../../Components/DashboardUtils';
@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { GlassCard, Badge, Button } from '../../design-system/primitives';
 import PendingReviewPanel from '../../Components/PendingReviewPanel';
+import { socket } from '../../Services/socket';
 
 const PROJECT_STATUS_COLORS = {
   planning: '#94a3b8', active: '#8b5cf6', in_progress: '#a855f7',
@@ -48,7 +49,9 @@ export default function OwnerDashboard({ user }) {
   const [copiedType, setCopiedType] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [liveSeconds, setLiveSeconds] = useState({});
   const headerRef = useRef(null);
+  const liveTickRef = useRef(null);
 
   const handleCopy = (text, type) => {
     if (!text) return;
@@ -77,6 +80,54 @@ export default function OwnerDashboard({ user }) {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Live-tick active timers every second. Reseeds/restarts only when the
+  // *set* of active timer IDs changes (a timer starting/stopping), not on
+  // every stats refetch — otherwise a socket-triggered refetch would reset
+  // the displayed elapsed time and cause a visible jump.
+  const activeTimersRef = useRef([]);
+  useEffect(() => {
+    activeTimersRef.current = stats?.activeTimers || [];
+  }, [stats?.activeTimers]);
+
+  const activeTimerIdsKey = (stats?.activeTimers || []).map(t => t.id).sort().join(',');
+
+  useEffect(() => {
+    const activeTimers = activeTimersRef.current;
+    if (activeTimers.length === 0) {
+      setLiveSeconds({});
+      return;
+    }
+
+    setLiveSeconds(prev => {
+      const next = {};
+      activeTimers.forEach(t => {
+        next[t.id] = t.id in prev ? prev[t.id] : (t.elapsedSeconds || 0);
+      });
+      return next;
+    });
+
+    liveTickRef.current = setInterval(() => {
+      setLiveSeconds(prev => {
+        const next = { ...prev };
+        activeTimersRef.current.forEach(t => { next[t.id] = (next[t.id] || 0) + 1; });
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(liveTickRef.current);
+  }, [activeTimerIdsKey]);
+
+  // Refresh when a timer starts/stops (real-time)
+  useEffect(() => {
+    const handle = (data) => {
+      if (data.action === 'timer_started' || data.action === 'timer_stopped') {
+        fetchAll();
+      }
+    };
+    socket.on('task_updated', handle);
+    return () => socket.off('task_updated', handle);
+  }, [fetchAll]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -183,6 +234,141 @@ export default function OwnerDashboard({ user }) {
         pendingReview={stats?.tasks?.pendingReview || 0}
         onActionDone={fetchAll}
       />
+
+      {/* ── Live Active Timers ───────────────────────────────────────── */}
+      {(stats?.activeTimers?.length > 0) && (
+        <GlassCard
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          padding="p-5"
+          className="mb-6 border border-emerald-500/20"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/15">
+                <Timer className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-ink">Active Timers — Live</h3>
+                <p className="text-xs text-ink-faint mt-0.5">Employees currently tracking time</p>
+              </div>
+            </div>
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+              {stats.activeTimers.length} Live
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.activeTimers.map(t => {
+              const secs = liveSeconds[t.id] ?? t.elapsedSeconds ?? 0;
+              const h = Math.floor(secs / 3600);
+              const m = Math.floor((secs % 3600) / 60);
+              const s = secs % 60;
+              const display = h > 0
+                ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+                : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => navigate(`/tasks/${t.id}`)}
+                  className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 hover:border-emerald-500/40 cursor-pointer transition-all group"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                    <Play className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-ink truncate group-hover:text-emerald-400 transition-colors">{t.title}</p>
+                    <p className="text-[10px] text-ink-faint mt-0.5 truncate">{t.assigneeName || 'Unassigned'} · {t.projectName}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-emerald-400 font-mono tabular-nums">{display}</p>
+                    <p className="text-[9px] text-emerald-600 font-semibold">tracking</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* ── Pending Work Logs & Timesheets Review Panel ───────────────────────────── */}
+      {(stats?.pendingWorkLogs?.length > 0 || stats?.pendingTimesheets?.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-7">
+          {/* Pending Work Logs */}
+          {stats?.pendingWorkLogs?.length > 0 && (
+            <GlassCard padding="p-6" className="border border-amber-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-400" />
+                    Work Logs Awaiting Review
+                  </h3>
+                  <p className="text-xs text-ink-faint mt-0.5">
+                    {stats.pendingWorkLogs.length} work log{stats.pendingWorkLogs.length === 1 ? '' : 's'} submitted by your team
+                  </p>
+                </div>
+                <Badge status="warning">{stats.pendingWorkLogs.length}</Badge>
+              </div>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {stats.pendingWorkLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    onClick={() => navigate('/work-log')}
+                    className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-xl bg-surface-2 border border-line hover:border-amber-500/30 transition-colors group cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink truncate">{log.title}</p>
+                      <p className="text-[11px] text-ink-faint mt-0.5 truncate">
+                        {log.userName} · {log.logDate} · {log.hoursWorked} hrs
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-ink-faint group-hover:text-amber-400 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Pending Timesheets */}
+          {stats?.pendingTimesheets?.length > 0 && (
+            <GlassCard padding="p-6" className="border border-blue-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-blue-400" />
+                    Timesheets Awaiting Review
+                  </h3>
+                  <p className="text-xs text-ink-faint mt-0.5">
+                    {stats.pendingTimesheets.length} timesheet{stats.pendingTimesheets.length === 1 ? '' : 's'} submitted for approval
+                  </p>
+                </div>
+                <Badge status="info">{stats.pendingTimesheets.length}</Badge>
+              </div>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {stats.pendingTimesheets.map((ts) => (
+                  <div
+                    key={ts.id}
+                    onClick={() => navigate('/timesheet')}
+                    className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-xl bg-surface-2 border border-line hover:border-blue-500/30 transition-colors group cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink truncate">{ts.userName}'s Timesheet</p>
+                      <p className="text-[11px] text-ink-faint mt-0.5 truncate">
+                        {ts.periodType} · {ts.periodStart} to {ts.periodEnd} · {ts.totalHours} hrs
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-ink-faint group-hover:text-blue-400 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
+        </div>
+      )}
 
       {/* ── Workspace Access & Quick Invite Panel ───────────────────────────── */}
       <AnimatePresence>

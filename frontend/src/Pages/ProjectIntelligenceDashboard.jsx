@@ -192,7 +192,7 @@ export default function ProjectIntelligenceDashboard() {
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={() => navigate(`/projects/${id}`)}
-                            className="p-3 bg-surface-2 hover:bg-gray-700/80 rounded-2xl transition border border-line text-ink-soft hover:text-ink"
+                            className="p-3 bg-surface-2 hover:bg-brand/10 rounded-2xl transition border border-line text-ink-soft hover:text-ink"
                         >
                             <ArrowLeft className="h-5 w-5" />
                         </button>
@@ -221,7 +221,7 @@ export default function ProjectIntelligenceDashboard() {
                         <button
                             onClick={handleRefreshMetrics}
                             disabled={refreshingMetrics}
-                            className="flex items-center gap-2 px-5 py-3 bg-surface-2 hover:bg-gray-700 text-ink font-semibold rounded-2xl border border-line transition text-sm cursor-pointer disabled:opacity-50"
+                            className="flex items-center gap-2 px-5 py-3 bg-surface-2 hover:bg-brand/10 text-ink font-semibold rounded-2xl border border-line transition text-sm cursor-pointer disabled:opacity-50"
                         >
                             {refreshingMetrics ? (
                                 <>
@@ -663,7 +663,7 @@ export default function ProjectIntelligenceDashboard() {
                                                         <button
                                                             onClick={() => handleDeleteDependency(dep.id)}
                                                             disabled={deletingDepId === dep.id}
-                                                            className="p-2 hover:bg-red-500/10 text-white0 hover:text-red-500 rounded-xl transition cursor-pointer disabled:opacity-50"
+                                                            className="p-2 hover:bg-red-500/10 text-ink-soft hover:text-red-500 rounded-xl transition cursor-pointer disabled:opacity-50"
                                                         >
                                                             {deletingDepId === dep.id ? (
                                                                 <Loader2 className="h-4 w-4 animate-spin" />

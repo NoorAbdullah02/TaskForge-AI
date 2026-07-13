@@ -645,4 +645,196 @@ export class EmailTemplates {
     `;
     return getBaseTemplate(`Access Request Status: ${workspaceName}`, `Access Request Status: ${workspaceName}`, body);
   }
+
+  // 22. Trial Started
+  static trialStarted(userName: string, workspaceName: string, trialEndsAt: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your 7-day free trial for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span> has started. Enjoy full access to TaskForge AI until <strong>${trialEndsAt}</strong>.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Explore Your Workspace</a>
+      </div>
+    `;
+    return getBaseTemplate('Your Free Trial Has Started', 'Your Free Trial Has Started', body);
+  }
+
+  // 23. Trial Reminder
+  static trialReminder(userName: string, workspaceName: string, daysLeft: number, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your free trial for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span> ends in <strong>${daysLeft} day${daysLeft === 1 ? '' : 's'}</strong>. Upgrade now to keep uninterrupted access.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Upgrade Plan</a>
+      </div>
+    `;
+    return getBaseTemplate(`Trial Ending in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`, `Trial Ending Soon`, body);
+  }
+
+  // 24. Trial Expired
+  static trialExpired(userName: string, workspaceName: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your free trial for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span> has ended and the workspace is now in read-only mode. Upgrade to a paid plan to restore full access.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Upgrade Now</a>
+      </div>
+    `;
+    return getBaseTemplate('Your Trial Has Ended', 'Your Trial Has Ended', body);
+  }
+
+  // 25. Payment Submitted
+  static paymentSubmitted(userName: string, workspaceName: string, plan: string, amountText: string, transactionId: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">We've received your payment submission for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span>.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Plan</span><span class="info-value">${plan}</span></div>
+        <div class="info-row"><span class="info-label">Amount</span><span class="info-value">${amountText}</span></div>
+        <div class="info-row"><span class="info-label">Transaction ID</span><span class="info-value">${transactionId}</span></div>
+      </div>
+      <p class="text">Your workspace continues on trial/current plan while our team verifies the payment. This usually takes a short while.</p>
+    `;
+    return getBaseTemplate('Payment Submitted — Under Review', 'Payment Submitted', body);
+  }
+
+  // 26. Payment Approved
+  static paymentApproved(userName: string, workspaceName: string, plan: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your payment has been verified and <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span> is now on the <strong>${plan}</strong> plan. 🎉</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">View Billing Dashboard</a>
+      </div>
+    `;
+    return getBaseTemplate('Subscription Activated', 'Subscription Activated', body);
+  }
+
+  // 27. Payment Rejected
+  static paymentRejected(userName: string, workspaceName: string, reason: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Unfortunately, we couldn't verify your recent payment for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span>.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Reason</span><span class="info-value">${reason}</span></div>
+      </div>
+      <p class="text">You can submit a new payment for review at any time.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Submit Payment Again</a>
+      </div>
+    `;
+    return getBaseTemplate('Payment Verification Failed', 'Payment Verification Failed', body);
+  }
+
+  // 28. Subscription Renewed
+  static subscriptionRenewed(userName: string, workspaceName: string, plan: string, periodEnd: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your <strong>${plan}</strong> subscription for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span> has been renewed and is now active until <strong>${periodEnd}</strong>.</p>
+    `;
+    return getBaseTemplate('Subscription Renewed', 'Subscription Renewed', body);
+  }
+
+  // 29. Invoice Generated
+  static invoiceGenerated(userName: string, workspaceName: string, invoiceNumber: string, amountText: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">An invoice has been generated for <span style="color: #0f172a; font-weight: 600;">${workspaceName}</span>.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Invoice Number</span><span class="info-value">${invoiceNumber}</span></div>
+        <div class="info-row"><span class="info-label">Amount</span><span class="info-value">${amountText}</span></div>
+      </div>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Download Invoice</a>
+      </div>
+    `;
+    return getBaseTemplate(`Invoice ${invoiceNumber}`, 'Invoice Generated', body);
+  }
+
+  // 30. Work Log Submitted
+  static workLogSubmitted(userName: string, employeeName: string, logTitle: string, logDate: string, hoursWorked: number, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text"><strong>${employeeName}</strong> submitted a daily work log for your review.</p>
+      <div class="card">
+        <h3 class="card-title">${logTitle}</h3>
+        <div class="info-row"><span class="info-label">Date</span><span class="info-value">${logDate}</span></div>
+        <div class="info-row"><span class="info-label">Hours Worked</span><span class="info-value">${hoursWorked} hrs</span></div>
+      </div>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Review Work Log</a>
+      </div>
+    `;
+    return getBaseTemplate(`Work Log Submitted: ${logTitle}`, 'Work Log Submitted', body);
+  }
+
+  // 31. Work Log Approved
+  static workLogApproved(userName: string, logTitle: string, logDate: string, approvedBy: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your work log <strong>${logTitle}</strong> for <strong>${logDate}</strong> has been approved by ${approvedBy}.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">View Work Log</a>
+      </div>
+    `;
+    return getBaseTemplate(`Work Log Approved: ${logTitle}`, 'Work Log Approved', body);
+  }
+
+  // 32. Work Log Rejected / Changes Requested
+  static workLogRejected(userName: string, logTitle: string, logDate: string, reviewedBy: string, reason: string, isChangesRequested: boolean, link: string): string {
+    const action = isChangesRequested ? 'requires changes' : 'was rejected';
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your work log <strong>${logTitle}</strong> for <strong>${logDate}</strong> ${action} by ${reviewedBy}.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Note</span><span class="info-value">${reason || 'No reason provided'}</span></div>
+      </div>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">View Work Log</a>
+      </div>
+    `;
+    return getBaseTemplate(`Work Log ${isChangesRequested ? 'Needs Changes' : 'Rejected'}: ${logTitle}`, 'Work Log Review', body);
+  }
+
+  // 33. Timesheet Submitted
+  static timesheetSubmitted(userName: string, employeeName: string, periodType: string, periodStart: string, periodEnd: string, totalHours: number, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text"><strong>${employeeName}</strong> submitted a ${periodType} timesheet for your review.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Period</span><span class="info-value">${periodStart} - ${periodEnd}</span></div>
+        <div class="info-row"><span class="info-label">Total Hours</span><span class="info-value">${totalHours} hrs</span></div>
+      </div>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">Review Timesheet</a>
+      </div>
+    `;
+    return getBaseTemplate(`Timesheet Submitted: ${periodStart} - ${periodEnd}`, 'Timesheet Submitted', body);
+  }
+
+  // 34. Timesheet Approved
+  static timesheetApproved(userName: string, periodType: string, periodStart: string, periodEnd: string, approvedBy: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your ${periodType} timesheet for <strong>${periodStart} - ${periodEnd}</strong> has been approved and locked by ${approvedBy}.</p>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">View Timesheet</a>
+      </div>
+    `;
+    return getBaseTemplate(`Timesheet Approved: ${periodStart} - ${periodEnd}`, 'Timesheet Approved', body);
+  }
+
+  // 35. Timesheet Rejected
+  static timesheetRejected(userName: string, periodType: string, periodStart: string, periodEnd: string, reviewedBy: string, reason: string, link: string): string {
+    const body = `
+      <h2 class="greeting">Hi ${userName},</h2>
+      <p class="text">Your ${periodType} timesheet for <strong>${periodStart} - ${periodEnd}</strong> was rejected by ${reviewedBy}.</p>
+      <div class="card">
+        <div class="info-row"><span class="info-label">Note</span><span class="info-value">${reason || 'No reason provided'}</span></div>
+      </div>
+      <div class="cta-wrapper">
+        <a href="${link}" class="cta-button">View Timesheet</a>
+      </div>
+    `;
+    return getBaseTemplate(`Timesheet Rejected: ${periodStart} - ${periodEnd}`, 'Timesheet Rejected', body);
+  }
 }

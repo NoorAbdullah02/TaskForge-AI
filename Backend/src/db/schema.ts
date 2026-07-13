@@ -748,7 +748,11 @@ export const timeLogs = pgTable("time_logs", {
     description: text("description"),
     startTime: timestamp("start_time", { mode: "date" }).notNull(),
     endTime: timestamp("end_time", { mode: "date" }),
-    duration: integer("duration"), // in seconds
+    duration: integer("duration"), // in seconds, excludes paused time
+    status: varchar("status", { length: 20 }).notNull().default("running"), // running | paused | stopped
+    pausedAt: timestamp("paused_at", { mode: "date" }),
+    totalPausedSeconds: integer("total_paused_seconds").notNull().default(0),
+    idleSeconds: integer("idle_seconds").notNull().default(0),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
 });
 
@@ -885,3 +889,237 @@ export type NotificationPreference = typeof notificationPreferences.$inferSelect
 export type NewNotificationPreference = typeof notificationPreferences.$inferInsert;
 export type AutomationLog = typeof automationLogs.$inferSelect;
 export type NewAutomationLog = typeof automationLogs.$inferInsert;
+
+// ----------------- Billing & Subscription -----------------
+// amountCents is the amount in paisa (1 BDT = 100 paisa), matching integer-cents convention.
+
+export const subscriptions = pgTable("subscriptions", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().unique().references(() => workspaces.id, { onDelete: 'cascade' }),
+    plan: varchar("plan", { length: 50 }).notNull().default("free"), // free, pro, enterprise
+    billingCycle: varchar("billing_cycle", { length: 20 }), // monthly, yearly
+    status: varchar("status", { length: 50 }).notNull().default("trialing"), // trialing, active, past_due, expired, cancelled
+    trialStartedAt: timestamp("trial_started_at", { mode: "date" }),
+    trialEndsAt: timestamp("trial_ends_at", { mode: "date" }),
+    currentPeriodStart: timestamp("current_period_start", { mode: "date" }),
+    currentPeriodEnd: timestamp("current_period_end", { mode: "date" }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const payments = pgTable("payments", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    submittedByUserId: integer("submitted_by_user_id").notNull().references(() => users.id, { onDelete: 'set null' }),
+    plan: varchar("plan", { length: 50 }).notNull(), // pro, enterprise
+    billingCycle: varchar("billing_cycle", { length: 20 }).notNull(), // monthly, yearly
+    amountCents: integer("amount_cents").notNull(),
+    method: varchar("method", { length: 20 }).notNull(), // bkash, nagad
+    transactionId: varchar("transaction_id", { length: 100 }).notNull().unique(),
+    senderNumber: varchar("sender_number", { length: 50 }).notNull(),
+    screenshotUrl: varchar("screenshot_url", { length: 500 }),
+    status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, under_review, approved, rejected, expired, cancelled
+    rejectionReason: text("rejection_reason"),
+    reviewedByUserId: integer("reviewed_by_user_id").references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp("reviewed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const invoices = pgTable("invoices", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    paymentId: integer("payment_id").notNull().references(() => payments.id, { onDelete: 'cascade' }),
+    invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+    plan: varchar("plan", { length: 50 }).notNull(),
+    billingCycle: varchar("billing_cycle", { length: 20 }).notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    issuedAt: timestamp("issued_at", { mode: "date" }).defaultNow().notNull(),
+    pdfUrl: varchar("pdf_url", { length: 500 })
+});
+
+export const billingHistory = pgTable("billing_history", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    type: varchar("type", { length: 50 }).notNull(), // trial_started, payment_submitted, payment_approved, payment_rejected, subscription_renewed, subscription_cancelled, plan_upgraded, plan_downgraded
+    description: text("description").notNull(),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const subscriptionLogs = pgTable("subscription_logs", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    subscriptionId: integer("subscription_id").references(() => subscriptions.id, { onDelete: 'set null' }),
+    action: varchar("action", { length: 100 }).notNull(),
+    performedByUserId: integer("performed_by_user_id").references(() => users.id, { onDelete: 'set null' }),
+    previousPlan: varchar("previous_plan", { length: 50 }),
+    newPlan: varchar("new_plan", { length: 50 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [subscriptions.workspaceId],
+        references: [workspaces.id]
+    })
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [payments.workspaceId],
+        references: [workspaces.id]
+    }),
+    submittedBy: one(users, {
+        fields: [payments.submittedByUserId],
+        references: [users.id]
+    }),
+    reviewedBy: one(users, {
+        fields: [payments.reviewedByUserId],
+        references: [users.id]
+    })
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [invoices.workspaceId],
+        references: [workspaces.id]
+    }),
+    payment: one(payments, {
+        fields: [invoices.paymentId],
+        references: [payments.id]
+    })
+}));
+
+export const billingHistoryRelations = relations(billingHistory, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [billingHistory.workspaceId],
+        references: [workspaces.id]
+    })
+}));
+
+export const subscriptionLogsRelations = relations(subscriptionLogs, ({ one }) => ({
+    workspace: one(workspaces, {
+        fields: [subscriptionLogs.workspaceId],
+        references: [workspaces.id]
+    }),
+    subscription: one(subscriptions, {
+        fields: [subscriptionLogs.subscriptionId],
+        references: [subscriptions.id]
+    })
+}));
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+export type Payment = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;
+export type BillingHistory = typeof billingHistory.$inferSelect;
+export type NewBillingHistory = typeof billingHistory.$inferInsert;
+export type SubscriptionLog = typeof subscriptionLogs.$inferSelect;
+
+// ----------------- Daily Work Log -----------------
+
+export const workLogs = pgTable("work_logs", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar("title", { length: 255 }).notNull(),
+    taskId: integer("task_id").references(() => tasks.id, { onDelete: 'set null' }),
+    projectId: integer("project_id").references(() => projects.id, { onDelete: 'set null' }),
+    logDate: varchar("log_date", { length: 20 }).notNull(), // YYYY-MM-DD
+    startTime: varchar("start_time", { length: 10 }),
+    endTime: varchar("end_time", { length: 10 }),
+    hoursWorked: doublePrecision("hours_worked").notNull().default(0),
+    progressPercent: integer("progress_percent").notNull().default(0),
+    description: text("description").notNull(),
+    challenges: text("challenges"),
+    tomorrowPlan: text("tomorrow_plan"),
+    gitCommitUrl: varchar("git_commit_url", { length: 500 }),
+    status: varchar("status", { length: 30 }).notNull().default("pending"), // pending, approved, rejected, changes_requested
+    reviewedByUserId: integer("reviewed_by_user_id").references((): any => users.id, { onDelete: 'set null' }),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const workLogAttachments = pgTable("work_log_attachments", {
+    id: serial("id").primaryKey(),
+    workLogId: integer("work_log_id").notNull().references(() => workLogs.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'set null' }),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    fileUrl: text("file_url").notNull(),
+    fileSize: integer("file_size"),
+    fileType: varchar("file_type", { length: 100 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const workLogsRelations = relations(workLogs, ({ one, many }) => ({
+    workspace: one(workspaces, {
+        fields: [workLogs.workspaceId],
+        references: [workspaces.id]
+    }),
+    user: one(users, {
+        fields: [workLogs.userId],
+        references: [users.id]
+    }),
+    task: one(tasks, {
+        fields: [workLogs.taskId],
+        references: [tasks.id]
+    }),
+    project: one(projects, {
+        fields: [workLogs.projectId],
+        references: [projects.id]
+    }),
+    reviewedBy: one(users, {
+        fields: [workLogs.reviewedByUserId],
+        references: [users.id]
+    }),
+    attachments: many(workLogAttachments)
+}));
+
+export const workLogAttachmentsRelations = relations(workLogAttachments, ({ one }) => ({
+    workLog: one(workLogs, {
+        fields: [workLogAttachments.workLogId],
+        references: [workLogs.id]
+    })
+}));
+
+export type WorkLog = typeof workLogs.$inferSelect;
+export type NewWorkLog = typeof workLogs.$inferInsert;
+export type WorkLogAttachment = typeof workLogAttachments.$inferSelect;
+export type NewWorkLogAttachment = typeof workLogAttachments.$inferInsert;
+export type NewSubscriptionLog = typeof subscriptionLogs.$inferInsert;
+
+// ----------------- Timesheet -----------------
+
+export const timesheets = pgTable("timesheets", {
+    id: serial("id").primaryKey(),
+    workspaceId: integer("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    periodType: varchar("period_type", { length: 20 }).notNull(), // daily, weekly, monthly
+    periodStart: varchar("period_start", { length: 20 }).notNull(), // YYYY-MM-DD
+    periodEnd: varchar("period_end", { length: 20 }).notNull(), // YYYY-MM-DD
+    totalHours: doublePrecision("total_hours").notNull().default(0),
+    billableHours: doublePrecision("billable_hours").notNull().default(0),
+    workLogCount: integer("work_log_count").notNull().default(0),
+    status: varchar("status", { length: 30 }).notNull().default("draft"), // draft, submitted, approved, rejected
+    isLocked: boolean("is_locked").notNull().default(false),
+    submittedAt: timestamp("submitted_at", { mode: "date" }),
+    reviewedByUserId: integer("reviewed_by_user_id").references((): any => users.id, { onDelete: 'set null' }),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull()
+});
+
+export const timesheetsRelations = relations(timesheets, ({ one }) => ({
+    workspace: one(workspaces, { fields: [timesheets.workspaceId], references: [workspaces.id] }),
+    user: one(users, { fields: [timesheets.userId], references: [users.id] }),
+    reviewedBy: one(users, { fields: [timesheets.reviewedByUserId], references: [users.id] })
+}));
+
+export type Timesheet = typeof timesheets.$inferSelect;
+export type NewTimesheet = typeof timesheets.$inferInsert;

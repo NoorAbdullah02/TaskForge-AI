@@ -4,7 +4,7 @@ import {
   LogOut, Settings, Bell, Search, Building2, ChevronDown,
   Menu, X, Zap, LayoutDashboard, FolderKanban, CheckSquare,
   MessageSquare, BookOpen, Clock, Calendar, Users, Plane,
-  BarChart2, SlidersHorizontal, ShieldCheck, Bot
+  BarChart2, SlidersHorizontal, ShieldCheck, Bot, CreditCard, NotebookPen, CalendarClock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import toast from 'react-hot-toast';
@@ -22,6 +22,8 @@ const NAV_ITEMS = [
   { to: '/chat',                label: 'Chat',            icon: MessageSquare },
   { to: '/kb',                  label: 'Wiki',            icon: BookOpen     },
   { to: '/time-tracker',        label: 'Timer',           icon: Clock        },
+  { to: '/work-log',            label: 'Work Log',        icon: NotebookPen  },
+  { to: '/timesheet',           label: 'Timesheet',       icon: CalendarClock },
   { to: '/calendar',            label: 'Calendar',        icon: Calendar     },
   { to: '/attendance',          label: 'Attendance',      icon: Users        },
   { to: '/leaves',              label: 'Leaves',          icon: Plane        },
@@ -36,6 +38,10 @@ const ADMIN_ITEMS = [
 
 const SUPER_ITEMS = [
   { to: '/super-admin', label: 'Super Admin', icon: ShieldCheck },
+];
+
+const OWNER_ITEMS = [
+  { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
 
 
@@ -67,12 +73,12 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  /* close all menus on route change */
+  /* close all menus on route change (skip the setState when already closed, avoiding a no-op re-render on most navigations) */
   useEffect(() => {
-    setMobileOpen(false);
-    setProfileOpen(false);
-    setWorkspaceOpen(false);
-    setMoreOpen(false);
+    setMobileOpen((v) => (v ? false : v));
+    setProfileOpen((v) => (v ? false : v));
+    setWorkspaceOpen((v) => (v ? false : v));
+    setMoreOpen((v) => (v ? false : v));
   }, [location.pathname]);
 
   /* close dropdowns on click outside */
@@ -106,8 +112,30 @@ const Header = () => {
   useEffect(() => {
     if (!socket) return;
     const inc = () => setUnreadCount(p => p + 1);
+    const handleVerified = (payment) => {
+      if (window.location.pathname === '/billing') return;
+      toast.success(`Subscription Approved! Your workspace has been upgraded to ${payment.plan?.toUpperCase()} (${payment.billingCycle?.toUpperCase()}).`, {
+        duration: 8000,
+        position: 'top-right',
+      });
+    };
+    const handleRejected = (payment) => {
+      if (window.location.pathname === '/billing') return;
+      toast.error(`Subscription Rejected! Reason: ${payment.rejectionReason || 'Invalid payment details.'}`, {
+        duration: 8000,
+        position: 'top-right',
+      });
+    };
+
     socket.on('notification', inc);
-    return () => socket.off('notification', inc);
+    socket.on('payment.verified', handleVerified);
+    socket.on('payment.rejected', handleRejected);
+
+    return () => {
+      socket.off('notification', inc);
+      socket.off('payment.verified', handleVerified);
+      socket.off('payment.rejected', handleRejected);
+    };
   }, []);
 
   /* workspaces */
@@ -148,10 +176,11 @@ const Header = () => {
   const allNavItems = [
     ...NAV_ITEMS,
     ...((user?.role === 'admin' || user?.role === 'manager' || user?.role === 'owner') ? ADMIN_ITEMS : []),
+    ...(user?.role === 'owner' ? OWNER_ITEMS : []),
     ...(user?.role === 'super_admin' ? SUPER_ITEMS : []),
   ];
 
-  const corePaths = ['/projects', '/tasks', '/chat', '/ai-workspace', '/executive-dashboard'];
+  const corePaths = ['/projects', '/tasks', '/chat', '/ai-workspace'];
   const coreItems = allNavItems.filter(item => corePaths.includes(item.to));
   const secondaryItems = allNavItems.filter(item => !corePaths.includes(item.to));
   const isSecondaryActive = secondaryItems.some(item => isActive(item.to));
@@ -161,10 +190,10 @@ const Header = () => {
     <>
       <header className={[
         'sticky top-0 z-50 w-full transition-all duration-300',
-        'bg-white/90 backdrop-blur-xl border-b',
+        'bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_15px_rgba(0,0,0,0.03)]',
         scrolled
-          ? 'border-slate-200 shadow-[0_2px_20px_rgba(0,0,0,0.08)]'
-          : 'border-slate-100 shadow-none',
+          ? 'shadow-[0_4px_25px_rgba(0,0,0,0.06)] border-slate-200/90'
+          : '',
       ].join(' ')}>
 
         <div className="w-full px-4 sm:px-6 h-16 flex items-center gap-4">
@@ -177,7 +206,7 @@ const Header = () => {
               <span className="block text-[17px] font-black bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
                 TaskForge
               </span>
-              <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              <span className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest mt-0.5">
                 AI Platform
               </span>
             </div>
@@ -186,7 +215,7 @@ const Header = () => {
           {/* ── Desktop Nav (responsive core/secondary/more) ── */}
           {isLoggedIn && (
             <nav className="hidden lg:flex items-center flex-1 min-w-0">
-              <div className="flex items-center gap-1 xl:gap-1.5 px-1 w-full">
+              <div className="flex items-center gap-1.5 px-1 w-full">
                 {/* Core Items (always visible) */}
                 {coreItems.map(({ to, label, icon: Icon }) => {
                   const active = isActive(to);
@@ -195,10 +224,10 @@ const Header = () => {
                       key={to}
                       to={to}
                       className={[
-                        'flex items-center gap-2 px-2 xl:px-2.5 2xl:px-3 py-2 rounded-xl text-[12.5px] font-semibold whitespace-nowrap transition-all',
+                        'flex items-center gap-2 px-3 py-2 rounded-xl text-[13.5px] font-bold whitespace-nowrap transition-all cursor-pointer',
                         active
                           ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                          : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100',
                       ].join(' ')}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
@@ -207,36 +236,16 @@ const Header = () => {
                   );
                 })}
 
-                {/* Secondary Items (visible on 3xl+) */}
-                {secondaryItems.map(({ to, label, icon: Icon }) => {
-                  const active = isActive(to);
-                  return (
-                    <Link
-                      key={to}
-                      to={to}
-                      className={[
-                        'hidden 3xl:flex items-center gap-2 px-2 xl:px-2.5 3xl:px-3 py-2 rounded-xl text-[12.5px] font-semibold whitespace-nowrap transition-all',
-                        active
-                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
-                      ].join(' ')}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
-                  );
-                })}
-
-                {/* 'More' dropdown button (visible only on lg, hidden on 3xl) */}
+                {/* 'More' dropdown button */}
                 {secondaryItems.length > 0 && (
-                  <div className="relative hidden lg:flex 3xl:hidden" ref={moreMenuRef}>
+                  <div className="relative flex" ref={moreMenuRef}>
                     <button
                       onClick={() => setMoreOpen(v => !v)}
                       className={[
-                        'flex items-center gap-1.5 px-2 xl:px-2.5 2xl:px-3 py-2 rounded-xl text-[12.5px] font-semibold whitespace-nowrap transition-all cursor-pointer',
+                        'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13.5px] font-bold whitespace-nowrap transition-all cursor-pointer',
                         isSecondaryActive
                           ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                          : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100',
                       ].join(' ')}
                     >
                       More
@@ -244,11 +253,11 @@ const Header = () => {
                     </button>
 
                     {moreOpen && (
-                      <div className="absolute left-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-1.5 z-50 animate-scale-in">
+                      <div className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden py-1.5 z-50 animate-scale-in">
                         <div className="px-3.5 py-1.5 border-b border-slate-100">
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">More Pages</span>
                         </div>
-                        <div className="p-1 space-y-0.5 max-h-72 overflow-y-auto">
+                        <div className="p-1 space-y-0.5 max-h-96 overflow-y-auto">
                           {secondaryItems.map(({ to, label, icon: Icon }) => {
                             const active = isActive(to);
                             return (
@@ -257,10 +266,10 @@ const Header = () => {
                                 to={to}
                                 onClick={() => setMoreOpen(false)}
                                 className={[
-                                  'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
+                                  'flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[12.5px] font-bold transition',
                                   active
-                                    ? 'bg-blue-50 text-blue-600 font-bold'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                                    ? 'bg-blue-50 text-blue-600 font-extrabold'
+                                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900',
                                 ].join(' ')}
                               >
                                 <Icon className="w-4 h-4 text-slate-400 shrink-0" />

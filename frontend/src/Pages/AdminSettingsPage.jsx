@@ -1359,7 +1359,7 @@ export default function AdminSettingsPage() {
                                     <button
                                         onClick={handleRegenerateInvite}
                                         disabled={regenerating || !workspaceInfo?.id}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-400 text-xs font-bold rounded-2xl shadow-md transition-all shrink-0 hover:scale-[1.02]"
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white disabled:bg-slate-300 disabled:text-slate-500 text-xs font-bold rounded-2xl shadow-md transition-all shrink-0 hover:scale-[1.02]"
                                     >
                                         {regenerating ? (
                                             <>
@@ -1410,7 +1410,7 @@ export default function AdminSettingsPage() {
                                                 <button
                                                     onClick={handleSendInvites}
                                                     disabled={sendingInvites || !inviteEmails.trim()}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
                                                 >
                                                     {sendingInvites ? (
                                                         <>

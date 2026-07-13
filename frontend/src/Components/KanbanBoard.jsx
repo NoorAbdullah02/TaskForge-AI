@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
     DndContext,
     useSensor,
@@ -34,13 +34,24 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
         opacity: isDragging ? 0.3 : undefined,
     };
 
-    // A click handler that ensures dragging action doesn't conflict with normal click events
-    const handleCardClick = (_e) => {
-        // Prevent click if we were dragging
-        if (transform && (Math.abs(transform.x) > 2 || Math.abs(transform.y) > 2)) {
-            return;
+    // dnd-kit resets `transform` to null once a drag ends, before the resulting
+    // click event reaches this element — so we can't use transform to detect a
+    // just-finished drag. Instead, measure pointer movement directly between
+    // down and up, independent of dnd-kit's own drag-activation state.
+    const pointerDownPos = useRef(null);
+
+    const handlePointerDown = (e) => {
+        pointerDownPos.current = { x: e.clientX, y: e.clientY };
+        listeners.onPointerDown?.(e);
+    };
+
+    const handlePointerUp = (e) => {
+        const start = pointerDownPos.current;
+        pointerDownPos.current = null;
+        listeners.onPointerUp?.(e);
+        if (start && Math.abs(e.clientX - start.x) < 5 && Math.abs(e.clientY - start.y) < 5) {
+            onClick(task.id);
         }
-        onClick(task.id);
     };
 
     const workTypeInfo = WORK_TYPE_ICONS[task.workType] || WORK_TYPE_ICONS.task;
@@ -52,7 +63,8 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
             style={style}
             {...attributes}
             {...listeners}
-            onClick={handleCardClick}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
             className="bg-card p-4 rounded-2xl shadow-soft border border-line hover:shadow-float hover:-translate-y-0.5 transition-all duration-300 cursor-grab active:cursor-grabbing space-y-3 relative group"
         >
             <div className="flex items-start justify-between gap-2">
@@ -60,7 +72,21 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
                     <div className={`p-1.5 rounded-lg border shrink-0 ${workTypeInfo.bg}`}>
                         <WorkTypeIcon className={`w-3.5 h-3.5 ${workTypeInfo.color}`} />
                     </div>
-                    <h5 className="font-bold text-ink leading-snug line-clamp-2">{task.title}</h5>
+                    <div>
+                        <h5 className="font-bold text-ink leading-snug line-clamp-2">{task.title}</h5>
+                        {task.isTimerActive && (
+                            <span className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[8.5px] font-black uppercase tracking-wider animate-pulse">
+                                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full shrink-0" />
+                                ⏱️ Tracking
+                            </span>
+                        )}
+                        {task.isPomodoroActive && (
+                            <span className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/25 text-[8.5px] font-black uppercase tracking-wider animate-pulse">
+                                <span className="w-1.5 h-1.5 bg-rose-400 rounded-full shrink-0" />
+                                🍅 Focus session
+                            </span>
+                        )}
+                    </div>
                 </div>
                 {task.isMilestone && <Trophy className="w-4 h-4 text-yellow-500 shrink-0" />}
             </div>
@@ -91,32 +117,35 @@ function KanbanTaskCard({ task, onClick, priorityColors }) {
     );
 }
 
-function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
+function KanbanColumn({ status, title, wipLimit, tasks, priorityColors, onCardClick, color }) {
     const { isOver, setNodeRef } = useDroppable({
         id: status,
     });
+
+    const limitExceeded = wipLimit && tasks.length > wipLimit;
 
     return (
         <div
             ref={setNodeRef}
             className={`bg-surface-2/45 rounded-3xl p-4 border border-line transition-all duration-300 flex-1 min-w-[250px] flex flex-col ${
                 isOver ? 'border-dashed border-blue-400 bg-blue-500/10 shadow-inner' : ''
-            }`}
+            } ${limitExceeded ? 'border-red-500/40 bg-red-500/5' : ''}`}
         >
             <div className="flex justify-between items-center mb-4 px-1">
-                <h4 className="font-extrabold text-ink-soft uppercase tracking-wider text-xs flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${
-                        status === 'backlog' ? 'bg-slate-500' :
-                        status === 'todo' ? 'bg-blue-500' :
-                        status === 'in-progress' ? 'bg-amber-500 animate-pulse' :
-                        status === 'review' ? 'bg-purple-500' :
-                        'bg-emerald-500'
-                    }`} />
-                    {title}
+                <h4 className="font-extrabold text-ink-soft uppercase tracking-wider text-xs flex items-center gap-1.5 truncate max-w-[150px]" title={title}>
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
+                    <span className="truncate">{title}</span>
                 </h4>
-                <span className="bg-surface-3 border border-line text-ink font-bold px-2.5 py-0.5 rounded-full text-[10px] shadow-sm">
-                    {tasks.length}
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                    <span className={`bg-line border border-line text-ink font-bold px-2 py-0.5 rounded-full text-[10px] shadow-sm ${
+                        limitExceeded ? 'border-red-500 text-red-500 bg-red-500/10' : ''
+                    }`}>
+                        {tasks.length}{wipLimit ? ` / ${wipLimit}` : ''}
+                    </span>
+                    {limitExceeded && (
+                        <span className="text-[9px] text-red-500 font-extrabold uppercase animate-pulse select-none" title="WIP Limit Exceeded">WIP!</span>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-3 flex-1 min-h-[350px]">
@@ -140,7 +169,7 @@ function KanbanColumn({ status, title, tasks, priorityColors, onCardClick }) {
 }
 
 
-export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColors, statusStates, statusTitles }) {
+export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColors, columnsConfig }) {
     const [activeTask, setActiveTask] = useState(null);
     const activeWorkTypeInfo = activeTask ? (WORK_TYPE_ICONS[activeTask.workType] || WORK_TYPE_ICONS.task) : null;
     const ActiveWorkTypeIcon = activeWorkTypeInfo ? activeWorkTypeInfo.icon : null;
@@ -151,7 +180,6 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
         },
     });
 
-    // TouchSensor requires holding 180ms before initiating to prevent conflicting with scroll gestures
     const touchSensor = useSensor(TouchSensor, {
         activationConstraint: {
             delay: 180,
@@ -191,7 +219,8 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
 
         try {
             await updateTask(taskId, { status: newStatus });
-            toast.success(`Task moved to ${statusTitles[newStatus] || newStatus}`);
+            const columnLabel = columnsConfig.find(c => c.key === newStatus)?.label || newStatus;
+            toast.success(`Task moved to ${columnLabel}`);
         } catch (error) {
             console.error('Failed to update task status:', error);
             toast.error('Failed to update status on server. Rolling back...');
@@ -210,17 +239,19 @@ export default function KanbanBoard({ tasks, setTasks, onCardClick, priorityColo
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-5 overflow-x-auto pb-6">
-                {statusStates.map((st) => {
-                    const columnTasks = tasks.filter((t) => t.status === st);
+            <div className="flex gap-5 overflow-x-auto pb-6 select-none scrollbar-thin">
+                {columnsConfig.filter(c => c.visible).map((col) => {
+                    const columnTasks = tasks.filter((t) => t.status === col.key);
                     return (
                         <KanbanColumn
-                            key={st}
-                            status={st}
-                            title={statusTitles[st]}
+                            key={col.key}
+                            status={col.key}
+                            title={col.label}
+                            wipLimit={col.wipLimit}
                             tasks={columnTasks}
                             priorityColors={priorityColors}
                             onCardClick={onCardClick}
+                            color={col.color}
                         />
                     );
                 })}

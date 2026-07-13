@@ -44,3 +44,33 @@ export const resetWorkspace = async (id) => {
     const response = await api.post(`/super-admin/workspaces/${id}/reset`);
     return response.data;
 };
+
+export const getSuperAdminPayments = async (params = {}) => {
+    const response = await api.get('/super-admin/payments', { params });
+    return response.data;
+};
+
+export const approvePayment = async (id) => {
+    const response = await api.post(`/super-admin/payments/${id}/approve`);
+    return response.data;
+};
+
+export const rejectPayment = async (id, reason) => {
+    const response = await api.post(`/super-admin/payments/${id}/reject`, { reason });
+    return response.data;
+};
+
+export const bulkApprovePayments = async (paymentIds) => {
+    const response = await api.post('/super-admin/payments/bulk-approve', { paymentIds });
+    return response.data;
+};
+
+export const bulkRejectPayments = async (paymentIds, reason) => {
+    const response = await api.post('/super-admin/payments/bulk-reject', { paymentIds, reason });
+    return response.data;
+};
+
+export const getBillingAnalytics = async () => {
+    const response = await api.get('/super-admin/billing-analytics');
+    return response.data;
+};

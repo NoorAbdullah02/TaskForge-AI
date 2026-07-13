@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ProjectController } from '../controllers/project.controller';
 import { checkValiditi } from '../middleware/checkValidUser';
+import { subscriptionGate } from '../middleware/subscriptionGate.middleware';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ router.post('/import', checkValiditi, ProjectController.importProjects);
 router.post('/join', checkValiditi, ProjectController.joinProject);
 
 router.get('/', checkValiditi, ProjectController.getUserProjects);
-router.post('/', checkValiditi, ProjectController.createProject);
+router.post('/', checkValiditi, subscriptionGate, ProjectController.createProject);
 
 router.get('/:id', checkValiditi, ProjectController.getProjectDetails);
 router.put('/:id', checkValiditi, ProjectController.updateProject);

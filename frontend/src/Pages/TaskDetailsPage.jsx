@@ -12,6 +12,7 @@ import {
     startTimer, stopTimer, startPomodoro, stopPomodoro,
     undoChange, redoChange, getTaskAIScores,
 } from '../Services/taskApi';
+import { pauseTimer, resumeTimer } from '../Services/timeApi';
 import {
     recommendAssignee, getTaskHealth, getProjectDependencies, addDependency, deleteDependency
 } from '../Services/intelligenceApi';
@@ -40,45 +41,54 @@ const fmtSeconds = (sec) => {
 };
 
 const PRIORITY_COLORS = {
-    low:      'bg-gray-100 text-gray-700',
-    medium:   'bg-blue-100 text-blue-800',
-    high:     'bg-orange-100 text-orange-800',
+    low: 'bg-gray-100 text-gray-700',
+    medium: 'bg-blue-100 text-blue-800',
+    high: 'bg-orange-100 text-orange-800',
     critical: 'bg-red-100 text-red-800',
 };
 
 const STATUS_COLORS_BADGE = {
-    backlog:     'bg-gray-100 text-gray-600',
-    todo:        'bg-blue-100 text-blue-700',
-    'in-progress':'bg-amber-100 text-amber-800',
-    review:      'bg-purple-100 text-purple-700',
-    done:        'bg-emerald-100 text-emerald-700',
+    backlog: 'bg-gray-100 text-gray-600',
+    todo: 'bg-blue-100 text-blue-700',
+    'in-progress': 'bg-amber-100 text-amber-800',
+    review: 'bg-purple-100 text-purple-700',
+    done: 'bg-emerald-100 text-emerald-700',
 };
 
 // ─── Timer Widget ──────────────────────────────────────────────────────────
-const TimerWidget = ({ task, onRefresh }) => {
+const TimerWidget = ({ task, user, isPM, onRefresh }) => {
     const [elapsed, setElapsed] = useState(0);
     const [running, setRunning] = useState(false);
     const [loading, setLoading] = useState(false);
     const intervalRef = useRef(null);
 
+    const canTrack = isPM || task?.assigneeId === user?.id;
+
     useEffect(() => {
-        // If task has an active timer, compute elapsed from timerStart
-        if (task?.isTimerActive && task?.timerStart) {
-            const startMs = new Date(task.timerStart).getTime();
-            const base = task.timerElapsed || 0;
-            setElapsed(base + Math.floor((Date.now() - startMs) / 1000));
-            setRunning(true);
-            intervalRef.current = setInterval(() => {
-                setElapsed(base + Math.floor((Date.now() - startMs) / 1000));
-            }, 1000);
+        clearInterval(intervalRef.current);
+        const baseSeconds = Math.round((task?.actualHours || 0) * 3600);
+
+        if (task?.isTimerActive) {
+            const startSecs = task.timerElapsedSeconds || 0;
+            setElapsed(baseSeconds + startSecs);
+            setRunning(task.timerStatus === 'running');
+
+            if (task.timerStatus === 'running') {
+                const startTime = Date.now();
+                intervalRef.current = setInterval(() => {
+                    const diff = Math.floor((Date.now() - startTime) / 1000);
+                    setElapsed(baseSeconds + startSecs + diff);
+                }, 1000);
+            }
         } else {
-            setElapsed(task?.timerElapsed || 0);
+            setElapsed(baseSeconds);
             setRunning(false);
         }
         return () => clearInterval(intervalRef.current);
-    }, [task?.isTimerActive, task?.timerStart, task?.timerElapsed]);
+    }, [task?.isTimerActive, task?.timerStatus, task?.timerElapsedSeconds, task?.actualHours]);
 
     const handleStart = async () => {
+        if (!canTrack) return;
         setLoading(true);
         try {
             await startTimer(task.id);
@@ -88,7 +98,30 @@ const TimerWidget = ({ task, onRefresh }) => {
         finally { setLoading(false); }
     };
 
+    const handlePause = async () => {
+        if (!canTrack) return;
+        setLoading(true);
+        try {
+            await pauseTimer();
+            toast.success('Timer paused');
+            onRefresh();
+        } catch { toast.error('Failed to pause timer'); }
+        finally { setLoading(false); }
+    };
+
+    const handleResume = async () => {
+        if (!canTrack) return;
+        setLoading(true);
+        try {
+            await resumeTimer();
+            toast.success('Timer resumed');
+            onRefresh();
+        } catch { toast.error('Failed to resume timer'); }
+        finally { setLoading(false); }
+    };
+
     const handleStop = async () => {
+        if (!canTrack) return;
         setLoading(true);
         try {
             await stopTimer(task.id);
@@ -124,22 +157,45 @@ const TimerWidget = ({ task, onRefresh }) => {
                 </div>
             )}
             <div className="flex gap-2 justify-center">
-                {!running ? (
+                {!task?.isTimerActive ? (
                     <button
                         onClick={handleStart}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-5 py-2 bg-white text-blue-700 font-black rounded-xl text-sm hover:bg-blue-50 transition disabled:opacity-50"
+                        disabled={loading || !canTrack}
+                        title={!canTrack ? "Only the assignee or PM can track time" : ""}
+                        className="flex items-center gap-2 px-5 py-2 bg-white text-blue-700 font-black rounded-xl text-sm hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         <Play className="w-4 h-4" /> Start
                     </button>
                 ) : (
-                    <button
-                        onClick={handleStop}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-5 py-2 bg-red-400 hover:bg-red-300 text-white font-black rounded-xl text-sm transition disabled:opacity-50"
-                    >
-                        <Square className="w-4 h-4" /> Stop
-                    </button>
+                    <>
+                        {task.timerStatus === 'running' ? (
+                            <button
+                                onClick={handlePause}
+                                disabled={loading || !canTrack}
+                                title={!canTrack ? "Only the assignee or PM can track time" : ""}
+                                className="flex items-center gap-2 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                <Pause className="w-4 h-4" /> Pause
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleResume}
+                                disabled={loading || !canTrack}
+                                title={!canTrack ? "Only the assignee or PM can track time" : ""}
+                                className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                <Play className="w-4 h-4" /> Resume
+                            </button>
+                        )}
+                        <button
+                            onClick={handleStop}
+                            disabled={loading || !canTrack}
+                            title={!canTrack ? "Only the assignee or PM can track time" : ""}
+                            className="flex items-center gap-2 px-5 py-2 bg-red-400 hover:bg-red-300 text-white font-black rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <Square className="w-4 h-4" /> Stop
+                        </button>
+                    </>
                 )}
             </div>
         </div>
@@ -312,7 +368,7 @@ const AIScorePanel = ({ taskId }) => {
             {scores && (
                 <div className="space-y-3">
                     {scoreBar('AI Confidence Score', scores.aiScore, 100, 'bg-purple-500')}
-                    {scoreBar('Risk Score',           scores.riskScore, 100,
+                    {scoreBar('Risk Score', scores.riskScore, 100,
                         scores.riskScore > 70 ? 'bg-red-500' : scores.riskScore > 40 ? 'bg-amber-500' : 'bg-emerald-500'
                     )}
                     {scores.completionPrediction != null && (
@@ -338,7 +394,7 @@ const AIScorePanel = ({ taskId }) => {
 
 // ─── Watchers Panel ────────────────────────────────────────────────────────
 const WatchersPanel = ({ task, user, onRefresh }) => {
-    const isWatching = task.watchers?.some(w => w.userId === user?.id);
+    const isWatching = task.watchers?.some(w => (w.userId || w.id) === user?.id);
     const [loading, setLoading] = useState(false);
 
     const toggle = async () => {
@@ -368,11 +424,10 @@ const WatchersPanel = ({ task, user, onRefresh }) => {
                 <button
                     onClick={toggle}
                     disabled={loading}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                        isWatching
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${isWatching
                             ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    } disabled:opacity-50`}
+                        } disabled:opacity-50`}
                 >
                     {loading ? <Loader className="w-3 h-3 animate-spin" /> : (isWatching ? <EyeIcon className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />)}
                     {isWatching ? 'Unwatch' : 'Watch'}
@@ -383,14 +438,18 @@ const WatchersPanel = ({ task, user, onRefresh }) => {
                 <p className="text-xs text-gray-400 font-medium">No one is watching this task yet.</p>
             ) : (
                 <div className="flex flex-wrap gap-1.5">
-                    {task.watchers.map(w => (
-                        <div key={w.userId} className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl px-2 py-1">
-                            <div className="w-5 h-5 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center">
-                                {w.userName?.charAt(0).toUpperCase()}
+                    {task.watchers.map(w => {
+                        const wId = w.userId || w.id;
+                        const wName = w.userName || w.name || 'Watcher';
+                        return (
+                            <div key={wId} className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl px-2 py-1">
+                                <div className="w-5 h-5 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center">
+                                    {wName.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700">{wName}</span>
                             </div>
-                            <span className="text-xs font-semibold text-gray-700">{w.userName}</span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -409,16 +468,16 @@ const HistoryTimeline = ({ history }) => {
 
     const actionIcon = (action) => {
         switch (action) {
-            case 'create':     return <span className="text-emerald-500 text-xs">✦</span>;
-            case 'update':     return <span className="text-blue-500 text-xs">✎</span>;
-            case 'delete':     return <span className="text-red-500 text-xs">✕</span>;
-            case 'lock':       return <Lock className="w-3 h-3 text-red-500" />;
-            case 'unlock':     return <Unlock className="w-3 h-3 text-green-500" />;
-            case 'archive':    return <Archive className="w-3 h-3 text-amber-500" />;
-            case 'restore':    return <RefreshCw className="w-3 h-3 text-teal-500" />;
-            case 'timer_start':return <Play className="w-3 h-3 text-blue-400" />;
+            case 'create': return <span className="text-emerald-500 text-xs">✦</span>;
+            case 'update': return <span className="text-blue-500 text-xs">✎</span>;
+            case 'delete': return <span className="text-red-500 text-xs">✕</span>;
+            case 'lock': return <Lock className="w-3 h-3 text-red-500" />;
+            case 'unlock': return <Unlock className="w-3 h-3 text-green-500" />;
+            case 'archive': return <Archive className="w-3 h-3 text-amber-500" />;
+            case 'restore': return <RefreshCw className="w-3 h-3 text-teal-500" />;
+            case 'timer_start': return <Play className="w-3 h-3 text-blue-400" />;
             case 'timer_stop': return <Square className="w-3 h-3 text-gray-500" />;
-            default:           return <Activity className="w-3 h-3 text-gray-400" />;
+            default: return <Activity className="w-3 h-3 text-gray-400" />;
         }
     };
 
@@ -478,11 +537,10 @@ const LockControl = ({ task, isPM, onRefresh }) => {
             onClick={toggle}
             disabled={loading || !isPM}
             title={isPM ? (task.isLocked ? 'Unlock Task' : 'Lock Task') : 'Only PMs can lock/unlock'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                task.isLocked
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${task.isLocked
                     ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
             {loading ? (
                 <Loader className="w-3.5 h-3.5 animate-spin" />
@@ -502,22 +560,23 @@ const TaskDetailsPage = () => {
     const navigate = useNavigate();
     const { user, isLoggedIn, loading: authLoading } = useAuth();
 
-    const [task, setTask]           = useState(null);
-    const [project, setProject]     = useState(null);
+    const [task, setTask] = useState(null);
+    const [project, setProject] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isInitialLoadRef = useRef(true);
 
     // Form states
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-    const [addingSubtask, setAddingSubtask]     = useState(false);
-    const [newComment, setNewComment]           = useState('');
-    const [postingComment, setPostingComment]   = useState(false);
+    const [addingSubtask, setAddingSubtask] = useState(false);
+    const [newComment, setNewComment] = useState('');
+    const [postingComment, setPostingComment] = useState(false);
     const [, setAddingAttachment] = useState(false);
 
     // Edit modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Intelligence
-    const [health, setHealth]             = useState(null);
+    const [health, setHealth] = useState(null);
     const [dependencies, setDependencies] = useState([]);
     const [projectTasks, setProjectTasks] = useState([]);
     const [recommendations, setRecommendations] = useState(null);
@@ -527,26 +586,26 @@ const TaskDetailsPage = () => {
 
     // Dependency form
     const [depParentId, setDepParentId] = useState('');
-    const [depType, setDepType]         = useState('FS');
-    const [linkingDep, setLinkingDep]   = useState(false);
+    const [depType, setDepType] = useState('FS');
+    const [linkingDep, setLinkingDep] = useState(false);
 
     // Active panel on the right sidebar
     const [rightPanel, setRightPanel] = useState('info'); // 'info' | 'timer' | 'history' | 'ai'
 
     // Per-action loading states
-    const [isDeletingTask, setIsDeletingTask]           = useState(false);
-    const [isApproving, setIsApproving]                 = useState(false);
-    const [isRejecting, setIsRejecting]                 = useState(false);
-    const [togglingSubtaskId, setTogglingSubtaskId]     = useState(null);
-    const [deletingSubtaskId, setDeletingSubtaskId]     = useState(null);
-    const [deletingCommentId, setDeletingCommentId]     = useState(null);
+    const [isDeletingTask, setIsDeletingTask] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
+    const [isRejecting, setIsRejecting] = useState(false);
+    const [togglingSubtaskId, setTogglingSubtaskId] = useState(null);
+    const [deletingSubtaskId, setDeletingSubtaskId] = useState(null);
+    const [deletingCommentId, setDeletingCommentId] = useState(null);
     const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
-    const [assigningUserId, setAssigningUserId]         = useState(null);
+    const [assigningUserId, setAssigningUserId] = useState(null);
     const [deletingDependencyId, setDeletingDependencyId] = useState(null);
-    const [isDuplicating, setIsDuplicating]             = useState(false);
-    const [isTogglingArchive, setIsTogglingArchive]     = useState(false);
-    const [isUndoing, setIsUndoing]                     = useState(false);
-    const [isRedoing, setIsRedoing]                     = useState(false);
+    const [isDuplicating, setIsDuplicating] = useState(false);
+    const [isTogglingArchive, setIsTogglingArchive] = useState(false);
+    const [isUndoing, setIsUndoing] = useState(false);
+    const [isRedoing, setIsRedoing] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) navigate('/login');
@@ -570,7 +629,10 @@ const TaskDetailsPage = () => {
 
     const fetchDetails = useCallback(async () => {
         try {
-            setIsLoading(true);
+            if (isInitialLoadRef.current) {
+                setIsLoading(true);
+                isInitialLoadRef.current = false;
+            }
             const data = await getTaskDetails(id);
             setTask(data);
             if (data?.projectId) await fetchHealthAndDependencies(data.projectId);
@@ -600,7 +662,7 @@ const TaskDetailsPage = () => {
         };
         socket.on('task_updated', handleTaskUpdated);
         return () => socket.off('task_updated', handleTaskUpdated);
-    }, [isLoggedIn, id]);
+    }, [isLoggedIn, id, fetchDetails, navigate]);
 
     // ─── Permissions ───────────────────────────────────────────────────────
     const currentMember = project?.members?.find(m => m.id === user?.id);
@@ -785,10 +847,10 @@ const TaskDetailsPage = () => {
         : 0;
 
     const RIGHT_TABS = [
-        { key: 'info',    label: 'Info',    icon: Shield },
-        { key: 'timer',   label: 'Timer',   icon: Timer },
+        { key: 'info', label: 'Info', icon: Shield },
+        { key: 'timer', label: 'Timer', icon: Timer },
         { key: 'history', label: 'History', icon: History },
-        { key: 'ai',      label: 'AI',      icon: Brain },
+        { key: 'ai', label: 'AI', icon: Brain },
     ];
 
     return (
@@ -819,11 +881,10 @@ const TaskDetailsPage = () => {
                                     {task.priority} Priority
                                 </span>
                                 {health && (
-                                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase border ${
-                                        health.color === 'Green'  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                        health.color === 'Yellow' ? 'bg-amber-50   text-amber-700   border-amber-200' :
-                                                                    'bg-red-50     text-red-700     border-red-200 animate-pulse'
-                                    }`}>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase border ${health.color === 'Green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                            health.color === 'Yellow' ? 'bg-amber-50   text-amber-700   border-amber-200' :
+                                                'bg-red-50     text-red-700     border-red-200 animate-pulse'
+                                        }`}>
                                         Health: {health.score} ({health.color})
                                     </span>
                                 )}
@@ -1162,11 +1223,10 @@ const TaskDetailsPage = () => {
                                 {RIGHT_TABS.map(({ key, label, icon: Icon }) => (
                                     <button key={key}
                                         onClick={() => setRightPanel(key)}
-                                        className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-extrabold uppercase tracking-wider transition ${
-                                            rightPanel === key
+                                        className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-extrabold uppercase tracking-wider transition ${rightPanel === key
                                                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30'
                                                 : 'text-gray-400 hover:text-gray-600'
-                                        }`}>
+                                            }`}>
                                         <Icon className="w-4 h-4" />
                                         {label}
                                     </button>
@@ -1260,7 +1320,7 @@ const TaskDetailsPage = () => {
                                 {/* ─── Timer Panel ─── */}
                                 {rightPanel === 'timer' && (
                                     <div className="space-y-4">
-                                        <TimerWidget task={task} onRefresh={fetchDetails} />
+                                        <TimerWidget task={task} user={user} isPM={isPM} onRefresh={fetchDetails} />
                                         <PomodoroWidget task={task} onRefresh={fetchDetails} />
                                     </div>
                                 )}

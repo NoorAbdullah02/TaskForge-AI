@@ -644,7 +644,7 @@ const ChatHub = () => {
                                 <button
                                     type="submit"
                                     disabled={addingMembers || selectedAddMemberIds.length === 0}
-                                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer disabled:bg-slate-500/50 disabled:cursor-not-allowed"
+                                    className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
                                     {addingMembers ? 'Adding...' : 'Add Selected'}
                                 </button>

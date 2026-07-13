@@ -1,6 +1,6 @@
 import { db } from '../db/index';
 import { eq, and, desc, gte, count, like, inArray, or } from 'drizzle-orm';
-import { projects, tasks, attendance, leaveRequests, activityLogs, users, workspaceMembers } from '../db/schema';
+import { projects, tasks, attendance, leaveRequests, activityLogs, users, workspaceMembers, workLogs, timesheets } from '../db/schema';
 import { mergeStatusCounts } from '../lib/taskStatus';
 
 export class DashboardService {
@@ -40,6 +40,9 @@ export class DashboardService {
             activeMembersResult,
             pendingReviewCountResult,
             reviewQueueRows,
+            pendingWorkLogsRows,
+            pendingTimesheetsRows,
+            activeTimersRows,
         ] = await Promise.all([
             workspaceId && workspaceProjectIds.length > 0
                 ? db.select({ status: projects.status, cnt: count() })
@@ -198,6 +201,69 @@ export class DashboardService {
                     ))
                     .orderBy(desc(tasks.updatedAt))
                     .limit(12),
+
+            // Pending work logs for review
+            workspaceId
+                ? db.select({
+                    id: workLogs.id,
+                    title: workLogs.title,
+                    hoursWorked: workLogs.hoursWorked,
+                    logDate: workLogs.logDate,
+                    status: workLogs.status,
+                    userName: users.name,
+                })
+                    .from(workLogs)
+                    .leftJoin(users, eq(workLogs.userId, users.id))
+                    .where(and(
+                        eq(workLogs.workspaceId, workspaceId),
+                        eq(workLogs.status, 'pending')
+                    ))
+                    .orderBy(desc(workLogs.createdAt))
+                    .limit(10)
+                : Promise.resolve([]),
+
+            // Pending timesheets for review
+            workspaceId
+                ? db.select({
+                    id: timesheets.id,
+                    periodType: timesheets.periodType,
+                    periodStart: timesheets.periodStart,
+                    periodEnd: timesheets.periodEnd,
+                    totalHours: timesheets.totalHours,
+                    status: timesheets.status,
+                    userName: users.name,
+                })
+                    .from(timesheets)
+                    .leftJoin(users, eq(timesheets.userId, users.id))
+                    .where(and(
+                        eq(timesheets.workspaceId, workspaceId),
+                        eq(timesheets.status, 'submitted')
+                    ))
+                    .orderBy(desc(timesheets.createdAt))
+                    .limit(10)
+                : Promise.resolve([]),
+
+            // Active timers (tasks currently being tracked)
+            workspaceId && workspaceProjectIds.length > 0
+                ? db.select({
+                    id: tasks.id,
+                    title: tasks.title,
+                    projectId: tasks.projectId,
+                    projectName: projects.name,
+                    assigneeId: tasks.assigneeId,
+                    assigneeName: users.name,
+                    timerStartedAt: tasks.timerStartedAt,
+                    actualHours: tasks.actualHours,
+                })
+                    .from(tasks)
+                    .innerJoin(projects, eq(tasks.projectId, projects.id))
+                    .leftJoin(users, eq(tasks.assigneeId, users.id))
+                    .where(and(
+                        inArray(tasks.projectId, workspaceProjectIds),
+                        eq(tasks.isTimerActive, true)
+                    ))
+                    .orderBy(desc(tasks.timerStartedAt))
+                : Promise.resolve([]),
         ]);
 
         // --- Project Stats ---
@@ -323,6 +389,15 @@ export class DashboardService {
             },
             productivity: weeklyProductivity,
             recentActivity,
+            pendingWorkLogs: pendingWorkLogsRows || [],
+            pendingTimesheets: pendingTimesheetsRows || [],
+            activeTimers: (activeTimersRows || []).map(t => ({
+                ...t,
+                timerStartedAt: t.timerStartedAt ? t.timerStartedAt.toISOString() : null,
+                elapsedSeconds: t.timerStartedAt
+                    ? Math.floor((Date.now() - t.timerStartedAt.getTime()) / 1000)
+                    : 0,
+            })),
             workspace: {
                 pendingMembers: Number((pendingMembersResult as any[])[0]?.cnt || 0),
                 activeMembers: Number((activeMembersResult as any[])[0]?.cnt || 0),

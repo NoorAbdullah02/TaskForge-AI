@@ -11,7 +11,11 @@ import {
     getAnalytics,
     getAuditLogs,
     toggleBanUser,
-    resetWorkspace
+    resetWorkspace,
+    getSuperAdminPayments,
+    approvePayment,
+    rejectPayment,
+    getBillingAnalytics
 } from '../Services/superAdminApi';
 import {
     Loader,
@@ -29,9 +33,13 @@ import {
     RefreshCw,
     ShieldCheck,
     Eye,
-    X
+    X,
+    CreditCard,
+    CheckCircle2,
+    XCircle
 } from 'lucide-react';
 import { getEmailLogs, retryEmailLog, getAutomationLogs } from '../Services/notificationApi';
+import { socket } from '../Services/socket';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -69,6 +77,14 @@ const SuperAdminConsole = () => {
     const [deletingWorkspaceId, setDeletingWorkspaceId] = useState(null);
     const [banningUserId, setBanningUserId] = useState(null);
     const [resettingWorkspaceId, setResettingWorkspaceId] = useState(null);
+
+    // Payments/Billing states
+    const [paymentsList, setPaymentsList] = useState([]);
+    const [billingAnalytics, setBillingAnalytics] = useState(null);
+    const [paymentsLoading, setPaymentsLoading] = useState(false);
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState('pending');
+    const [processingPaymentId, setProcessingPaymentId] = useState(null);
+    const [screenshotPreview, setScreenshotPreview] = useState(null);
 
     // Redirect if not super admin
     useEffect(() => {
@@ -128,6 +144,78 @@ const SuperAdminConsole = () => {
             fetchAutomationLogs();
         }
     }, [activeTab, emailFilter]);
+
+    // Fetch Payments when payments tab is activated
+    useEffect(() => {
+        if (isLoggedIn && user?.role === 'super_admin' && activeTab === 'payments') {
+            fetchPayments();
+            fetchBillingAnalytics();
+        }
+    }, [activeTab, paymentStatusFilter]);
+
+    // Realtime: new payment submitted
+    useEffect(() => {
+        if (!isLoggedIn || user?.role !== 'super_admin') return;
+        const onSubmitted = () => {
+            toast.success('New payment submitted for review.');
+            if (activeTab === 'payments') fetchPayments();
+        };
+        socket.on('payment.submitted', onSubmitted);
+        return () => socket.off('payment.submitted', onSubmitted);
+    }, [isLoggedIn, user, activeTab]);
+
+    const fetchPayments = async () => {
+        try {
+            setPaymentsLoading(true);
+            const res = await getSuperAdminPayments({ status: paymentStatusFilter === 'all' ? undefined : paymentStatusFilter, limit: 50 });
+            setPaymentsList(res?.payments || []);
+        } catch (error) {
+            console.error('Failed to fetch payments:', error);
+            toast.error('Failed to retrieve payments');
+        } finally {
+            setPaymentsLoading(false);
+        }
+    };
+
+    const fetchBillingAnalytics = async () => {
+        try {
+            const res = await getBillingAnalytics();
+            setBillingAnalytics(res);
+        } catch (error) {
+            console.error('Failed to fetch billing analytics:', error);
+        }
+    };
+
+    const handleApprovePayment = async (paymentId) => {
+        if (!window.confirm('Approve this payment and activate the subscription?')) return;
+        setProcessingPaymentId(paymentId);
+        try {
+            await approvePayment(paymentId);
+            toast.success('Payment approved and subscription activated.');
+            fetchPayments();
+            fetchBillingAnalytics();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to approve payment');
+        } finally {
+            setProcessingPaymentId(null);
+        }
+    };
+
+    const handleRejectPayment = async (paymentId) => {
+        const reason = window.prompt('Reason for rejection:');
+        if (!reason || !reason.trim()) return;
+        setProcessingPaymentId(paymentId);
+        try {
+            await rejectPayment(paymentId, reason.trim());
+            toast.success('Payment rejected.');
+            fetchPayments();
+            fetchBillingAnalytics();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to reject payment');
+        } finally {
+            setProcessingPaymentId(null);
+        }
+    };
 
     const fetchEmailLogs = async () => {
         try {
@@ -313,7 +401,7 @@ const SuperAdminConsole = () => {
                     <button
                         onClick={loadData}
                         disabled={isSyncingRegistry}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 transition cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-line transition cursor-pointer disabled:opacity-50"
                     >
                         {isSyncingRegistry ? (
                             <>
@@ -382,7 +470,8 @@ const SuperAdminConsole = () => {
                         { id: 'projects', name: 'Projects', icon: Briefcase },
                         { id: 'analytics', name: 'AI & Usage Analytics', icon: BarChart3 },
                         { id: 'audit-logs', name: 'Global Audit Logs', icon: Activity },
-                        { id: 'email-logs', name: 'Email & Automations', icon: Mail }
+                        { id: 'email-logs', name: 'Email & Automations', icon: Mail },
+                        { id: 'payments', name: 'Payments & Billing', icon: CreditCard }
                     ].map(t => {
                         const Icon = t.icon;
                         return (
@@ -407,8 +496,8 @@ const SuperAdminConsole = () => {
 
                 {/* Sub Tab Contents */}
                 <div className="bg-surface-2 border border-line rounded-3xl p-6 shadow-xl backdrop-blur-md">
-                    {/* Search Panel (if not in analytics) */}
-                    {activeTab !== 'analytics' && (
+                    {/* Search Panel (if not in analytics/payments) */}
+                    {activeTab !== 'analytics' && activeTab !== 'payments' && (
                         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-6">
                             <div className="relative flex-1 max-w-md">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-soft" />
@@ -715,7 +804,7 @@ const SuperAdminConsole = () => {
                             ) : (
                                 <table className="w-full text-left text-xs text-ink font-sans border-collapse">
                                     <thead>
-                                        <tr className="border-b border-line text-[10px] font-bold text-slate-455 uppercase tracking-wider">
+                                        <tr className="border-b border-line text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                             <th className="pb-3 pr-4">Action</th>
                                             <th className="pb-3 pr-4">Entity Context</th>
                                             <th className="pb-3 pr-4">Action Description Details</th>
@@ -783,7 +872,7 @@ const SuperAdminConsole = () => {
                                                     className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition cursor-pointer ${
                                                         emailFilter === st
                                                             ? 'bg-blue-600/20 text-blue-400 border-blue-500/30 font-extrabold'
-                                                            : 'bg-surface-2 text-ink-soft border-line hover:bg-surface-2 hover:text-ink'
+                                                            : 'bg-surface-2 text-ink-soft border-line hover:bg-line hover:text-ink'
                                                     }`}
                                                 >
                                                     {st}
@@ -841,7 +930,7 @@ const SuperAdminConsole = () => {
                                                             <td className="py-3 text-right space-x-2">
                                                                 <button
                                                                     onClick={() => setSelectedEmail(log)}
-                                                                    className="px-2 py-1 rounded bg-surface-2 border border-line text-[9px] font-bold text-ink hover:bg-surface-2 transition cursor-pointer"
+                                                                    className="px-2 py-1 rounded bg-surface-2 border border-line text-[9px] font-bold text-ink hover:bg-line transition cursor-pointer"
                                                                 >
                                                                     Preview HTML
                                                                 </button>
@@ -918,6 +1007,120 @@ const SuperAdminConsole = () => {
                             </div>
                         </div>
                     )}
+                    {/* TAB: PAYMENTS & BILLING */}
+                    {activeTab === 'payments' && (
+                        <div className="space-y-8 animate-in fade-in duration-200">
+                            {/* Billing Analytics Summary */}
+                            {billingAnalytics && (
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                                        <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">Total Revenue</span>
+                                        <span className="text-xl font-extrabold text-ink mt-0.5 block">{(billingAnalytics.revenue?.totalCents / 100).toFixed(2)} BDT</span>
+                                    </div>
+                                    <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                                        <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">Pending Payments</span>
+                                        <span className="text-xl font-extrabold text-amber-400 mt-0.5 block">{billingAnalytics.payments?.pending}</span>
+                                    </div>
+                                    <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                                        <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">Active Subscriptions</span>
+                                        <span className="text-xl font-extrabold text-emerald-400 mt-0.5 block">{billingAnalytics.subscriptions?.active}</span>
+                                    </div>
+                                    <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                                        <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">Conversion Rate</span>
+                                        <span className="text-xl font-extrabold text-ink mt-0.5 block">{billingAnalytics.conversionRate}%</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Status filter */}
+                            <div className="flex items-center gap-1.5">
+                                {['pending', 'approved', 'rejected', 'all'].map((st) => (
+                                    <button
+                                        key={st}
+                                        onClick={() => setPaymentStatusFilter(st)}
+                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition cursor-pointer ${
+                                            paymentStatusFilter === st
+                                                ? 'bg-blue-600/20 text-blue-400 border-blue-500/30 font-extrabold'
+                                                : 'bg-surface-2 text-ink-soft border-line hover:bg-line hover:text-ink'
+                                        }`}
+                                    >
+                                        {st}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Payments table */}
+                            <div className="overflow-x-auto">
+                                {paymentsLoading && paymentsList.length === 0 ? (
+                                    <div className="py-20 flex items-center justify-center">
+                                        <Loader className="w-6 h-6 text-blue-500 animate-spin" />
+                                    </div>
+                                ) : paymentsList.length === 0 ? (
+                                    <p className="text-xs text-ink-soft py-16 text-center font-sans">No payments found for this filter.</p>
+                                ) : (
+                                    <table className="w-full text-left text-xs text-ink font-sans border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-line text-[10px] font-bold text-ink-soft uppercase tracking-wider">
+                                                <th className="pb-3 pr-4">Transaction ID</th>
+                                                <th className="pb-3 pr-4">Plan / Cycle</th>
+                                                <th className="pb-3 pr-4">Method</th>
+                                                <th className="pb-3 pr-4">Sender Number</th>
+                                                <th className="pb-3 pr-4">Amount</th>
+                                                <th className="pb-3 pr-4">Status</th>
+                                                <th className="pb-3 pr-4">Submitted</th>
+                                                <th className="pb-3 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {paymentsList.map(p => (
+                                                <tr key={p.id} className="hover:bg-surface-2 transition-colors">
+                                                    <td className="py-3.5 font-mono text-indigo-300 pr-4">{p.transactionId}</td>
+                                                    <td className="py-3.5 pr-4 capitalize">{p.plan} · {p.billingCycle}</td>
+                                                    <td className="py-3.5 pr-4 uppercase font-bold text-[10px]">{p.method}</td>
+                                                    <td className="py-3.5 pr-4 font-mono">{p.senderNumber}</td>
+                                                    <td className="py-3.5 pr-4 font-semibold">{(p.amountCents / 100).toFixed(2)} BDT</td>
+                                                    <td className="py-3.5 pr-4">
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase border ${
+                                                            p.status === 'approved'
+                                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                : p.status === 'rejected'
+                                                                    ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                        }`}>
+                                                            {p.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3.5 pr-4 font-mono text-ink-soft">{new Date(p.createdAt).toLocaleDateString()}</td>
+                                                    <td className="py-3.5 text-right">
+                                                        {p.status === 'pending' && (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => handleApprovePayment(p.id)}
+                                                                    disabled={processingPaymentId === p.id}
+                                                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition cursor-pointer disabled:opacity-50 text-[10px] font-bold"
+                                                                >
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    Approve
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRejectPayment(p.id)}
+                                                                    disabled={processingPaymentId === p.id}
+                                                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition cursor-pointer disabled:opacity-50 text-[10px] font-bold"
+                                                                >
+                                                                    <XCircle className="w-3.5 h-3.5" />
+                                                                    Reject
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -947,7 +1150,7 @@ const SuperAdminConsole = () => {
                                 </div>
                                 <button 
                                     onClick={() => setSelectedEmail(null)}
-                                    className="p-1.5 rounded-lg bg-surface-2 border border-line text-ink-soft hover:text-ink hover:bg-surface-2 transition cursor-pointer"
+                                    className="p-1.5 rounded-lg bg-surface-2 border border-line text-ink-soft hover:text-ink hover:bg-line transition cursor-pointer"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -990,7 +1193,7 @@ const SuperAdminConsole = () => {
                                     )}
                                     <button
                                         onClick={() => setSelectedEmail(null)}
-                                        className="px-4 py-2 bg-surface-2 text-ink hover:bg-surface-2 font-bold rounded-xl text-xs transition cursor-pointer"
+                                        className="px-4 py-2 bg-surface-2 text-ink hover:bg-line font-bold rounded-xl text-xs transition cursor-pointer"
                                     >
                                         Close Preview
                                     </button>

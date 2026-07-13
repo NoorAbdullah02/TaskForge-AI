@@ -26,7 +26,11 @@ import timeRoute from './routes/time.routes';
 import calendarRoute from './routes/calendar.routes';
 import fileRoute from './routes/file.routes';
 import notificationRoute from './routes/notification.routes';
+import billingRoute from './routes/billing.routes';
+import workLogRoute from './routes/workLog.routes';
+import timesheetRoute from './routes/timesheet.routes';
 import { startEscalationScheduler } from './services/escalation.scheduler';
+import { startBillingScheduler } from './services/billing.scheduler';
 
 
 
@@ -108,6 +112,9 @@ app.use("/api/time", timeRoute);
 app.use("/api/calendar", calendarRoute);
 app.use("/api/files", fileRoute);
 app.use("/api/notifications", notificationRoute);
+app.use("/api/billing", billingRoute);
+app.use("/api/worklogs", workLogRoute);
+app.use("/api/timesheets", timesheetRoute);
 
 
 
@@ -134,6 +141,7 @@ if (env.NODE_ENV === 'production') {
 const server = http.createServer(app);
 socketService.init(server);
 startEscalationScheduler();
+startBillingScheduler();
 
 server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);

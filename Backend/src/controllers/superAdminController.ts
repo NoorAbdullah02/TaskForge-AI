@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { db } from '../db/index';
-import { workspaces, users, projects, activityLogs, aiRequests, emailLogs, attachments, projectDocuments, sessionTable, workspaceMembers } from '../db/schema';
+import { workspaces, users, projects, activityLogs, aiRequests, emailLogs, attachments, projectDocuments, sessionTable, workspaceMembers, payments, subscriptions } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { EmailTriggerService } from '../services/emailTrigger.service';
+import { PaymentService } from '../services/payment.service';
 
 export class SuperAdminController {
     // 1. Get all workspaces
@@ -286,6 +287,159 @@ export class SuperAdminController {
             return res.status(200).json({ message: 'Workspace successfully reset. All projects and tasks wiped.' });
         } catch (error) {
             console.error('Error resetting workspace:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // 10. Get all payments (filter/search/paginate)
+    static async getPayments(req: Request, res: Response) {
+        try {
+            const { status, search, page, limit } = req.query;
+            const result = await PaymentService.listPayments({
+                status: status as string | undefined,
+                search: search as string | undefined,
+                page: page ? parseInt(page as string, 10) : 1,
+                limit: limit ? parseInt(limit as string, 10) : 20,
+            });
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error('Error getting payments:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // 11. Approve payment
+    static async approvePayment(req: Request, res: Response) {
+        try {
+            const paymentId = parseInt(req.params.id, 10);
+            if (isNaN(paymentId)) return res.status(400).json({ message: 'Invalid Payment ID' });
+
+            const adminUser = (req as any).user;
+            const result = await PaymentService.approvePayment(paymentId, adminUser.id);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error approving payment:', error);
+            return res.status(400).json({ message: error.message || 'Failed to approve payment' });
+        }
+    }
+
+    // 12. Reject payment
+    static async rejectPayment(req: Request, res: Response) {
+        try {
+            const paymentId = parseInt(req.params.id, 10);
+            if (isNaN(paymentId)) return res.status(400).json({ message: 'Invalid Payment ID' });
+
+            const { reason } = req.body;
+            const adminUser = (req as any).user;
+            const result = await PaymentService.rejectPayment(paymentId, adminUser.id, reason);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            console.error('Error rejecting payment:', error);
+            return res.status(400).json({ message: error.message || 'Failed to reject payment' });
+        }
+    }
+
+    // 13. Bulk approve payments
+    static async bulkApprovePayments(req: Request, res: Response) {
+        try {
+            const { paymentIds } = req.body;
+            if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
+                return res.status(400).json({ message: 'paymentIds array is required' });
+            }
+            const adminUser = (req as any).user;
+            const results = [];
+            for (const id of paymentIds) {
+                try {
+                    const result = await PaymentService.approvePayment(parseInt(id, 10), adminUser.id);
+                    results.push({ id, success: true, result });
+                } catch (err: any) {
+                    results.push({ id, success: false, error: err.message });
+                }
+            }
+            return res.status(200).json({ results });
+        } catch (error) {
+            console.error('Error bulk approving payments:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // 14. Bulk reject payments
+    static async bulkRejectPayments(req: Request, res: Response) {
+        try {
+            const { paymentIds, reason } = req.body;
+            if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
+                return res.status(400).json({ message: 'paymentIds array is required' });
+            }
+            const adminUser = (req as any).user;
+            const results = [];
+            for (const id of paymentIds) {
+                try {
+                    const result = await PaymentService.rejectPayment(parseInt(id, 10), adminUser.id, reason || 'Rejected by Super Admin');
+                    results.push({ id, success: true, result });
+                } catch (err: any) {
+                    results.push({ id, success: false, error: err.message });
+                }
+            }
+            return res.status(200).json({ results });
+        } catch (error) {
+            console.error('Error bulk rejecting payments:', error);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+    }
+
+    // 15. Billing analytics
+    static async getBillingAnalytics(req: Request, res: Response) {
+        try {
+            const [totalRevenue] = await db.select({ total: sql<number>`coalesce(sum(${payments.amountCents}), 0)::int` })
+                .from(payments).where(eq(payments.status, 'approved'));
+
+            const [pendingCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(payments).where(eq(payments.status, 'pending'));
+
+            const [approvedCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(payments).where(eq(payments.status, 'approved'));
+
+            const [rejectedCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(payments).where(eq(payments.status, 'rejected'));
+
+            const [trialingCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(subscriptions).where(eq(subscriptions.status, 'trialing'));
+
+            const [activeCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(subscriptions).where(eq(subscriptions.status, 'active'));
+
+            const [expiredCount] = await db.select({ count: sql<number>`count(*)::int` })
+                .from(subscriptions).where(eq(subscriptions.status, 'expired'));
+
+            const planBreakdown = await db.select({
+                plan: subscriptions.plan,
+                count: sql<number>`count(*)::int`
+            }).from(subscriptions).groupBy(subscriptions.plan);
+
+            const totalSubs = Number(trialingCount?.count || 0) + Number(activeCount?.count || 0) + Number(expiredCount?.count || 0);
+            const conversionRate = totalSubs > 0
+                ? Number(((Number(activeCount?.count || 0) / totalSubs) * 100).toFixed(1))
+                : 0;
+
+            return res.status(200).json({
+                revenue: {
+                    totalCents: Number(totalRevenue?.total || 0),
+                },
+                payments: {
+                    pending: Number(pendingCount?.count || 0),
+                    approved: Number(approvedCount?.count || 0),
+                    rejected: Number(rejectedCount?.count || 0),
+                },
+                subscriptions: {
+                    trialing: Number(trialingCount?.count || 0),
+                    active: Number(activeCount?.count || 0),
+                    expired: Number(expiredCount?.count || 0),
+                },
+                planBreakdown,
+                conversionRate,
+            });
+        } catch (error) {
+            console.error('Error getting billing analytics:', error);
             return res.status(500).json({ message: 'Internal Server Error' });
         }
     }

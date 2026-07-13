@@ -1,9 +1,9 @@
 import { Server } from 'socket.io';
 import { db } from '../db/index';
-import { notifications, chatMembers } from '../db/schema';
+import { notifications, chatMembers, timeLogs, tasks } from '../db/schema';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 const parseCookies = (cookieString: string) => {
     const list: Record<string, string> = {};
@@ -76,6 +76,9 @@ class SocketService {
             socket.join(`user_${userId}`);
             console.log(`⚡ Socket connected & verified: User ID ${userId} -> Socket ID ${socket.id}`);
 
+            // Automatically resume system-paused timer on connection
+            this.resumeSystemPausedTimerForUser(userId);
+
             socket.on('auth', (clientUserId: number) => {
                 console.log(`👤 Client auth request for user ID: ${clientUserId} (Verified ID: ${userId})`);
                 if (Number(clientUserId) !== userId) {
@@ -132,8 +135,120 @@ class SocketService {
             socket.on('disconnect', () => {
                 console.log('🔌 Socket disconnected:', socket.id);
                 this.userSockets.delete(userId);
+
+                // Wait 1.5 seconds to verify if they are fully offline or just reloading/navigating
+                setTimeout(async () => {
+                    if (this.io) {
+                        const sockets = await this.io.in(`user_${userId}`).fetchSockets();
+                        if (!sockets || sockets.length === 0) {
+                            console.log(`👤 User ID ${userId} is completely offline. Pausing active timers...`);
+                            await this.pauseActiveTimerForUser(userId);
+                        }
+                    }
+                }, 1500);
             });
         });
+    }
+
+    async pauseActiveTimerForUser(userId: number) {
+        try {
+            const [active] = await db.select().from(timeLogs).where(
+                and(
+                    eq(timeLogs.userId, userId),
+                    isNull(timeLogs.endTime),
+                    eq(timeLogs.status, 'running')
+                )
+            ).limit(1);
+
+            if (!active) return;
+
+            const now = new Date();
+            const originalDescription = active.description || '';
+            const newDescription = originalDescription.endsWith(' [system_paused]') 
+                ? originalDescription 
+                : `${originalDescription} [system_paused]`;
+
+            const [updated] = await db.update(timeLogs)
+                .set({ 
+                    status: 'paused', 
+                    pausedAt: now,
+                    description: newDescription
+                })
+                .where(eq(timeLogs.id, active.id))
+                .returning();
+
+            if (updated.taskId) {
+                const [task] = await db.select().from(tasks).where(eq(tasks.id, updated.taskId)).limit(1);
+                if (task) {
+                    await db.update(tasks).set({
+                        isTimerActive: false,
+                        timerStartedAt: null
+                    }).where(eq(tasks.id, updated.taskId));
+
+                    this.broadcastToWorkspace(updated.workspaceId, 'task_updated', { 
+                        action: 'timer_stopped', 
+                        taskId: updated.taskId,
+                        projectId: task.projectId 
+                    });
+                }
+            }
+
+            console.log(`⏸️ Automatically paused timer ${updated.id} for user ${userId} on disconnect.`);
+            this.broadcastToWorkspace(updated.workspaceId, 'timer.paused', { userId, logId: updated.id, taskId: updated.taskId });
+        } catch (error) {
+            console.error('Error pausing active timer on disconnect:', error);
+        }
+    }
+
+    async resumeSystemPausedTimerForUser(userId: number) {
+        try {
+            const [active] = await db.select().from(timeLogs).where(
+                and(
+                    eq(timeLogs.userId, userId),
+                    isNull(timeLogs.endTime),
+                    eq(timeLogs.status, 'paused')
+                )
+            ).limit(1);
+
+            if (!active || !active.description || !active.description.endsWith(' [system_paused]')) {
+                return;
+            }
+
+            const now = new Date();
+            const additionalPaused = active.pausedAt ? Math.round((now.getTime() - active.pausedAt.getTime()) / 1000) : 0;
+            const cleanDescription = active.description.slice(0, -' [system_paused]'.length);
+
+            const [updated] = await db.update(timeLogs)
+                .set({
+                    status: 'running',
+                    pausedAt: null,
+                    totalPausedSeconds: active.totalPausedSeconds + additionalPaused,
+                    description: cleanDescription
+                })
+                .where(eq(timeLogs.id, active.id))
+                .returning();
+
+            if (updated.taskId) {
+                const [task] = await db.select().from(tasks).where(eq(tasks.id, updated.taskId)).limit(1);
+                if (task) {
+                    await db.update(tasks).set({
+                        isTimerActive: true,
+                        timerStartedAt: now
+                    }).where(eq(tasks.id, updated.taskId));
+
+                    this.broadcastToWorkspace(updated.workspaceId, 'task_updated', { 
+                        action: 'timer_started', 
+                        taskId: updated.taskId,
+                        projectId: task.projectId 
+                    });
+                }
+            }
+
+            console.log(`▶️ Automatically resumed timer ${updated.id} for user ${userId} on connect.`);
+            this.broadcastToWorkspace(updated.workspaceId, 'timer.resumed', { userId, logId: updated.id, taskId: updated.taskId });
+        } catch (error) {
+            console.error('Error resuming system-paused timer on connect:', error);
+        }
     }
 
     // Send real-time notification, save to DB, and emit to socket room

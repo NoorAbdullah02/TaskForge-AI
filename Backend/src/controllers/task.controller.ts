@@ -750,8 +750,9 @@ export class TaskController {
 
             const watcher = await TaskService.watchTask(taskId, user.id, role || 'watcher');
             return res.status(200).json({ message: 'Task watched successfully', watcher });
-        } catch (error) {
-            return res.status(500).json({ message: 'Internal Server Error' });
+        } catch (error: any) {
+            console.error('Error in watchTask:', error);
+            return res.status(500).json({ message: error.message || 'Internal Server Error' });
         }
     }
 
@@ -762,8 +763,9 @@ export class TaskController {
 
             await TaskService.unwatchTask(taskId, user.id);
             return res.status(200).json({ message: 'Task unwatched successfully' });
-        } catch (error) {
-            return res.status(500).json({ message: 'Internal Server Error' });
+        } catch (error: any) {
+            console.error('Error in unwatchTask:', error);
+            return res.status(500).json({ message: error.message || 'Internal Server Error' });
         }
     }
 

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getLogs, getActiveTimer, startTimer, stopTimer, createManualLog } from '../Services/timeApi';
+import { getLogs, getActiveTimer, startTimer, pauseTimer, resumeTimer, stopTimer, restartTimer, createManualLog, getMyHoursSummary } from '../Services/timeApi';
 import { getTasks } from '../Services/taskApi';
-import { Clock, Play, Square, Calendar, Plus, List, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Clock, Play, Pause, RotateCcw, Square, Calendar, Plus, List, Loader2, Link as LinkIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { socket } from '../Services/socket';
 
 const TimeTracker = () => {
     const { user } = useAuth();
@@ -26,27 +27,28 @@ const TimeTracker = () => {
     const [manualStart, setManualStart] = useState('');
     const [manualEnd, setManualEnd] = useState('');
     const [showManualModal, setShowManualModal] = useState(false);
+    const [hoursSummary, setHoursSummary] = useState(null);
 
     // Refs
     const timerIntervalRef = useRef(null);
 
     // Load tasks & logs
-    const loadTrackerData = async () => {
+    const loadTrackerData = useCallback(async (showLoader = true) => {
         try {
-            setLoading(true);
-            const [logsList, tasksList, active] = await Promise.all([
+            if (showLoader) setLoading(true);
+            const [logsList, tasksList, active, summary] = await Promise.all([
                 getLogs(),
                 getTasks(),
-                getActiveTimer()
+                getActiveTimer(),
+                getMyHoursSummary()
             ]);
             setLogs(logsList || []);
             setTasks(tasksList || []);
-            
+            setHoursSummary(summary || null);
+
             if (active) {
                 setActiveTimer(active);
-                const startTime = new Date(active.startTime).getTime();
-                const now = new Date().getTime();
-                setSecondsElapsed(Math.round((now - startTime) / 1000));
+                setSecondsElapsed(active.elapsedSeconds ?? 0);
             } else {
                 setActiveTimer(null);
                 setSecondsElapsed(0);
@@ -55,20 +57,42 @@ const TimeTracker = () => {
             console.error('Failed to load tracker details:', error);
             toast.error('Could not load time tracking logs.');
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         loadTrackerData();
         return () => {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [user?.activeWorkspaceId]);
+    }, [user?.activeWorkspaceId, loadTrackerData]);
 
-    // Active Timer tick handler
     useEffect(() => {
-        if (activeTimer) {
+        if (!user?.id) return;
+
+        const handleTimerEvent = (data) => {
+            if (Number(data.userId) === Number(user.id)) {
+                loadTrackerData(false); // reload silently
+            }
+        };
+
+        socket.on('timer.started', handleTimerEvent);
+        socket.on('timer.paused', handleTimerEvent);
+        socket.on('timer.resumed', handleTimerEvent);
+        socket.on('timer.stopped', handleTimerEvent);
+
+        return () => {
+            socket.off('timer.started', handleTimerEvent);
+            socket.off('timer.paused', handleTimerEvent);
+            socket.off('timer.resumed', handleTimerEvent);
+            socket.off('timer.stopped', handleTimerEvent);
+        };
+    }, [user?.id, loadTrackerData]);
+
+    // Active Timer tick handler — only ticks while running, freezes while paused
+    useEffect(() => {
+        if (activeTimer && activeTimer.status === 'running') {
             timerIntervalRef.current = setInterval(() => {
                 setSecondsElapsed(prev => prev + 1);
             }, 1000);
@@ -113,6 +137,50 @@ const TimeTracker = () => {
         } catch (error) {
             console.error('Failed to stop timer:', error);
             toast.error('Failed to stop timer');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handlePauseTimer = async () => {
+        try {
+            setSubmitting(true);
+            const updated = await pauseTimer();
+            setActiveTimer(updated);
+            toast.success('Timer paused.');
+        } catch (error) {
+            console.error('Failed to pause timer:', error);
+            toast.error(error.response?.data?.message || 'Failed to pause timer');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleResumeTimer = async () => {
+        try {
+            setSubmitting(true);
+            const updated = await resumeTimer();
+            setActiveTimer(updated);
+            toast.success('Timer resumed.');
+        } catch (error) {
+            console.error('Failed to resume timer:', error);
+            toast.error(error.response?.data?.message || 'Failed to resume timer');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleRestartTimer = async (logId) => {
+        try {
+            setSubmitting(true);
+            const newTimer = await restartTimer(logId);
+            setActiveTimer(newTimer);
+            setSecondsElapsed(0);
+            toast.success('Timer restarted.');
+            loadTrackerData();
+        } catch (error) {
+            console.error('Failed to restart timer:', error);
+            toast.error(error.response?.data?.message || 'Failed to restart timer');
         } finally {
             setSubmitting(false);
         }
@@ -184,12 +252,34 @@ const TimeTracker = () => {
 
                     <button
                         onClick={() => setShowManualModal(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-surface-2 transition cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-line text-xs font-bold hover:bg-line transition cursor-pointer"
                     >
                         <Plus className="w-4 h-4 text-ink" />
                         Log Hours Manually
                     </button>
                 </div>
+
+                {/* Hours summary strip */}
+                {hoursSummary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">Today</span>
+                            <span className="text-xl font-extrabold text-ink mt-0.5 block">{hoursSummary.todayHours}h</span>
+                        </div>
+                        <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">This Week</span>
+                            <span className="text-xl font-extrabold text-ink mt-0.5 block">{hoursSummary.weekHours}h</span>
+                        </div>
+                        <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">This Month</span>
+                            <span className="text-xl font-extrabold text-ink mt-0.5 block">{hoursSummary.monthHours}h</span>
+                        </div>
+                        <div className="bg-surface-2 border border-line p-5 rounded-2xl">
+                            <span className="text-[10px] font-bold text-ink-soft uppercase tracking-wider block">All Time</span>
+                            <span className="text-xl font-extrabold text-emerald-400 mt-0.5 block">{hoursSummary.totalHours}h</span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Main timer widget */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
@@ -229,7 +319,7 @@ const TimeTracker = () => {
                                             <select
                                                 value={selectedTaskId}
                                                 onChange={(e) => setSelectedTaskId(e.target.value)}
-                                                className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
+                                                className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-300"
                                             >
                                                 <option value="" className="bg-card text-ink-soft">Choose task (Optional)</option>
                                                 {tasks.map(t => (
@@ -269,23 +359,35 @@ const TimeTracker = () => {
                                 {formatDuration(secondsElapsed)}
                             </div>
                             {activeTimer && (
-                                <button
-                                    onClick={handleStopTimer}
-                                    disabled={submitting}
-                                    className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-xs font-bold cursor-pointer"
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Stopping...
-                                        </>
+                                <div className="mt-4 flex items-center gap-2">
+                                    {activeTimer.status === 'running' ? (
+                                        <button
+                                            onClick={handlePauseTimer}
+                                            disabled={submitting}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition text-xs font-bold cursor-pointer"
+                                        >
+                                            <Pause className="w-4 h-4" />
+                                            Pause
+                                        </button>
                                     ) : (
-                                        <>
-                                            <Square className="w-4 h-4" />
-                                            Halt Tracker
-                                        </>
+                                        <button
+                                            onClick={handleResumeTimer}
+                                            disabled={submitting}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition text-xs font-bold cursor-pointer"
+                                        >
+                                            <Play className="w-4 h-4" />
+                                            Resume
+                                        </button>
                                     )}
-                                </button>
+                                    <button
+                                        onClick={handleStopTimer}
+                                        disabled={submitting}
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition text-xs font-bold cursor-pointer"
+                                    >
+                                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
+                                        Stop
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -340,7 +442,8 @@ const TimeTracker = () => {
                                         <th className="pb-3 pr-4">Linked Task</th>
                                         <th className="pb-3 pr-4">Start Time</th>
                                         <th className="pb-3 pr-4">End Time</th>
-                                        <th className="pb-3 text-right">Duration</th>
+                                        <th className="pb-3 pr-4 text-right">Duration</th>
+                                        <th className="pb-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -357,8 +460,20 @@ const TimeTracker = () => {
                                                 )}
                                             </td>
                                             <td className="py-3.5 font-mono text-ink-soft pr-4">{new Date(log.startTime).toLocaleString()}</td>
-                                            <td className="py-3.5 font-mono text-ink-soft pr-4">{log.endTime ? new Date(log.endTime).toLocaleString() : <span className="text-emerald-400 font-bold uppercase text-[9px] animate-pulse">Running</span>}</td>
-                                            <td className="py-3.5 text-right font-mono font-bold text-ink">{formatDuration(log.duration)}</td>
+                                            <td className="py-3.5 font-mono text-ink-soft pr-4">{log.endTime ? new Date(log.endTime).toLocaleString() : <span className="text-emerald-400 font-bold uppercase text-[9px] animate-pulse">{log.status === 'paused' ? 'Paused' : 'Running'}</span>}</td>
+                                            <td className="py-3.5 text-right font-mono font-bold text-ink pr-4">{formatDuration(log.duration)}</td>
+                                            <td className="py-3.5 text-right">
+                                                {log.status === 'stopped' && !activeTimer && (
+                                                    <button
+                                                        onClick={() => handleRestartTimer(log.id)}
+                                                        disabled={submitting}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-2 border border-line text-[10px] font-bold text-ink-soft hover:text-ink hover:bg-line transition cursor-pointer"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3" />
+                                                        Restart
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -416,7 +531,7 @@ const TimeTracker = () => {
                                 <select
                                     value={manualTaskId}
                                     onChange={(e) => setManualTaskId(e.target.value)}
-                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-355"
+                                    className="w-full bg-surface-2 border border-line rounded-2xl px-5 py-3.5 text-xs font-bold focus:outline-none focus:border-emerald-500 text-slate-300"
                                 >
                                     <option value="" className="bg-card text-ink-soft">Choose task (Optional)</option>
                                     {tasks.map(t => (
@@ -431,7 +546,7 @@ const TimeTracker = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowManualModal(false)}
-                                    className="flex-1 py-3.5 bg-surface-2 hover:bg-surface-2 text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
+                                    className="flex-1 py-3.5 bg-surface-2 hover:bg-line text-xs font-bold rounded-2xl transition cursor-pointer text-ink"
                                 >
                                     Cancel
                                 </button>

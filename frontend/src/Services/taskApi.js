@@ -1,13 +1,26 @@
 import api from './api';
 
-const normalizeTask = (task) => {
-    if (!task) return task;
+const normalizeTask = (taskOrObj) => {
+    if (!taskOrObj) return taskOrObj;
+    const task = taskOrObj.task ? taskOrObj.task : taskOrObj;
     let status = task.status;
     if (status === 'approved') status = 'done';
     if (status === 'rejected') status = 'in-progress';
     if (status === 'in_review') status = 'review';
     if (status === 'in_progress') status = 'in-progress';
-    return { ...task, status };
+    
+    // Map database properties to frontend property expectations
+    const timerStart = task.timerStartedAt || null;
+    const isPomodoroActive = task.activePomodoroSession || false;
+    const pomodoroStart = task.pomodoroTimerStartedAt || null;
+    
+    return { 
+        ...task, 
+        status, 
+        timerStart, 
+        isPomodoroActive, 
+        pomodoroStart 
+    };
 };
 
 // ─── Core CRUD ─────────────────────────────────────────────────────────────
@@ -116,23 +129,23 @@ export const duplicateTask = async (taskId) => {
 // ─── Timer ─────────────────────────────────────────────────────────────────
 export const startTimer = async (taskId) => {
     const response = await api.post(`/tasks/${taskId}/timer/start`);
-    return response.data;
+    return normalizeTask(response.data);
 };
 
 export const stopTimer = async (taskId) => {
     const response = await api.post(`/tasks/${taskId}/timer/stop`);
-    return response.data;
+    return normalizeTask(response.data);
 };
 
 // ─── Pomodoro ──────────────────────────────────────────────────────────────
 export const startPomodoro = async (taskId) => {
     const response = await api.post(`/tasks/${taskId}/pomodoro/start`);
-    return response.data;
+    return normalizeTask(response.data);
 };
 
 export const stopPomodoro = async (taskId) => {
     const response = await api.post(`/tasks/${taskId}/pomodoro/stop`);
-    return response.data;
+    return normalizeTask(response.data);
 };
 
 // ─── Undo / Redo ───────────────────────────────────────────────────────────

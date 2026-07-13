@@ -1,5 +1,5 @@
 import { db } from '../db/index';
-import { eq, and, inArray, desc, SQL } from 'drizzle-orm';
+import { eq, and, inArray, desc, SQL, isNull } from 'drizzle-orm';
 import { 
     tasks, 
     projects, 
@@ -10,7 +10,8 @@ import {
     users,
     taskWatchers,
     taskTemplates,
-    taskHistory
+    taskHistory,
+    timeLogs
 } from '../db/schema';
 import type { 
     Task, 
@@ -98,7 +99,7 @@ export class TaskService {
         if (!task) return null;
 
         // Fetch all related data in parallel — reduces 6 sequential round-trips to 1
-        const [project, taskSubtasks, taskComments, taskAttachments, watchersList, historyList, assigneeResult] =
+        const [project, taskSubtasks, taskComments, taskAttachments, watchersList, historyList, assigneeResult, [activeTimer]] =
             await Promise.all([
                 db.select().from(projects).where(eq(projects.id, task.projectId)).then(r => r[0] ?? null),
 
@@ -145,11 +146,40 @@ export class TaskService {
                 task.assigneeId
                     ? db.select({ id: users.id, name: users.name, email: users.email })
                         .from(users).where(eq(users.id, task.assigneeId)).then(r => r[0] ?? null)
-                    : Promise.resolve(null)
+                    : Promise.resolve(null),
+
+                // Fetch active timer log if any
+                db.select().from(timeLogs).where(
+                    and(
+                        eq(timeLogs.taskId, taskId),
+                        isNull(timeLogs.endTime)
+                    )
+                ).limit(1)
             ]);
+
+        let timerStatus = null;
+        let timerElapsedSeconds = 0;
+        let isTimerActive = task.isTimerActive;
+
+        if (activeTimer) {
+            timerStatus = activeTimer.status;
+            isTimerActive = true;
+            
+            const now = new Date();
+            const start = activeTimer.startTime.getTime();
+            let pausedMs = activeTimer.totalPausedSeconds * 1000;
+            if (activeTimer.status === 'paused' && activeTimer.pausedAt) {
+                pausedMs += now.getTime() - activeTimer.pausedAt.getTime();
+            }
+            const elapsedMs = now.getTime() - start - pausedMs;
+            timerElapsedSeconds = Math.max(0, Math.round(elapsedMs / 1000));
+        }
 
         return {
             ...task,
+            isTimerActive,
+            timerStatus,
+            timerElapsedSeconds,
             project,
             assignee: assigneeResult,
             subtasks: taskSubtasks,
@@ -470,33 +500,101 @@ export class TaskService {
 
     // TIMERS & POMODORO
     static async startTimer(taskId: number, userId: number) {
-        const [task] = await db.update(tasks)
+        const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+        if (!task) throw new Error("Task not found");
+
+        const [project] = await db.select().from(projects).where(eq(projects.id, task.projectId)).limit(1);
+        if (!project) throw new Error("Project not found");
+
+        const activeWorkspaceId = project.workspaceId;
+        if (activeWorkspaceId === null) throw new Error("Project has no active workspace");
+
+        // Check if there is already an active timer running for this user in this workspace
+        const [active] = await db.select().from(timeLogs).where(
+            and(
+                eq(timeLogs.workspaceId, activeWorkspaceId),
+                eq(timeLogs.userId, userId),
+                isNull(timeLogs.endTime)
+            )
+        ).limit(1);
+
+        if (active) {
+            throw new Error("A timer is already running. Please stop it first.");
+        }
+
+        const now = new Date();
+        const [newLog] = await db.insert(timeLogs).values({
+            workspaceId: activeWorkspaceId,
+            userId: userId,
+            taskId: taskId,
+            description: `Working on task: ${task.title}`,
+            startTime: now,
+            status: 'running',
+            createdAt: now
+        }).returning();
+
+        const [updatedTask] = await db.update(tasks)
             .set({
                 isTimerActive: true,
-                timerStartedAt: new Date(),
-                updatedAt: new Date()
+                timerStartedAt: now,
+                updatedAt: now
             })
             .where(eq(tasks.id, taskId))
             .returning();
 
         await TaskService.logChange(taskId, userId, 'timer', 'isTimerActive', 'false', 'true');
-        return task;
+        return updatedTask;
     }
 
     static async stopTimer(taskId: number, userId: number) {
-        const [current] = await db.select().from(tasks).where(eq(tasks.id, taskId));
-        if (!current || !current.isTimerActive || !current.timerStartedAt) {
+        const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+        if (!task) throw new Error("Task not found");
+
+        const [project] = await db.select().from(projects).where(eq(projects.id, task.projectId)).limit(1);
+        if (!project) throw new Error("Project not found");
+
+        const activeWorkspaceId = project.workspaceId;
+        if (activeWorkspaceId === null) throw new Error("Project has no active workspace");
+
+        // Find the active time log for this task and user
+        const [active] = await db.select().from(timeLogs).where(
+            and(
+                eq(timeLogs.workspaceId, activeWorkspaceId),
+                eq(timeLogs.userId, userId),
+                eq(timeLogs.taskId, taskId),
+                isNull(timeLogs.endTime)
+            )
+        ).limit(1);
+
+        if (!active) {
             throw new Error("Timer is not active");
         }
 
-        const now = new Date();
-        const diffMs = now.getTime() - current.timerStartedAt.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60); // convert to hours
-        const newActual = Number(current.actualHours) + diffHours;
+        const endTime = new Date();
+        let totalPausedSeconds = active.totalPausedSeconds;
+        if (active.status === 'paused' && active.pausedAt) {
+            totalPausedSeconds += Math.round((endTime.getTime() - active.pausedAt.getTime()) / 1000);
+        }
+        const duration = Math.round((endTime.getTime() - active.startTime.getTime()) / 1000) - totalPausedSeconds;
 
-        const [task] = await db.update(tasks)
+        const [updatedLog] = await db.update(timeLogs)
+            .set({
+                endTime,
+                duration: duration > 0 ? duration : 0,
+                status: 'stopped',
+                pausedAt: null,
+                totalPausedSeconds
+            })
+            .where(eq(timeLogs.id, active.id))
+            .returning();
+
+        const addedHours = (updatedLog.duration || 0) / 3600;
+        const newActual = Number(task.actualHours || 0) + addedHours;
+
+        const [updatedTask] = await db.update(tasks)
             .set({
                 isTimerActive: false,
+                timerStartedAt: null,
                 actualHours: parseFloat(newActual.toFixed(2)),
                 updatedAt: new Date()
             })
@@ -504,8 +602,8 @@ export class TaskService {
             .returning();
 
         await TaskService.logChange(taskId, userId, 'timer', 'isTimerActive', 'true', 'false');
-        await TaskService.logChange(taskId, userId, 'timer', 'actualHours', String(current.actualHours), String(task.actualHours));
-        return task;
+        await TaskService.logChange(taskId, userId, 'timer', 'actualHours', String(task.actualHours), String(updatedTask.actualHours));
+        return updatedTask;
     }
 
     static async startPomodoro(taskId: number, userId: number) {

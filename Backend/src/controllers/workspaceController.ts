@@ -9,6 +9,7 @@ import { socketService } from '../services/socket.service';
 import { env } from '../config/env';
 import { NotificationService } from '../services/notification.service';
 import { validatePasswordStrength } from '../validations/validinputs';
+import { SubscriptionService } from '../services/subscription.service';
 
 function normalizeUrl(url: string) {
     return url.replace(/\/+$/, '');
@@ -120,6 +121,9 @@ export class WorkspaceController {
                     details: `Workspace ${workspaceName} created by owner ${name}`,
                     ipAddress: (req as any).clientIp || req.ip || null
                 });
+
+                // Start 7-day free trial subscription
+                await SubscriptionService.startTrial(newWorkspace.id, newUser.id);
             }
 
             // Trigger verification email for the new workspace owner

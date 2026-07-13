@@ -127,7 +127,7 @@ const ExecutiveDashboard = () => {
                 <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-surface-3 border border-line rounded-xl text-xs font-black text-ink transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-line border border-line rounded-xl text-xs font-black text-ink transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
                 >
                     {isRefreshing ? (
                         <>
