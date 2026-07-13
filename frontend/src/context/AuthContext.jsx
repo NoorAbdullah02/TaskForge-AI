@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../Services/api';
 import { connectSocket, disconnectSocket, joinWorkspace } from '../Services/socket';
