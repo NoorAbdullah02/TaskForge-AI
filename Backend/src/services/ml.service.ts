@@ -127,7 +127,9 @@ export class MLService {
 
             return await response.json() as T;
         } catch (error) {
-            console.error(`Error calling ML Service endpoint ${endpoint}:`, error);
+            if (!MLService.isServiceUnavailable(error)) {
+                console.error(`Error calling ML Service endpoint ${endpoint}:`, error);
+            }
             throw error;
         }
     }

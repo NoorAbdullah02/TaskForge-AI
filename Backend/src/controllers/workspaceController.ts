@@ -46,13 +46,15 @@ export class WorkspaceController {
                 return res.status(400).json({ message: 'Name, email, and password are required' });
             }
 
+            const normalizedEmail = email.toLowerCase().trim();
+
             const passwordError = validatePasswordStrength(password);
             if (passwordError) {
                 return res.status(400).json({ message: passwordError });
             }
 
             // Check if user already exists
-            let user = await queries.getUserByEmail(email);
+            let user = await queries.getUserByEmail(normalizedEmail);
             if (user) {
                 return res.status(400).json({ message: 'User with this email already exists' });
             }
@@ -79,7 +81,7 @@ export class WorkspaceController {
 
             const [newUser] = await db.insert(users).values({
                 name,
-                email: email.toLowerCase().trim(),
+                email: normalizedEmail,
                 password: hashedPassword,
                 role: userRole,
                 isEmailVerified: isFirstUser // super admin verified by default
@@ -171,6 +173,8 @@ export class WorkspaceController {
                 return res.status(400).json({ message: 'Name, email, password, and invite code are required' });
             }
 
+            const normalizedEmail = email.toLowerCase().trim();
+
             // Check if workspace exists
             const [workspace] = await db.select().from(workspaces).where(eq(workspaces.inviteCode, inviteCode.trim()));
             if (!workspace) {
@@ -183,7 +187,7 @@ export class WorkspaceController {
             }
 
             // Check if the user account already exists
-            let user = await queries.getUserByEmail(email);
+            let user = await queries.getUserByEmail(normalizedEmail);
             let pendingMembership = null;
             let verificationSent = false;
 
@@ -222,7 +226,7 @@ export class WorkspaceController {
                 const hashedPassword = await bcrypt.hash(password, 10);
                 [user] = await db.insert(users).values({
                     name,
-                    email: email.toLowerCase().trim(),
+                    email: normalizedEmail,
                     password: hashedPassword,
                     role: 'employee',
                     isEmailVerified: false
