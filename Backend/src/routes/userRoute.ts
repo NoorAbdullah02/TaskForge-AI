@@ -22,7 +22,6 @@ router.post('/login', loginLimiter, loginUser);
 
 router.post('/logout', logoutUser);
 
-
 router.get('/profile', checkValiditi, userProfile);
 
 router.get('/verify-email', checkValiditi, verify_email);
@@ -45,7 +44,6 @@ router.post('/forgot-password', forgotPasswordLimiter, forgotUserPassword);
 
 router.post('/reset-password', forgotPasswordLimiter, resetUserPassword);
 
-// Returns current user if authenticated (reads httpOnly cookie or Authorization header)
 router.get('/me', checkValiditi, getCurrentUser);
 
 // 2FA Routes

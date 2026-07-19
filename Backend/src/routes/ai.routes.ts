@@ -20,7 +20,6 @@ router.post('/generate-docs', checkValiditi, aiLimiter, AIController.generateDoc
 router.post('/analyze-risks', checkValiditi, aiLimiter, AIController.analyzeRisks);
 router.post('/weekly-summary', checkValiditi, aiLimiter, AIController.sendWeeklySummaryEmail);
 
-// New AI & ML Sprint endpoints
 router.post('/plan-sprint-v2', checkValiditi, aiLimiter, AIController.planSprintV2);
 router.get('/resource-planner/:projectId', checkValiditi, aiLimiter, AIController.resourcePlanner);
 router.get('/predict-deadline/:type/:id', checkValiditi, aiLimiter, AIController.predictDeadline);
@@ -29,7 +28,6 @@ router.get('/predict-productivity/:userId', checkValiditi, aiLimiter, AIControll
 router.get('/daily-standup', checkValiditi, aiLimiter, AIController.getDailyStandup);
 router.get('/executive-stats', checkValiditi, aiLimiter, AIController.getExecutiveStats);
 
-// Enterprise AI endpoints
 router.post('/enterprise/copilot', checkValiditi, aiLimiter, AIController.enterpriseCopilot);
 router.post('/enterprise/burnout-detect', checkValiditi, aiLimiter, AIController.detectBurnout);
 router.get('/enterprise/burnout-team/:projectId', checkValiditi, aiLimiter, AIController.detectTeamBurnout);

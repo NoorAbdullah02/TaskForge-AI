@@ -13,7 +13,6 @@ const router = Router();
 // Apply auth middleware globally to agile routes
 router.use(checkValiditi);
 
-// Team Routes
 router.get('/teams', getTeams);
 router.post('/teams', createTeam);
 router.put('/teams/:id', updateTeam);
@@ -22,7 +21,6 @@ router.get('/teams/:id/members', getTeamMembers);
 router.post('/teams/:id/members/add', addTeamMember);
 router.post('/teams/:id/members/remove', removeTeamMember);
 
-// Sprint Routes
 router.get('/sprints', getSprints);
 router.post('/sprints', createSprint);
 router.put('/sprints/:id', updateSprint);
@@ -30,13 +28,11 @@ router.delete('/sprints/:id', deleteSprint);
 router.put('/sprints/:id/start', startSprint);
 router.put('/sprints/:id/complete', completeSprint);
 
-// Epic Routes
 router.get('/epics', getEpics);
 router.post('/epics', createEpic);
 router.put('/epics/:id', updateEpic);
 router.delete('/epics/:id', deleteEpic);
 
-// Story Routes
 router.get('/stories', getStories);
 router.post('/stories', createStory);
 router.put('/stories/:id', updateStory);

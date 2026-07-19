@@ -13,7 +13,6 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
-// ─── Palette ───────────────────────────────────────────────────────────────
 const P = {
     bg: '#ffffff',
     bg2: '#f8faff',
@@ -431,7 +430,7 @@ export default function LandingPage() {
                         {/* Badge */}
                         <div className="lp-badge">
                             <Pill icon={Sparkles} color="#6366f1" bg="rgba(99,102,241,0.08)" border="rgba(99,102,241,0.2)">
-                                Mistral AI · Socket.IO · Drizzle ORM
+                                AI · Socket.IO · Drizzle ORM
                             </Pill>
                         </div>
 

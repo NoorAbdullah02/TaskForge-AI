@@ -28,17 +28,14 @@ const adminManageRoles = ['admin', 'owner', 'super_admin'];
 router.get('/settings', requireRole(settingsViewRoles), getSystemSettings);
 router.put('/settings', requireRole(settingsManageRoles), updateSystemSettings);
 
-// Department management routes
 router.get('/departments', requireRole(adminViewRoles), getAdminDepartments);
 router.post('/departments', requireRole(adminManageRoles), createDepartment);
 router.put('/departments/:id', requireRole(adminManageRoles), updateDepartment);
 router.delete('/departments/:id', requireRole(adminManageRoles), deleteDepartment);
 
-// User management routes
 router.get('/users', requireRole(adminViewRoles), getAdminUsers);
 router.put('/users/:id', requireRole(adminManageRoles), updateUserRoleDept);
 
-// Audit logs routes
 router.get('/audit-logs', requireRole(adminViewRoles), getAuditLogs);
 
 export default router;

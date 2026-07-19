@@ -23,6 +23,7 @@
     "@react-three/fiber": "^9.6.1",
     "@tanstack/react-query": "^5.101.1",
     "framer-motion": "^12.41.0",
+    "pptxgenjs": "^4.0.1",
     "react-router-dom": "^7.18.0",
     "recharts": "^3.9.0",
     "three": "^0.185.0",
