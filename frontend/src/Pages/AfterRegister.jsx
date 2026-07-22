@@ -1,18 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Inbox, RefreshCw, CheckCircle, AlertCircle, Sparkles, Loader, ArrowRight } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { resendVerificationEmail } from '../Services/authApi';
+import { resendVerificationEmail, checkEmailStatus } from '../Services/authApi';
 import toast from 'react-hot-toast';
 import { GlassCard } from '../design-system/primitives';
 
 const AfterRegister = () => {
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
     const [error, setError] = useState('');
 
     const email = searchParams.get('email') || localStorage.getItem('registrationEmail') || '';
+
+    useEffect(() => {
+        if (!email) return;
+
+        let isMounted = true;
+        const checkVerified = async () => {
+            try {
+                const res = await checkEmailStatus(email);
+                if (res?.isEmailVerified && isMounted) {
+                    toast.success('🎉 Email verified! Redirecting to login...');
+                    setTimeout(() => {
+                        navigate('/login');
+                    }, 1500);
+                    return true;
+                }
+            } catch (e) {
+                // ignore interval check errors
+            }
+            return false;
+        };
+
+        checkVerified();
+
+        const interval = setInterval(async () => {
+            const isVerified = await checkVerified();
+            if (isVerified) {
+                clearInterval(interval);
+            }
+        }, 3000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [email, navigate]);
 
     const handleResendEmail = async () => {
         if (!email) {

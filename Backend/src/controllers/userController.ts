@@ -196,13 +196,17 @@ export const loginUser = async (req: Request, res: Response) => {
 export const checkEmailExists = async (req: Request, res: Response) => {
     try {
         const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
 
-        const user = await queries.getUserByEmail(email);
+        const cleanEmail = email.toString().trim();
+        const user = await queries.getUserByEmail(cleanEmail);
 
         if (user) {
-            return res.status(200).json({ exists: true });
+            return res.status(200).json({ exists: true, isEmailVerified: !!user.isEmailVerified });
         } else {
-            return res.status(200).json({ exists: false });
+            return res.status(200).json({ exists: false, isEmailVerified: false });
         }
     }
     catch (error) {
@@ -451,10 +455,17 @@ export const verifyEmailToken = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Email and token are required' });
         }
 
-        const user = await queries.getUserByEmail(email);
+        const cleanEmail = email.toString().trim();
+        const cleanToken = token.toString().trim();
+
+        const user = await queries.getUserByEmail(cleanEmail);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const verifyRow = await queries.findVerifyToken({ token, userId: user.id });
+        if (user.isEmailVerified) {
+            return res.status(200).json({ message: 'Email is already verified', user: { id: user.id, email: user.email, isEmailVerified: true } });
+        }
+
+        const verifyRow = await queries.findVerifyToken({ token: cleanToken, userId: user.id });
         if (!verifyRow) {
             return res.status(400).json({ message: 'Invalid or expired token' });
         }
@@ -478,7 +489,10 @@ export const verifyEmailViaLink = async (req: Request, res: Response) => {
             return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('Invalid verification link. Missing email or token.')}`);
         }
 
-        const user = await queries.getUserByEmail(email as string);
+        const cleanEmail = (email as string).trim();
+        const cleanToken = (token as string).trim();
+
+        const user = await queries.getUserByEmail(cleanEmail);
         if (!user) {
             return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('User not found.')}`);
         }
@@ -487,7 +501,7 @@ export const verifyEmailViaLink = async (req: Request, res: Response) => {
             return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=already-verified&email=${encodeURIComponent(user.email)}`);
         }
 
-        const verifyRow = await queries.findVerifyToken({ token: token as string, userId: user.id });
+        const verifyRow = await queries.findVerifyToken({ token: cleanToken, userId: user.id });
         if (!verifyRow) {
             return res.redirect(`${env.FRONTEND_URL}/verify-email-result?status=error&message=${encodeURIComponent('Invalid or expired verification link. Please request a new one.')}&email=${encodeURIComponent(user.email)}`);
         }

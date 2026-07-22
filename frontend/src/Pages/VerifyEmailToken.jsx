@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mail, CheckCircle, ArrowRight, Sparkles, AlertCircle, Loader } from 'lucide-react';
-import { verifyEmailToken, resendVerificationEmail } from '../Services/authApi';
+import { verifyEmailToken, resendVerificationEmail, checkEmailStatus } from '../Services/authApi';
 import { GlassCard } from '../design-system/primitives';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,7 @@ const EmailVerificationPage = () => {
 
   // one ref per digit input
   const inputRefs = useRef([]);
+  const autoVerifyRef = useRef(false);
 
   // derived full token string
   const verificationToken = digits.join('');
@@ -68,7 +69,7 @@ const EmailVerificationPage = () => {
       return;
     }
 
-    if (!verificationToken.trim()) {
+    if (!verificationToken.trim() || verificationToken.length < DIGIT_COUNT) {
       setError('Please enter an 8-digit code');
       return;
     }
@@ -89,6 +90,7 @@ const EmailVerificationPage = () => {
       }, 3000);
     } catch (err) {
       console.error('Verification error:', err);
+      autoVerifyRef.current = false;
       const errorMessage = err?.response?.data?.message || err.message || 'Verification failed. Please check your code and try again.';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -96,6 +98,50 @@ const EmailVerificationPage = () => {
       setIsVerifying(false);
     }
   };
+
+  // Auto-trigger verification when 8 digits are entered or filled from URL
+  useEffect(() => {
+    if (email && verificationToken.length === DIGIT_COUNT && !isVerifying && step === 'verify' && !autoVerifyRef.current) {
+      autoVerifyRef.current = true;
+      handleVerifyToken();
+    }
+  }, [email, verificationToken, isVerifying, step]);
+
+  // Polling to check if database email is verified automatically (e.g. via email link in another tab)
+  useEffect(() => {
+    if (!email || step !== 'verify') return;
+
+    let isMounted = true;
+    const pollStatus = async () => {
+      try {
+        const res = await checkEmailStatus(email);
+        if (res?.isEmailVerified && isMounted) {
+          setStep('success');
+          toast.success('Email verified successfully!');
+          setTimeout(() => {
+            localStorage.removeItem('verificationEmail');
+            localStorage.removeItem('verificationToken');
+            window.location.href = '/login';
+          }, 3000);
+          return true;
+        }
+      } catch (e) {
+        // ignore polling errors
+      }
+      return false;
+    };
+
+    pollStatus();
+    const interval = setInterval(async () => {
+      const isVerified = await pollStatus();
+      if (isVerified) clearInterval(interval);
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [email, step]);
 
   const handleResendToken = async () => {
     console.log('Resend clicked with email:', email);

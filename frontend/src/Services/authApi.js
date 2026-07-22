@@ -16,6 +16,15 @@ export const checkEmailExists = async (email) => {
     }
 }
 
+export const checkEmailStatus = async (email) => {
+    try {
+        const response = await api.post('/users/check-email', { email });
+        return response.data; // { exists: boolean, isEmailVerified: boolean }
+    } catch (err) {
+        return { exists: false, isEmailVerified: false };
+    }
+}
+
 export const loginUser = async (userData) => {
     try {
         const response = await api.post('/users/login', userData);
