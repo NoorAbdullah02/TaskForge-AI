@@ -226,20 +226,19 @@ export const sendNewVerificationEmail = async (
     userId: number,
     email: string
 ) => {
-    const randomToken = generateRandomToken(8);
-
-    await insertVerifyEmailToken({
-        userId,
-        token: randomToken,
-    });
-
-    const verifyEmailLink = await getVerifyByEmailLink({
-        email,
-        token: randomToken,
-    });
-
-
     try {
+        const randomToken = generateRandomToken(8);
+
+        await insertVerifyEmailToken({
+            userId,
+            token: randomToken,
+        });
+
+        const verifyEmailLink = await getVerifyByEmailLink({
+            email,
+            token: randomToken,
+        });
+
         const html = verifyEmailTemplate({ verifyEmailLink, token: randomToken });
         const result = await sendMail(email, 'Verify your email address', html);
 
@@ -255,12 +254,12 @@ export const sendNewVerificationEmail = async (
     } catch (err: any) {
         console.error('Error sending verification email:', err);
 
-        // token already saved — surface failure details
+        // Surface token/email failure details
         return {
             success: false,
-            tokenCreated: true,
+            tokenCreated: false,
             emailSent: false,
-            message: 'Verification token created (email send failed)',
+            message: 'Verification token creation or email send failed',
             error: (err as any)?.response?.data ?? String(err),
         };
     }

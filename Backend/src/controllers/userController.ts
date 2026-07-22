@@ -39,6 +39,13 @@ export const registerUser = async (req: Request, res: Response) => {
             password: hashedPassword
         })
 
+        if (user.emailResult === null) {
+            return res.status(201).json({
+                message: 'Super admin account created successfully.',
+                user: { id: user.user.id, name: user.user.name, email: user.user.email }
+            });
+        }
+
         if (user.emailResult?.success) {
             return res.status(201).json({
                 message: 'User created & verification email sent',
